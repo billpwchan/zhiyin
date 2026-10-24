@@ -1,0 +1,7 @@
+.venv
+data
+deploy
+docs
+assets
+**/__pycache__
+*.log

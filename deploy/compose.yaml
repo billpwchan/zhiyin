@@ -1,0 +1,23 @@
+# Installed at /opt/zhiyin/compose.yaml. ./current is the release being run, ./data holds every listener's data,
+# ./secrets/zhiyin.env holds ZHIYIN_WORKER_TOKEN and CLAUDE_CODE_OAUTH_TOKEN (see docs/self-hosting.md).
+services:
+  zhiyin:
+    build: ./current
+    image: zhiyin:current
+    container_name: zhiyin
+    restart: unless-stopped
+    env_file: ./secrets/zhiyin.env
+    environment:
+      ZHIYIN_PUBLIC_URL: ${ZHIYIN_PUBLIC_URL:?set ZHIYIN_PUBLIC_URL}
+    volumes:
+      - ./data:/data
+    # one uvicorn process (~150 MB) plus up to two `claude -p` processes (~255 MB each)
+    mem_limit: 900m
+    cpus: 1.5
+    pids_limit: 256
+    security_opt: [no-new-privileges:true]
+    networks: [gateway]
+networks:
+  gateway:
+    external: true
+    name: ${GATEWAY_NETWORK:-proxy}

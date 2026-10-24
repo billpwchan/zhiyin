@@ -1,0 +1,29 @@
+name: Something is wrong
+description: A bug, a crash, or a recommendation that is clearly broken
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got. Paste the error if there is one.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - On a Mac (zhiyin serve)
+        - On a server (Docker)
+        - The audio worker
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: 0.1.0 or a commit hash
+  - type: markdown
+    attributes:
+      value: Please don't paste tokens, cookies or your list of likes. Song titles from a bad pick are fine.

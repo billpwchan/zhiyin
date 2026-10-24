@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#0b0b0c">
+<title>知音</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<header class="top">
+  <a class="mark" href="#" aria-label="知音"><svg class="wm" viewBox="20 -930 2060 1050" aria-hidden="true"><g transform="scale(1 -1)" fill="currentColor" stroke="currentColor" stroke-width="44" stroke-linejoin="round"><path d="M554 747V-46H601V37H853V-37H901V747Z M601 84V701H853V84Z M173 836C147 709 104 586 41 507C53 499 74 486 82 478C115 525 145 584 169 650H268V468L267 426H49V379H265C253 238 206 82 40 -36C51 -43 67 -62 74 -72C199 17 262 131 292 245C346 186 441 76 474 30L508 71C476 107 346 252 303 295C308 323 311 351 314 379H519V426H316L317 467V650H487V696H185C199 738 211 781 221 826Z"/><path transform="translate(1040 0)" d="M258 668C290 617 318 548 326 501L375 516C366 561 337 629 303 680Z M115 737V692H892V737Z M703 683C682 629 646 550 615 499H57V454H944V499H666C696 548 727 614 753 668Z M251 139H757V8H251Z M251 182V308H757V182Z M203 351V-76H251V-35H757V-72H806V351Z"/><circle cx="1543" cy="862" r="82" fill="#E9A55B" stroke="none"/></g></svg></a>
+  <form class="ask" id="ask" autocomplete="off">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+    <input id="askInput" name="q" placeholder="想听点什么？比如：下雨的周日下午，做饭时听的日语 city pop" enterkeyhint="go">
+    <kbd>/</kbd>
+  </form>
+  <nav class="top-r"><a href="#ear" id="earLink">你的耳朵</a></nav>
+</header>
+<div class="app">
+  <aside class="stations" id="stations" aria-label="电台"></aside>
+  <main class="view" id="view"></main>
+</div>
+<div class="backdrop" id="backdrop" aria-hidden="true"></div>
+<div class="yt-host" id="ytHost" hidden>
+  <div class="yt-crop on"><div id="ytA"></div></div>
+  <div class="yt-crop"><div id="ytB"></div></div>
+  <img class="yt-cover" id="ytCover" alt="">
+  <button class="yt-play" id="ytPlay" aria-label="播放"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></button>
+</div>
+<div class="mini" id="mini" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

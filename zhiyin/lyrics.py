@@ -1,0 +1,384 @@
+"""Synced lyrics for whatever is playing, matched by title, artist and duration.
+
+Sources, best first: NetEase (word timing, a Chinese translation line for Japanese/Korean/English, credits),
+LRCLIB (line timing), YouTube Music's own timed lyrics (line timing, same catalogue we play from).
+Lyrics are only cached locally and shown in the player; nothing is redistributed."""
+import concurrent.futures as cf
+import difflib
+import json
+import re
+import threading
+import time
+import unicodedata
+
+import httpx
+import opencc
+
+from . import llm, store, ytm
+
+CACHE = store.CACHE / "lyrics"
+CACHE.mkdir(parents=True, exist_ok=True)
+MISS_TTL = 7 * 86400
+UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/141 Safari/537.36"}
+NE = {**UA, "Referer": "https://music.163.com"}
+LRCLIB = {"User-Agent": "zhiyin/0.1 (personal player)", "Lrclib-Client": "zhiyin/0.1"}
+DUR_TOL = 4.0
+MIN_SCORE = 0.6
+
+_t2s = opencc.OpenCC("t2s")
+_s2hk = opencc.OpenCC("s2hk")
+_s2tw = opencc.OpenCC("s2tw")
+_s2t_std = opencc.OpenCC("s2t")
+_inflight: dict[str, threading.Event] = {}
+_lock = threading.Lock()
+
+CREDIT = re.compile(r"^\s*(作词|作詞|作曲|编曲|編曲|制作人|製作人|监制|監製|词|詞|曲|演唱|原唱|和声|和聲|混音|母带|录音|吉他|贝斯|鼓|钢琴|弦乐|Lyrics?|Composer|Composed by|Arranger|Arranged by|Producer|Produced by|Written by)\s*[:：]\s*(.+)$", re.I)
+LRC_TS = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
+YRC_LINE = re.compile(r"^\[(\d+),(\d+)\](.*)$")
+YRC_WORD = re.compile(r"\((\d+),(\d+),\d+\)")
+VERSION = re.compile(r"live|remix|karaoke|伴奏|inst|纯音乐|純音樂|cover|翻唱|dj|現場|现场|demo|acoustic", re.I)
+SHOW_ROLES = {"作词": "作词", "作詞": "作词", "词": "作词", "詞": "作词", "作曲": "作曲", "曲": "作曲",
+              "编曲": "编曲", "編曲": "编曲", "制作人": "制作", "製作人": "制作", "监制": "监制", "監製": "监制"}
+
+
+def norm(s: str) -> str:
+    s = _t2s.convert(unicodedata.normalize("NFKC", s or "")).lower()
+    s = re.sub(r"[\(\[（【「『].*?[\)\]）】」』]", "", s)
+    s = re.sub(r"\b(feat|ft|prod)\.?\b.*$", "", s)
+    return re.sub(r"[\s\W_]+", "", s)
+
+
+def _sim(a: str, b: str) -> float:
+    a, b = norm(a), norm(b)
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    if len(a) >= 2 and len(b) >= 2 and (a in b or b in a):
+        return 0.9
+    return difflib.SequenceMatcher(None, a, b).ratio()
+
+
+def _artist_sim(names: list[str], cand: str) -> float:
+    parts = [p for p in re.split(r"[,、/&;]|feat\.?|ft\.?", cand or "") if p.strip()] or [cand]
+    return max((_sim(n, p) for n in names for p in parts), default=0.0)
+
+
+def _score(title: str, artists: list[str], dur: float, c_title: str, c_artist: str, c_dur: float) -> float:
+    if dur and c_dur and abs(dur - c_dur) > DUR_TOL:
+        return 0.0
+    if VERSION.search(c_title or "") and not VERSION.search(title or ""):
+        return 0.0
+    t = _sim(title, c_title)
+    s = 0.5 * t + 0.5 * _artist_sim(artists, c_artist)
+    return s - 0.35 if t < 0.3 else s
+
+
+def _lang(text: str) -> str:
+    if re.search(r"[぀-ヿ]", text):
+        return "ja"
+    if re.search(r"[가-힯]", text):
+        return "ko"
+    cjk = len(re.findall(r"[一-鿿]", text))
+    latin = len(re.findall(r"[A-Za-z]", text))
+    return "en" if latin > 3 * cjk + 20 else "zh"
+
+
+# ---------- parsing ----------
+
+def parse_lrc(text: str) -> list[dict]:
+    out = []
+    for raw in (text or "").splitlines():
+        if raw.lstrip().startswith("{"):
+            continue
+        stamps = LRC_TS.findall(raw)
+        if not stamps:
+            continue
+        body = LRC_TS.sub("", raw).strip()
+        for m, s in stamps:
+            out.append({"t": int(m) * 60 + float(s), "x": body})
+    out.sort(key=lambda l: l["t"])
+    return out
+
+
+def parse_yrc(text: str) -> list[dict]:
+    out = []
+    for raw in (text or "").splitlines():
+        m = YRC_LINE.match(raw.strip())
+        if not m:
+            continue
+        start, dur, body = int(m.group(1)) / 1000, int(m.group(2)) / 1000, m.group(3)
+        parts = YRC_WORD.split(body)
+        words = []
+        for i in range(1, len(parts) - 2, 3):
+            ws, wd, w = int(parts[i]) / 1000, int(parts[i + 1]) / 1000, parts[i + 2]
+            if w:
+                words.append([round(ws, 3), round(wd, 3), w])
+        x = "".join(w[2] for w in words).strip()
+        if x:
+            out.append({"t": start, "e": round(start + dur, 3), "x": x, "w": words})
+    return out
+
+
+def credits_from_json_lines(text: str) -> list[list[str]]:
+    out = []
+    for raw in (text or "").splitlines():
+        if not raw.lstrip().startswith("{"):
+            continue
+        try:
+            c = "".join(x.get("tx", "") for x in json.loads(raw).get("c", []))
+        except (json.JSONDecodeError, AttributeError):
+            continue
+        m = CREDIT.match(c)
+        if m:
+            out.append([m.group(1), m.group(2).strip()])
+    return out
+
+
+def split_credits(lines: list[dict]) -> tuple[list[dict], list[list[str]]]:
+    """NetEase and many LRCs open with '作词 : X' lines; they are credits, not lyrics."""
+    credits, keep = [], []
+    for i, l in enumerate(lines):
+        m = CREDIT.match(l["x"]) if i < 14 else None
+        if m:
+            credits.append([m.group(1), m.group(2).strip()])
+        else:
+            keep.append(l)
+    return keep, credits
+
+
+def attach(lines: list[dict], extra: list[dict], key: str, tol: float = 1.2) -> int:
+    """Pin translation/romanisation lines to the original line closest in time (indexes drift between files)."""
+    n = 0
+    if not extra:
+        return 0
+    starts = [l["t"] for l in lines]
+    for e in extra:
+        if not e["x"] or CREDIT.match(e["x"]):
+            continue
+        j = min(range(len(starts)), key=lambda k: abs(starts[k] - e["t"]), default=None)
+        if j is not None and abs(starts[j] - e["t"]) <= tol and not lines[j].get(key):
+            lines[j][key] = e["x"]
+            n += 1
+    return n
+
+
+# ---------- sources ----------
+
+def _get(url, params, headers, tries=3):
+    for k in range(tries):
+        try:
+            r = httpx.get(url, params=params, headers=headers, timeout=10, follow_redirects=True)
+            if r.status_code in (429, 503):
+                time.sleep(1 + k)
+                continue
+            return r
+        except httpx.HTTPError:
+            time.sleep(0.5 + k)
+    return None
+
+
+def netease(title, artists, album, dur):
+    r = _get("https://music.163.com/api/search/get", {"s": f"{artists[0] if artists else ''} {title}", "type": 1, "limit": 12}, NE)
+    if not r or r.status_code != 200:
+        return None
+    songs = (r.json().get("result") or {}).get("songs") or []
+    ranked = sorted(((_score(title, artists, dur, s.get("name"), "/".join(a.get("name", "") for a in s.get("artists", [])),
+                             (s.get("duration") or 0) / 1000), s) for s in songs), key=lambda x: -x[0])
+    for sc, s in ranked[:3]:
+        if sc < MIN_SCORE:
+            break
+        lr = _get("https://music.163.com/api/song/lyric/v1",
+                  {"id": s["id"], "lv": 1, "tv": 1, "rv": 1, "yv": 1, "ytv": 1, "yrv": 1}, NE)
+        if not lr or lr.status_code != 200:
+            continue
+        d = lr.json()
+        if d.get("pureMusic"):
+            return {"source": "网易云音乐", "instrumental": True, "score": sc}
+        lrc = (d.get("lrc") or {}).get("lyric") or ""
+        yrc = (d.get("yrc") or {}).get("lyric") or ""
+        lines = parse_yrc(yrc) or parse_lrc(lrc)
+        if not lines:
+            continue
+        credits = credits_from_json_lines(yrc) + credits_from_json_lines(lrc)
+        lines, more = split_credits(lines)
+        credits += more
+        attach(lines, parse_lrc((d.get("tlyric") or {}).get("lyric")), "tr")
+        attach(lines, parse_lrc((d.get("romalrc") or {}).get("lyric")), "ro")
+        return {"source": "网易云音乐", "lines": lines, "credits": credits, "score": round(sc, 2),
+                "words": bool(yrc and lines and lines[0].get("w"))}
+    return None
+
+
+def lrclib(title, artists, album, dur):
+    params = {"track_name": title, "artist_name": artists[0] if artists else ""}
+    hits = []
+    if dur:
+        r = _get("https://lrclib.net/api/get", {**params, "duration": round(dur)}, LRCLIB)
+        if r is not None and r.status_code == 200:
+            hits = [r.json()]
+    if not hits:
+        r = _get("https://lrclib.net/api/search", params, LRCLIB)
+        if r is not None and r.status_code == 200:
+            hits = r.json() or []
+    best = None
+    for h in hits:
+        if not h.get("syncedLyrics") and not h.get("instrumental"):
+            continue
+        sc = _score(title, artists, dur, h.get("trackName"), h.get("artistName"), h.get("duration") or 0)
+        if sc >= MIN_SCORE and (not best or sc > best[0]):
+            best = (sc, h)
+    if not best:
+        return None
+    sc, h = best
+    if h.get("instrumental"):
+        return {"source": "LRCLIB", "instrumental": True, "score": sc}
+    lines, credits = split_credits(parse_lrc(h["syncedLyrics"]))
+    return {"source": "LRCLIB", "lines": lines, "credits": credits, "score": round(sc, 2), "words": False}
+
+
+def youtube(vid):
+    try:
+        yt = ytm.client()
+        bid = yt.get_watch_playlist(videoId=vid, limit=1).get("lyrics")
+        if not bid:
+            return None
+        res = yt.get_lyrics(bid, timestamps=True)
+    except Exception:
+        return None
+    if not res or not res.get("hasTimestamps"):
+        return None
+    lines = [{"t": l.start_time / 1000, "e": l.end_time / 1000, "x": (l.text or "").strip()} for l in res["lyrics"]]
+    lines, credits = split_credits(lines)
+    src = re.sub(r"^.*?[:：]\s*", "", res.get("source") or "").strip() or "YouTube Music"
+    return {"source": src, "lines": lines, "credits": credits, "score": 1.0, "words": False}
+
+
+# ---------- assembly ----------
+
+def _script_like_title(lines: list[dict], shown: str):
+    """Show Chinese lyrics in the script the song is shown in (title, artist, album as YouTube Music gives them to
+    this listener), down to the Hong Kong or Taiwan variant of each character. Text with no telling characters
+    gets Traditional (Taiwan) forms, matching the zh_TW reading in ytm.client."""
+    simplified = _s2t_std.convert(shown) != shown
+    if simplified and _t2s.convert(shown) == shown:
+        return None
+    conv = _s2hk if _s2hk.convert(_t2s.convert(shown)) == shown and _s2tw.convert(_t2s.convert(shown)) != shown else _s2tw
+    for l in lines:
+        l["x"] = conv.convert(l["x"])
+        for w in l.get("w") or []:
+            w[2] = conv.convert(w[2])
+    return conv
+
+
+def _credits(raw: list[list[str]]) -> list[list[str]]:
+    out, seen = [], set()
+    for role, name in raw:
+        r = SHOW_ROLES.get(role)
+        if r and r not in seen:
+            seen.add(r)
+            out.append([r, name])
+    return out
+
+
+_pool = cf.ThreadPoolExecutor(6)
+
+
+def resolve(vid: str, title: str, artists: list[str], album: str, dur: float) -> dict:
+    # All sources start at once; take the first in priority order that has lyrics, without waiting for the rest.
+    futures = [_pool.submit(netease, title, artists, album, dur), _pool.submit(lrclib, title, artists, album, dur),
+               _pool.submit(youtube, vid)]
+    found = None
+    for f in futures:
+        try:
+            found = f.result(timeout=25)
+        except Exception:
+            found = None
+        if found:
+            break
+    if not found:
+        return {"vid": vid, "found": False, "ts": time.time()}
+    if found.get("instrumental"):
+        return {"vid": vid, "found": False, "instrumental": True, "source": found["source"], "ts": time.time()}
+    lines = [l for l in found["lines"] if l["t"] <= (dur or 1e9) + 5]
+    body = " ".join(l["x"] for l in lines)
+    lang = _lang(body)
+    conv = _script_like_title(lines, " ".join([title, *artists, album or ""])) if lang == "zh" else None
+    credits = _credits(found.get("credits", []))
+    if conv:
+        credits = [[role, conv.convert(name)] for role, name in credits]
+    # Lines that are empty mark instrumental breaks; collapse repeats so the player shows one break, not several.
+    clean = []
+    for l in lines:
+        if not l["x"] and clean and not clean[-1]["x"]:
+            continue
+        clean.append(l)
+    while clean and not clean[-1]["x"]:
+        clean.pop()
+    return {"vid": vid, "found": bool(clean), "source": found["source"], "lang": lang, "words": found.get("words", False),
+            "translated": any(l.get("tr") for l in clean), "credits": credits,
+            "lines": [{k: (round(v, 3) if isinstance(v, float) else v) for k, v in l.items()} for l in clean],
+            "ts": time.time()}
+
+
+def get(vid: str, title: str, artists: list[str], album: str = "", dur: float = 0) -> dict:
+    path = CACHE / f"{vid}.json"
+    if path.exists():
+        d = json.loads(path.read_text())
+        if d.get("found") or time.time() - d.get("ts", 0) < MISS_TTL:
+            return d
+    with _lock:
+        ev = _inflight.get(vid)
+        mine = ev is None
+        if mine:
+            ev = _inflight[vid] = threading.Event()
+    if not mine:
+        ev.wait(30)
+        return json.loads(path.read_text()) if path.exists() else {"vid": vid, "found": False}
+    try:
+        d = resolve(vid, title, artists, album, dur)
+        path.write_text(json.dumps(d, ensure_ascii=False))
+        return d
+    finally:
+        ev.set()
+        with _lock:
+            _inflight.pop(vid, None)
+
+
+# ---------- translation for songs no source translates ----------
+
+TR_SCHEMA = {"type": "object", "properties": {"lines": {"type": "array", "items": {"type": "object", "properties": {
+    "i": {"type": "integer"}, "tr": {"type": "string"}}, "required": ["i", "tr"]}}}, "required": ["lines"]}
+TR_SYSTEM = ("Translate song lyrics into natural Simplified Chinese for a listener reading along while the song plays. "
+             "One translation per input line, same index. Keep it singable-plain, faithful, short; no notes, no romanisation. "
+             "Lines that are only vocalisations (oh, yeah, la la) keep as-is.")
+_tr_running: set[str] = set()
+
+
+def translate_later(vid: str) -> bool:
+    """Start a background translation for a Japanese/Korean/English lyric without one. Returns True if started."""
+    path = CACHE / f"{vid}.json"
+    if not path.exists() or vid in _tr_running:
+        return False
+    d = json.loads(path.read_text())
+    if not d.get("found") or d.get("translated") or d.get("lang") == "zh" or d.get("tr_failed"):
+        return False
+    _tr_running.add(vid)
+
+    def run():
+        try:
+            idx = [i for i, l in enumerate(d["lines"]) if l["x"]]
+            prompt = "\n".join(f"{i}\t{d['lines'][i]['x']}" for i in idx)
+            res = llm.call(prompt, TR_SYSTEM, TR_SCHEMA, model="sonnet", timeout=180, retries=1)
+            for x in res["lines"]:
+                if 0 <= x["i"] < len(d["lines"]) and x["tr"].strip() and x["tr"].strip() != d["lines"][x["i"]]["x"]:
+                    d["lines"][x["i"]]["tr"] = x["tr"].strip()
+            d["translated"] = any(l.get("tr") for l in d["lines"])
+            d["tr_by"] = "AI"
+        except Exception:
+            d["tr_failed"] = True
+        finally:
+            path.write_text(json.dumps(d, ensure_ascii=False))
+            _tr_running.discard(vid)
+    threading.Thread(target=run, daemon=True).start()
+    return True

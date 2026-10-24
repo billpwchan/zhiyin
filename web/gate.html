@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<title>知音</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="gate-body">
+<main class="gate" id="gate"></main>
+<script>
+const G = __GATE__;
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const errors = {
+  unknown: '这个 Google 账号还没有加入知音。第一次来，请先打开收到的邀请链接。',
+  expired: '这个邀请链接已经失效了。找邀请你的人要一个新的。',
+  cancelled: '没有登录。随时可以再试。',
+};
+const el = document.getElementById('gate');
+if (G.mode === 'switch') {
+  el.innerHTML = `<div class="mark" role="img" aria-label="知音"><svg class="wm" viewBox="20 -930 2060 1050" aria-hidden="true"><g transform="scale(1 -1)" fill="currentColor" stroke="currentColor" stroke-width="44" stroke-linejoin="round"><path d="M554 747V-46H601V37H853V-37H901V747Z M601 84V701H853V84Z M173 836C147 709 104 586 41 507C53 499 74 486 82 478C115 525 145 584 169 650H268V468L267 426H49V379H265C253 238 206 82 40 -36C51 -43 67 -62 74 -72C199 17 262 131 292 245C346 186 441 76 474 30L508 71C476 107 346 252 303 295C308 323 311 351 314 379H519V426H316L317 467V650H487V696H185C199 738 211 781 221 826Z"/><path transform="translate(1040 0)" d="M258 668C290 617 318 548 326 501L375 516C366 561 337 629 303 680Z M115 737V692H892V737Z M703 683C682 629 646 550 615 499H57V454H944V499H666C696 548 727 614 753 668Z M251 139H757V8H251Z M251 182V308H757V182Z M203 351V-76H251V-35H757V-72H806V351Z"/><circle cx="1543" cy="862" r="82" fill="#E9A55B" stroke="none"/></g></svg></div>
+    <h1>这个链接是给${esc(G.name)}的</h1>
+    <p>这个浏览器现在登录的是${esc(G.me || '另一位听众')}。换成${esc(G.name)}之后，这里会显示${esc(G.name)}的电台。</p>
+    <div class="gate-acts"><a class="btn" href="/i/${encodeURIComponent(G.token)}?go=1">以${esc(G.name)}的身份进入</a><a class="tb" href="/">保持现在的账号</a></div>`;
+} else {
+  el.innerHTML = `<div class="mark" role="img" aria-label="知音"><svg class="wm" viewBox="20 -930 2060 1050" aria-hidden="true"><g transform="scale(1 -1)" fill="currentColor" stroke="currentColor" stroke-width="44" stroke-linejoin="round"><path d="M554 747V-46H601V37H853V-37H901V747Z M601 84V701H853V84Z M173 836C147 709 104 586 41 507C53 499 74 486 82 478C115 525 145 584 169 650H268V468L267 426H49V379H265C253 238 206 82 40 -36C51 -43 67 -62 74 -72C199 17 262 131 292 245C346 186 441 76 474 30L508 71C476 107 346 252 303 295C308 323 311 351 314 379H519V426H316L317 467V650H487V696H185C199 738 211 781 221 826Z"/><path transform="translate(1040 0)" d="M258 668C290 617 318 548 326 501L375 516C366 561 337 629 303 680Z M115 737V692H892V737Z M703 683C682 629 646 550 615 499H57V454H944V499H666C696 548 727 614 753 668Z M251 139H757V8H251Z M251 182V308H757V182Z M203 351V-76H251V-35H757V-72H806V351Z"/><circle cx="1543" cy="862" r="82" fill="#E9A55B" stroke="none"/></g></svg></div>
+    <h1>一个私人的推荐电台</h1>
+    <p>它从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌。需要邀请才能进来。</p>
+    ${G.error ? `<p class="gate-err">${esc(errors[G.error] || G.error)}</p>` : ''}
+    ${G.google ? `<div class="gate-acts"><a class="btn" href="/auth/google/start?mode=login">用 Google 登录</a></div>
+    <p class="gate-note">已经连接过 YouTube Music 的话，用同一个 Google 账号登录。</p>` : ''}`;
+}
+</script>
+</body>
+</html>

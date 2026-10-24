@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 272" width="960" height="272" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, 'PingFang SC', sans-serif">
+<title>How Zhiyin picks songs</title>
+<line x1="112" y1="60" x2="847" y2="60" stroke="#43434a" stroke-width="1.5"/>
+<circle cx="112" cy="60" r="5" fill="#F2F0EB"/>
+<text x="112" y="38" text-anchor="middle" font-size="11" fill="#9b9ba2">1</text>
+<text x="112" y="92" text-anchor="middle" font-size="15" font-weight="600" fill="#F2F0EB">Your likes</text>
+<text x="112" y="113" text-anchor="middle" font-size="12" fill="#9b9ba2">Newest count more</text>
+<text x="112" y="130" text-anchor="middle" font-size="12" fill="#9b9ba2">(half-life ~7 months)</text>
+<circle cx="259" cy="60" r="5" fill="#F2F0EB"/>
+<text x="259" y="38" text-anchor="middle" font-size="11" fill="#9b9ba2">2</text>
+<text x="259" y="92" text-anchor="middle" font-size="15" font-weight="600" fill="#F2F0EB">Stations</text>
+<text x="259" y="113" text-anchor="middle" font-size="12" fill="#9b9ba2">About 8 kinds of</text>
+<text x="259" y="130" text-anchor="middle" font-size="12" fill="#9b9ba2">music you play</text>
+<circle cx="406" cy="60" r="5" fill="#F2F0EB"/>
+<text x="406" y="38" text-anchor="middle" font-size="11" fill="#9b9ba2">3</text>
+<text x="406" y="92" text-anchor="middle" font-size="15" font-weight="600" fill="#F2F0EB">Candidates</text>
+<text x="406" y="113" text-anchor="middle" font-size="12" fill="#9b9ba2">~600 per station from</text>
+<text x="406" y="130" text-anchor="middle" font-size="12" fill="#9b9ba2">YouTube Music's graph</text>
+<circle cx="553" cy="60" r="5" fill="#F2F0EB"/>
+<text x="553" y="38" text-anchor="middle" font-size="11" fill="#9b9ba2">4</text>
+<text x="553" y="92" text-anchor="middle" font-size="15" font-weight="600" fill="#F2F0EB">Shortlist</text>
+<text x="553" y="113" text-anchor="middle" font-size="12" fill="#9b9ba2">Known songs out,</text>
+<text x="553" y="130" text-anchor="middle" font-size="12" fill="#9b9ba2">graph score, sound veto</text>
+<circle cx="700" cy="60" r="5" fill="#F2F0EB"/>
+<text x="700" y="38" text-anchor="middle" font-size="11" fill="#9b9ba2">5</text>
+<text x="700" y="92" text-anchor="middle" font-size="15" font-weight="600" fill="#F2F0EB">Editor</text>
+<text x="700" y="113" text-anchor="middle" font-size="12" fill="#9b9ba2">Claude keeps only</text>
+<text x="700" y="130" text-anchor="middle" font-size="12" fill="#9b9ba2">what it's sure of</text>
+<circle cx="847" cy="60" r="7" fill="#E9A55B"/>
+<text x="847" y="38" text-anchor="middle" font-size="11" fill="#9b9ba2">6</text>
+<text x="847" y="92" text-anchor="middle" font-size="15" font-weight="600" fill="#F2F0EB">Edition</text>
+<text x="847" y="113" text-anchor="middle" font-size="12" fill="#9b9ba2">Up to 8 per station,</text>
+<text x="847" y="130" text-anchor="middle" font-size="12" fill="#9b9ba2">one line on why</text>
+<path d="M853 152 V162 Q853 184 831 184 H575 Q553 184 553 162 V161" stroke="#43434a" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="1" stroke-dasharray="2 5"/><path d="M548 161 L553 152 L558 161" stroke="#43434a" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="1"/>
+<text x="694" y="203" text-anchor="middle" font-size="12" fill="#9b9ba2">skips and likes re-rank the queue as you listen</text>
+<path d="M841 152 V214 Q841 236 819 236 H281 Q259 236 259 214 V161" stroke="#43434a" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" stroke-dasharray="2 5"/><path d="M254 161 L259 152 L264 161" stroke="#43434a" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+<text x="553.0" y="255" text-anchor="middle" font-size="12" fill="#9b9ba2">and shape the next edition</text>
+</svg>

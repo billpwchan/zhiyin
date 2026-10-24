@@ -1,0 +1,10 @@
+# A site block for the reverse proxy in front of the container (Caddy on the same Docker network).
+zhiyin.example.com {
+	encode zstd gzip
+	handle /healthz {
+		respond "ok" 200
+	}
+	handle {
+		reverse_proxy zhiyin:8817
+	}
+}

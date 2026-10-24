@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      # the audio model (torch) is only needed on the machine that listens; tests don't load it
+      - run: uv sync --no-default-groups --group dev
+      - run: uv run --no-sync ruff check zhiyin tests
+      - run: uv run --no-sync pytest -q

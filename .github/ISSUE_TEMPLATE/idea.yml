@@ -1,0 +1,10 @@
+name: An idea
+description: Something that would make listening better
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you'd like
+      description: Describe the moment it would help with, not only the feature.
+    validations:
+      required: true
