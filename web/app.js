@@ -1082,12 +1082,12 @@ function accountHTML() {
     const state = sy.pending ? `${sy.pending} 首等待同步${sy.error === 'quota' ? `：今天的额度用完了，${quotaReset()}后继续` : sy.error === 'reconnect' ? '：需要重新连接' : ''}` : sy.done ? `已同步 ${sy.done} 首` : '在这里点 ♥，YouTube Music 里也会是喜欢';
     rows.push(`<li><span>把这里的喜欢同步到 YouTube Music<small>${esc(state)}。「不要」只记在知音，不会变成 YouTube 上的踩。</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="同步喜欢"></button></li>`);
   }
-  if (me.owner && me.claude) {
+  if (me.mine && me.claude) {
     const c = me.claude;
     rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) : '还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。'}</small></span><span>${c.source === 'worker' ? (c.online ? '在线' : '离线') : ''}</span></li>`);
   }
   if (me.auth) {
-    if (g.email) rows.push(`<li><span>在另一台设备上登录<small>打开这个网站，用 ${esc(g.email)} 登录。</small></span><span></span></li>`);
+    if (g.email) rows.push(`<li><span>用书签切换账号<small>把这个链接存成书签，点一下就回到这个账号，在别的设备上也一样。有几个账号就各存一个，来回切换；浏览器里要登着 ${esc(g.email)}。</small>${linkHTML(`${location.origin}/auth/google/start?mode=login&as=${encodeURIComponent(g.email)}`)}</span><span></span></li>`);
     else rows.push(`<li><span>在另一台设备上登录<small>生成一个 14 天内有效的登录链接，发给自己。</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">生成链接</button></li>`);
     rows.push(`<li><span>退出登录<small>只退出这台设备。</small></span><button class="tb" data-k="logout">退出</button></li>`);
     if (!me.owner) rows.push(`<li><span>断开并删除我的数据<small>撤销 Google 授权，删掉你的喜欢、电台和反馈。</small></span><button class="tb danger" data-k="delete">删除</button></li>`);
@@ -1104,12 +1104,13 @@ const FRIEND_KEY_NOTE = 'Claude 订阅按 Anthropic 的规定只给订阅者本�
 function friendsHTML() {
   if (!friends) { api('/api/users').then((r) => { friends = r.users; if (view === 'ear') renderEar(); }).catch(() => {}); return ''; }
   const others = S.me.claude?.others;
-  const list = friends.map((u) => `<li><span>${esc(u.name)}<small>${STATUS[u.status] || u.status}${u.songs ? ` · ${u.songs} 首喜欢` : ''}${u.usd7 ? ` · 近 7 天 $${u.usd7.toFixed(2)}` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : '还没来过'}</span></li>`).join('');
+  const list = friends.map((u) => `<li><span>${esc(u.mine ? u.email || '你的另一个账号' : u.name)}<small>${u.mine && u.email ? '你的另一个账号 · ' : ''}${STATUS[u.status] || u.status}${u.songs ? ` · ${u.songs} 首喜欢` : ''}${u.usd7 ? ` · 近 7 天 $${u.usd7.toFixed(2)}` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : '还没来过'}</span></li>`).join('');
   const add = others
     ? `<li><form class="invite" id="invite"><input name="name" placeholder="朋友的名字" maxlength="20" autocomplete="off"><button class="tb">生成邀请链接</button></form>${shownLink?.kind === 'invite' ? linkHTML(shownLink.url) : ''}</li>`
     : `<li><span>邀请朋友前，先配置 Claude API key<small>${FRIEND_KEY_NOTE}</small></span><span></span></li>`;
+  const mine = `<li><span>加你自己的另一个账号<small>比如你的另一个 YouTube Music 账号：喜欢和电台各自独立，和你一样用你的 Claude。只给你自己用。</small>${shownLink?.kind === 'mine' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="mine">生成登录链接</button></li>`;
   return `<section class="sec"><h2>朋友<small>每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到${others ? '；他们的推荐用你的 API key 计费' : ''}。</small></h2>
-    <ul class="plain">${list}${add}</ul></section>`;
+    <ul class="plain">${list}${add}${mine}</ul></section>`;
 }
 
 /* ---------- ear view ---------- */
@@ -1596,6 +1597,7 @@ async function act(k, btn) {
     S.me = await api('/api/account/sync-likes', { on });
     toast(on ? '之后的喜欢会同步到 YouTube Music' : '喜欢只记在知音，不再同步');
   } else if (k === 'device') { const r = await api('/api/account/device', {}); shownLink = { kind: 'device', url: r.url }; renderEar(); }
+  else if (k === 'mine') { const r = await api('/api/invite', { mine: true }); shownLink = { kind: 'mine', url: r.url }; friends = null; renderEar(); }
   else if (k === 'copy') {
     const input = btn.parentElement.querySelector('input');
     try { await navigator.clipboard.writeText(input.value); toast('已复制'); } catch { input.select(); }

@@ -28,6 +28,16 @@ def test_a_subscription_only_serves_its_owner(hosted):
     assert llm.source("u1") == "key"
 
 
+def test_another_account_of_the_owners_runs_on_the_owners_claude(hosted):
+    from zhiyin import accounts
+    mine = accounts.redeem(accounts.invite("", mine=True))
+    friend = accounts.redeem(accounts.invite("Ming"))
+    hosted(worker=True)
+    assert llm.source(mine) == "worker" and llm.source(friend) is None
+    hosted(oauth=True, key=True)
+    assert llm.source(mine) == "subscription" and llm.source(friend) == "key"
+
+
 def test_on_the_mac_it_is_whatever_claude_is_signed_in_with():
     assert llm.source(store.OWNER) == "here"
 

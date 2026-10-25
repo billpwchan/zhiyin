@@ -305,7 +305,7 @@ def _sync_view(uid: str) -> dict:
 def _me() -> dict:
     u = accounts.get() or {"id": store.uid(), "name": "", "status": "ready", "prefs": {}, "email": None}
     ok = google.configured() and google.connected(u["id"])
-    return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "status": u["status"], "auth": AUTH,
+    return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "mine": store.is_owners(u["id"]), "status": u["status"], "auth": AUTH,
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
                        "error": u["prefs"].get("google_error")},
             "sync_likes": u["prefs"].get("sync_likes", True), "sync": _sync_view(u["id"]),
@@ -369,7 +369,9 @@ def logout(request: Request):
 
 
 @app.get("/auth/google/start")
-def google_start(request: Request, mode: str = "connect"):
+def google_start(request: Request, mode: str = "connect",
+                 as_: Annotated[str, Query(alias="as", max_length=254)] = ""):
+    """mode=login&as=<email> is a bookmark that goes straight back into that listener's account."""
     if not google.configured():
         raise HTTPException(503, "Google 登录还没配置")
     connect = mode == "connect"
@@ -378,10 +380,13 @@ def google_start(request: Request, mode: str = "connect"):
         return RedirectResponse("/login", 303)
     state = secrets.token_urlsafe(24)
     verifier, challenge = google.pkce()
-    store.db().execute("delete from kv where k like 'oauth:%' and json_extract(v, '$.t') < ?", (time.time() - 900,))
+    con = store.db()
+    con.execute("delete from kv where k like 'oauth:%' and json_extract(v, '$.t') < ?", (time.time() - 900,))
+    con.commit()
     store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "uid": uid, "t": time.time()})
-    hint = (accounts.get(uid) or {}).get("email") if uid else None
-    r = RedirectResponse(google.auth_url(state, challenge, connect, hint), 303)
+    named = "" if connect else as_
+    hint = named or ((accounts.get(uid) or {}).get("email") if uid else None)
+    r = RedirectResponse(google.auth_url(state, challenge, connect, hint, pick=not named), 303)
     r.set_cookie("zy_o", state, max_age=900, httponly=True, samesite="lax", secure=google.public_url().startswith("https"))
     return r
 
@@ -685,7 +690,8 @@ def account_delete(request: Request):
 
 
 class InviteReq(BaseModel):
-    name: str
+    name: str = ""
+    mine: bool = False   # another account of the owner's own
 
 
 def _owner_only():
@@ -696,6 +702,9 @@ def _owner_only():
 @app.post("/api/invite")
 def invite(body: InviteReq):
     _owner_only()
+    if body.mine:   # it runs on your Claude like your main account, so it needs no API key
+        tok = accounts.invite(body.name.strip()[:20] or "我的另一个账号", mine=True)
+        return {"url": f"{google.public_url()}/i/{tok}", "days": accounts.INVITE_DAYS}
     if not llm.API_KEY:
         raise HTTPException(409, "先在服务器上配置 Claude API key：你的 Claude 订阅只能你自己用")
     name = body.name.strip()[:20]
@@ -714,7 +723,8 @@ def users():
             continue
         with store.as_user(u["id"]):
             lib = store.read_json(store.LIBRARY) or {}
-        out.append({"name": u["name"], "status": u["status"], "last_seen": u["last_seen"], "created": u["created"],
+        out.append({"name": u["name"], "mine": bool(u.get("mine")), "email": u["email"] if u.get("mine") else None,
+                    "status": u["status"], "last_seen": u["last_seen"], "created": u["created"],
                     "songs": sum(1 for t in lib.get("tracks", []) if not t["long"]), "usd7": llm.spent(u["id"])})
     return {"users": out}
 

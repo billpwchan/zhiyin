@@ -81,7 +81,7 @@ def pkce() -> tuple[str, str]:
     return verifier, challenge
 
 
-def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None) -> str:
+def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None, pick: bool = True) -> str:
     c = client()
     q = {"client_id": c["id"], "redirect_uri": redirect_uri(), "response_type": "code", "state": state,
          "code_challenge": challenge, "code_challenge_method": "S256", "include_granted_scopes": "true"}
@@ -89,7 +89,8 @@ def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None)
         # prompt=consent guarantees a refresh token even if the listener granted access before.
         q |= {"scope": f"{BASE_SCOPES} {YT_SCOPE}", "access_type": "offline", "prompt": "consent"}
     else:
-        q |= {"scope": BASE_SCOPES, "prompt": "select_account"}
+        # without the account picker, signing in as a named account already in the browser takes one click
+        q |= {"scope": BASE_SCOPES} | ({"prompt": "select_account"} if pick else {})
     if hint:
         q["login_hint"] = hint
     return AUTH_URL + "?" + urllib.parse.urlencode(q)

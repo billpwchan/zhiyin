@@ -53,3 +53,38 @@ def test_a_sibling_site_cannot_post():
     c = TestClient(server.app)
     assert c.post("/auth/logout", headers={"sec-fetch-site": "same-site"}).status_code == 403
     assert c.post("/auth/logout", headers={"sec-fetch-site": "same-origin"}).status_code == 200
+
+
+def test_your_own_second_account_needs_no_api_key(monkeypatch):
+    from fastapi import HTTPException
+    from zhiyin import llm
+    monkeypatch.setattr(llm, "API_KEY", False)
+    with store.as_user(store.OWNER):
+        assert "/i/" in server.invite(server.InviteReq(mine=True))["url"]
+        with pytest.raises(HTTPException) as e:
+            server.invite(server.InviteReq(name="Ming"))
+    assert e.value.status_code == 409
+
+
+def test_a_bookmark_signs_in_as_the_named_account_in_one_click(monkeypatch):
+    from urllib.parse import parse_qs, urlparse
+    from zhiyin import google
+    monkeypatch.setattr(google, "client", lambda: {"id": "c"})
+    q = parse_qs(urlparse(google.auth_url("s", "x", False, "me@example.com", pick=False)).query)
+    assert q["login_hint"] == ["me@example.com"] and "prompt" not in q
+    assert parse_qs(urlparse(google.auth_url("s", "x", False)).query)["prompt"] == ["select_account"]
+
+
+def test_starting_a_sign_in_leaves_the_database_writable(monkeypatch):
+    import sqlite3
+    from fastapi.testclient import TestClient
+    from zhiyin import google
+    monkeypatch.setattr(google, "configured", lambda: True)
+    monkeypatch.setattr(google, "client", lambda: {"id": "c"})
+    c = TestClient(server.app)
+    for _ in range(2):
+        assert c.get("/auth/google/start", params={"mode": "login", "as": "me@example.com"},
+                     follow_redirects=False).status_code == 303
+    raw = sqlite3.connect(store.DB, timeout=1)
+    raw.execute("insert or replace into kv values ('probe', '1')")
+    raw.commit()

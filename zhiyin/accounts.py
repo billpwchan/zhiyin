@@ -62,12 +62,14 @@ def link_google(uid: str, sub: str, email: str, name: str) -> None:
     con.commit()
 
 
-def invite(name: str, uid: str | None = None) -> str:
-    """A new listener (or a sign-in link for an existing one, e.g. the owner on a new server)."""
+def invite(name: str, uid: str | None = None, mine: bool = False) -> str:
+    """A new listener (or a sign-in link for an existing one, e.g. the owner on a new server). `mine` is another
+    account of the owner's own, which runs on the owner's Claude."""
     con = store.db()
     if uid is None:
         uid = "u" + secrets.token_hex(4)
-        con.execute("insert into users(id, name, created, status) values (?, ?, ?, 'new')", (uid, name.strip(), time.time()))
+        con.execute("insert into users(id, name, created, status, mine) values (?, ?, ?, 'new', ?)",
+                    (uid, name.strip(), time.time(), int(mine)))
     elif name.strip():
         con.execute("update users set name=? where id=? and coalesce(name, '')=''", (name.strip(), uid))
     token = secrets.token_urlsafe(18)

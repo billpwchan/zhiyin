@@ -135,12 +135,22 @@ def _migrate(con: sqlite3.Connection) -> None:
         con.execute("alter table plays add column pos real")
     if "next_try" not in {r[1] for r in con.execute("pragma table_info(outbox)")}:
         con.execute("alter table outbox add column next_try real")
+    if "mine" not in {r[1] for r in con.execute("pragma table_info(users)")}:
+        con.execute("alter table users add column mine integer not null default 0")
     for t in ("feedback", "shown", "plays"):
         if "uid" not in {r[1] for r in con.execute(f"pragma table_info({t})")}:
             con.execute(f"alter table {t} add column uid text not null default '{OWNER}'")
             con.execute(f"create index if not exists {t}_uid on {t}(uid)")
     con.execute("insert or ignore into users(id, name, created, status) values (?, ?, ?, 'ready')", (OWNER, "", time.time()))
     con.commit()
+
+
+def is_owners(uid: str) -> bool:
+    """The owner, or another account the owner added for themselves (a second YouTube library): the owner listening."""
+    if uid == OWNER:
+        return True
+    r = db().execute("select mine from users where id=?", (uid,)).fetchone()
+    return bool(r and r["mine"])
 
 
 def now() -> float:

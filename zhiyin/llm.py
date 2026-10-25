@@ -45,7 +45,7 @@ def source(uid: str | None = None) -> str | None:
     uid = uid or store.uid()
     if not HOSTED:
         return "here"
-    if uid == store.OWNER:
+    if store.is_owners(uid):
         return "subscription" if OAUTH else "worker" if WORKER else "key" if API_KEY else None
     return "key" if API_KEY else None
 
@@ -54,11 +54,12 @@ def unavailable(uid: str | None = None) -> str | None:
     """Why this listener's calls can't run right now, or None."""
     uid = uid or store.uid()
     src = source(uid)
+    mine = store.is_owners(uid)
     if src is None:
-        return "主人还没有为其他听众配置 Claude API key" if uid != store.OWNER else "服务器上还没有配置 Claude"
+        return "服务器上还没有配置 Claude" if mine else "主人还没有为其他听众配置 Claude API key"
     if src == "worker" and not worker_online():
         return "Mac 不在线（睡着或关机了）"
-    cap = OWNER_DAILY_USD if uid == store.OWNER else DAILY_USD
+    cap = OWNER_DAILY_USD if mine else DAILY_USD
     if HOSTED and spent(uid, days=1) >= cap:
         return f"今天的 Claude 额度（${cap:g}）用完了，明天再来"
     return None

@@ -26,6 +26,7 @@ on offering Claude Code in products expects each end user to bring their own cre
 |---|---|
 | you, on your Mac | your `claude` login there, a subscription or an API key |
 | you, on your server | your subscription: a token on the server if you added one, otherwise the Mac worker |
+| another account of yours (a second YouTube library) | the same as you: it is still you listening |
 | anyone you invite | your API key on the server, billed to you per use |
 
 The server holds to this. Your subscription only ever runs your own calls, and inviting someone stays closed until
@@ -138,6 +139,11 @@ docker exec zhiyin zhiyin users
 A friend opens the link and connects Google. Their first edition takes about ten minutes; the page says when it's
 ready. Invites need an API key on the server (step 2). Once a listener has connected Google, links no longer sign
 them in: on another device they sign in with the same Google account, so a forwarded link opens nothing.
+
+Have a second YouTube Music account of your own? Under 朋友, "加你自己的另一个账号" (or `zhiyin invite --mine`) makes
+a link for it. It keeps its own likes and stations, runs on your Claude like your main account, and needs no API
+key. Each account shows a bookmark under 账号 (`/auth/google/start?mode=login&as=<email>`): with both Google
+accounts signed in to the browser, one click switches between them.
 
 ### 5. Start the audio worker
 
