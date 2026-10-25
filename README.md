@@ -1,58 +1,75 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/wordmark-on-dark.svg">
-    <img alt="知音 Zhiyin" src="docs/brand/wordmark-on-light.svg" height="72">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/wordmark-en-on-dark.svg">
+    <img alt="Zhiyin" src="docs/brand/wordmark-en-on-light.svg" height="64">
   </picture>
 </p>
 
 <p align="center">
-  A music player that reads your YouTube Music likes and, every morning, brings a short edition of songs
-  you're likely to love on the first listen.
+  A private radio built from the songs you liked on YouTube Music.<br>
+  Every morning it brings a few stations of songs you haven't heard, and says why it picked each one.
+</p>
+
+<p align="center">
+  <b>English</b> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/billpwchan/zhiyin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/billpwchan/zhiyin/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-lightgrey"></a>
-  <img alt="Python 3.13" src="https://img.shields.io/badge/python-3.13-lightgrey">
-  <a href="README.zh-CN.md">中文</a>
 </p>
 
 <p align="center">
-  <img alt="The player: a station list on the left, the current song with its cover, why it was picked, and the queue" src="docs/images/player.webp" width="900">
+  <img alt="The player: stations on the left, the song playing with its cover and the reason it was picked, synced lyrics on the right, and the rest of the station below" src="docs/images/player.webp" width="900">
 </p>
 
-知音 (*zhīyīn*) is the friend who truly knows your music. Streaming apps recommend from what millions of people
-play; Zhiyin starts from the few hundred songs you chose to like, and keeps only the picks it is sure of.
+Most recommenders work from what millions of other people played next to your song. You get the same few hits,
+and "because you listened to X" is all the reasoning you see.
 
-## What it does
+Zhiyin starts from the few hundred songs you chose to like. For each kind of music you listen to, it gathers about
+600 candidates from YouTube Music's listening graph, drops everything you already know, and hands a shortlist to
+Claude, which reads it like an editor who has been through your whole library. Only the picks it rates 0.7 or higher
+go out, so when it isn't sure, a station simply gets fewer songs (its best three if none clear the bar).
 
-- **A daily edition.** About eight stations, one for each kind of music you actually listen to, with up to eight
-  songs each and one line on why. When the editor isn't sure, a station gets fewer songs, not filler.
-- **A real player.** Full songs through YouTube's embedded player, crossfades, synced lyrics with translation and
-  romanization, a floating mini player (Chrome), media keys and keyboard control.
-- **Ask in your own words.** "A rainy Sunday afternoon", "Japanese city pop to cook to".
-- **It listens back.** A skip pushes similar-sounding songs down the queue and a like pulls them up. On a server
-  setup, your likes are written back to YouTube Music.
-- **Your ear.** A page that draws your whole library, when you liked each song and which station it belongs to,
-  with a written portrait of your taste.
+## What you get
+
+### A morning edition
+
+About eight stations, one per kind of music you actually play, up to eight songs each, with
+one line on why each song is there. Full songs play through YouTube's own player, with crossfades and synced lyrics
+that can show a translation and romanization.
+
+### Ask in your own words
+
+"A rainy Sunday afternoon", "Japanese city pop to cook to". About a minute later there is
+a station for it.
+
+### It listens back
+
+A skip pushes similar-sounding songs down the queue and a like pulls them up, while you listen.
+"Quieter", "more energy" and "more new artists" re-rank the station by sound.
+
+### Your ear
+
+A page that draws your whole library as a disc, one ring per year and one sector per kind of music,
+and can replay how your taste grew. Claude writes the portrait next to it.
 
 <p align="center">
-  <img alt="Your ear: every liked song as a mark on a disc, by year and station" src="docs/images/ear.webp" width="900">
+  <img alt="Your ear: every liked song is a mark on a disc, by year and by station, next to a written portrait of the listener's taste" src="docs/images/ear.webp" width="900">
 </p>
 
 <p align="center">
-  <img alt="The player on a phone" src="docs/images/mobile-player.webp" height="560">
+  <img alt="The player on a phone" src="docs/images/mobile-player.webp" height="520">
   &nbsp;&nbsp;
-  <img alt="Your ear on a phone, with the player docked below" src="docs/images/mobile-ear.webp" height="560">
+  <img alt="Your ear on a phone, with the player docked above the tabs" src="docs/images/mobile-ear.webp" height="520">
 </p>
 
-The interface is in Chinese. Song titles, artists and lyrics stay in their own language and script.
+<p align="center"><sub>The screenshots show a made-up listener built from public playlists.</sub></p>
+
+The app speaks English, Simplified Chinese and Traditional Chinese, and the editor writes in the one you choose.
+Song titles, artists and lyrics stay in their own language and script.
 
 ## How it picks
-
-YouTube Music's listening graph finds about 600 candidates per station. Songs you know are filtered out, a graph
-score narrows them to 64, and an audio model vetoes sounds you've turned down. Then Claude, acting as an editor who
-knows your library, keeps the few it is confident about.
 
 <p align="center">
   <picture>
@@ -61,31 +78,39 @@ knows your library, keeps the few it is confident about.
   </picture>
 </p>
 
-Sound is used to veto and to steer, never to rank: on held-out likes, audio similarity barely beats a coin flip.
-[How it works](docs/how-it-works.md) explains each step and what was learned the hard way.
+1. Claude sorts your likes into stations, each with its scene, languages, seed songs and core artists.
+2. YouTube Music's radio, related artists, and public playlists that already hold your songs supply the candidates.
+3. A graph score keeps the 64 that most of your seeds point to.
+4. An audio model, [MuQ-MuLan](https://huggingface.co/OpenMuQ/MuQ-MuLan-large), vetoes sounds you've turned down.
+5. Claude keeps the few it is confident about and writes why.
 
-## Run it on your Mac
+Sound vetoes and steers but never ranks. On held-out likes, audio similarity scored an AUC of 0.55–0.61, barely
+better than a coin flip. [How it works](docs/how-it-works.md) has every step and the mistakes behind these choices.
+
+|  | A streaming app's radio | Zhiyin |
+|---|---|---|
+| Starts from | what other listeners play next to your song | the songs you liked, recent ones weighted most |
+| Why this song | "because you listened to X" | a line from an editor that has read your library |
+| When it has nothing good | keeps the queue full | plays fewer songs |
+| Songs you already know | come back often | filtered out, along with their live, remix and cover versions |
+
+## Run it
 
 You need Python 3.13, [uv](https://docs.astral.sh/uv/), a YouTube Music account with some liked songs, and
-[Claude Code](https://docs.claude.com/en/docs/claude-code) signed in (a Claude subscription or an API key).
+[Claude Code](https://docs.claude.com/en/docs/claude-code). Zhiyin calls Claude through the `claude` command: set
+`ANTHROPIC_API_KEY` (a normal day costs $1–2), or sign the CLI in to your own Claude plan.
 
 ```sh
-git clone https://github.com/billpwchan/zhiyin && cd zhiyin
-uv sync
-uv run zhiyin auth       # save YouTube Music request headers (it walks you through it)
-uv run zhiyin sync       # read your liked songs
-uv run zhiyin profile    # stations and the portrait, a few minutes
-uv run zhiyin listen     # hear a preview of every like, about an hour, once
-uv run zhiyin refresh    # the first edition
-uv run zhiyin serve      # open http://localhost:8817
+git clone https://github.com/billpwchan/zhiyin && cd zhiyin && uv sync
+uv run zhiyin auth     # connect YouTube Music; it walks you through it
+uv run zhiyin setup    # read your likes, find your stations, pick the first edition (about an hour)
+uv run zhiyin serve    # open http://localhost:8817
 ```
 
-`uv run zhiyin service install` keeps it running from login, with a new edition every morning at 05:00.
+`uv run zhiyin service install` keeps it running from login and builds a new edition every morning at 05:00.
 
-To share it with a few friends, each signing in with their own Google account, see
-[running it on a server](docs/self-hosting.md). Your Claude subscription covers only your own listening, since
-Anthropic doesn't let an app route other people's requests through it; friends run on an API key you add
-([whose Claude](docs/self-hosting.md#whose-claude)).
+To run it on a server for yourself and a few friends, each signing in with their own Google account, see
+[running it on a server](docs/self-hosting.md). Every account is separate, with its own likes, stations and history.
 
 <details>
 <summary>Keyboard</summary>
@@ -106,18 +131,28 @@ Anthropic doesn't let an app route other people's requests through it; friends r
 
 ## Privacy
 
-Everything is stored on the machine you run it on. Song titles and artists go to Claude to build stations and pick
-songs; nothing goes to the author of this project. [Privacy](docs/privacy.md) lists every outside service and what
-it receives.
+Your likes, plays and stations stay on the machine you run it on. Song titles and artist names go to Claude to
+build stations and pick songs, and nothing reaches the author of this project. [Privacy](docs/privacy.md) lists
+every outside service and what it receives.
+
+## Why "Zhiyin"
+
+知音 (*zhīyīn*) comes from an old story. The musician Bo Ya played of high mountains and flowing water, and only his
+friend Zhong Ziqi heard what he meant. When Zhong Ziqi died, Bo Ya broke his strings and never played again. Since
+then the word has meant the friend who truly understands. The mark is that mountain-and-water line, curling into an
+ear.
+
+I built it because the recommendations I got judged mechanically: one song played, more of the same returned. I
+wanted something that had read all my likes and picked the way a friend would.
 
 ## Credits
 
 - [ytmusicapi](https://github.com/sigma67/ytmusicapi) for YouTube Music.
-- [MuQ-MuLan](https://huggingface.co/OpenMuQ/MuQ-MuLan-large) for sound. Its weights are licensed CC BY-NC 4.0,
-  so the audio features are for non-commercial use.
-- Previews from Deezer and Apple's iTunes Search; lyrics from NetEase Cloud Music, [LRCLIB](https://lrclib.net)
-  and YouTube Music.
-- The mark is drawn from Noto Sans CJK (SIL Open Font License).
+- [MuQ-MuLan](https://huggingface.co/OpenMuQ/MuQ-MuLan-large) for sound. Its weights are licensed CC BY-NC 4.0, so
+  the audio features are for non-commercial use.
+- Previews from Deezer and Apple's iTunes Search; lyrics from NetEase Cloud Music, [LRCLIB](https://lrclib.net) and
+  YouTube Music.
+- The wordmarks are set in Inter and Noto Sans CJK (SIL Open Font License).
 - The [design notes](docs/design.md) (in Chinese) record the interface rules and where they came from.
 
 Zhiyin is not affiliated with YouTube, Google or Anthropic.

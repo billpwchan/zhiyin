@@ -48,13 +48,14 @@ git clone https://github.com/billpwchan/zhiyin && cd zhiyin
 uv sync                      # includes the audio model's dependencies (torch, MuQ)
 claude                       # sign in once, then quit
 uv run zhiyin auth           # explains how to save YouTube Music request headers for ytmusicapi
-uv run zhiyin sync           # read your liked songs
 uv run zhiyin about "I grew up in Taipei and listen in Mandarin, Japanese and English"   # optional
-uv run zhiyin profile        # stations and the portrait (a few minutes)
-uv run zhiyin listen         # a 30-second preview of every like through the audio model (about an hour, once)
-uv run zhiyin refresh        # the first edition
+uv run zhiyin setup          # read your likes, find your stations, hear every like once, pick the first edition (about an hour)
 uv run zhiyin serve          # http://localhost:8817
 ```
+
+`setup` runs `sync`, `profile`, `listen` and `refresh` in turn; each can also be run on its own later. The stations
+and reasons are written in your system language (set `ZHIYIN_LANG=en`, `zh-Hans` or `zh-Hant` to choose) and can be
+switched in Settings.
 
 To keep it running from login, run `uv run zhiyin service install`. It builds a fresh edition every morning at
 05:00. In Chrome you can install the page as an app.
@@ -81,6 +82,7 @@ KEY=~/.ssh/your-key.pem
 HOST=ubuntu@your-server
 SITE=https://zhiyin.example.com
 GATEWAY_NETWORK=proxy
+YT_LANGUAGE=en        # optional, see ZHIYIN_YT_LANGUAGE below
 ```
 
 Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the repository. Data lives in
@@ -97,7 +99,7 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 | `ZHIYIN_LLM_CONCURRENCY` | parallel `claude -p` calls (the image sets 2) |
 | `TZ` | the time zone the morning edition (05:00) follows, e.g. `Asia/Taipei`; the image defaults to UTC |
 | `ZHIYIN_YT_REGION` | YouTube region code for what is available, e.g. `TW`; empty lets YouTube go by the server's IP |
-| `ZHIYIN_YT_LANGUAGE` | the language titles and artist names are read in (default `zh_TW`) |
+| `ZHIYIN_YT_LANGUAGE` | the YouTube Music language song titles and artist names are read in (default `en`). It is one setting for the whole server; `zh_TW` reads them the way YouTube Music shows them in Taiwan. Each listener picks the app's own language in Settings |
 
 ### 2. Let Claude in
 
@@ -140,10 +142,11 @@ A friend opens the link and connects Google. Their first edition takes about ten
 ready. Invites need an API key on the server (step 2). Once a listener has connected Google, links no longer sign
 them in: on another device they sign in with the same Google account, so a forwarded link opens nothing.
 
-Have a second YouTube Music account of your own? Under 朋友, "加你自己的另一个账号" (or `zhiyin invite --mine`) makes
-a link for it. It keeps its own likes and stations, runs on your Claude like your main account, and needs no API
-key. Each account shows a bookmark under 账号 (`/auth/google/start?mode=login&as=<email>`): with both Google
-accounts signed in to the browser, one click switches between them.
+Have a second YouTube Music account of your own? In Settings, under Friends, "Add another account of yours" (or
+`zhiyin invite --mine`) makes a link for it. It is a separate account with its own Google sign-in, likes, stations
+and feedback; the only thing it shares with yours is that it runs on your Claude, so it needs no API key. Each
+account shows a sign-in bookmark under Account (`/auth/google/start?mode=login&as=<email>`) that opens it directly
+in a browser where that Google account is signed in.
 
 ### 5. Start the audio worker
 
