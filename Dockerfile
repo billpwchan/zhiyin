@@ -11,7 +11,8 @@ RUN useradd --create-home --uid 1000 app
 USER app
 WORKDIR /app
 
-# Claude Code runs the editor steps (`claude -p`), signed in with CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`.
+# Claude Code runs the editor steps (`claude -p`) when the server has a token or an API key; otherwise the owner's
+# calls go to the Mac worker (docs/self-hosting.md, "Whose Claude").
 ARG CLAUDE_VERSION=2.1.310
 RUN curl -fsSL https://claude.ai/install.sh | bash -s ${CLAUDE_VERSION}
 ENV PATH=/home/app/.local/bin:/app/.venv/bin:$PATH

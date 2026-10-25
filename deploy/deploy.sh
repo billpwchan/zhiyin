@@ -2,7 +2,7 @@
 # Ship the current tree to the server: a new timestamped release, `current` repointed, the image rebuilt there and
 # the container recreated. Earlier releases stay in $R/releases for rollback (repoint `current`, run compose up).
 # Listener data lives in $R/data and is never touched by a release. On the first run this creates
-# $R/secrets/zhiyin.env with a fresh worker token; add CLAUDE_CODE_OAUTH_TOKEN to it (docs/self-hosting.md).
+# $R/secrets/zhiyin.env with a fresh worker token; Claude goes in with deploy/claude-token.sh (docs/self-hosting.md).
 # Settings come from the environment or deploy/local.conf (not tracked):
 #   KEY=<ssh key file>  HOST=user@host  SITE=https://zhiyin.example.com  GATEWAY_NETWORK=proxy
 set -euo pipefail

@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import accounts, ask, audio, candidates, ear, edition, google, library, lyrics, profile, settings, store, ytm
+from . import accounts, ask, audio, candidates, ear, edition, google, library, llm, lyrics, profile, settings, store, ytm
 from .text import display_title, is_version
 
 WEB = store.ROOT / "web"
@@ -134,7 +134,7 @@ def _edition_stale(ed: dict | None) -> bool:
 
 
 def _auto_refresh(ed: dict | None):
-    if not store.read_json(store.PROFILE) or not _edition_stale(ed):
+    if not store.read_json(store.PROFILE) or not _edition_stale(ed) or llm.unavailable():
         return
     j = _jobs.get((store.uid(), "refresh"))
     if j and (j["running"] or time.time() - j.get("ended", 0) < 1800):
@@ -179,6 +179,10 @@ def _scheduler():
                     j = _jobs.get((u["id"], "setup"))
                     if u["status"] in ("importing", "building") and not (j and j["running"]):
                         _start("setup", _setup)   # the server restarted in the middle of a first run
+                    elif (u["status"] == "error" and u["prefs"].get("setup_fails", 0) < 3
+                          and google.connected(u["id"]) and not llm.unavailable(u["id"])
+                          and not (j and (j["running"] or time.time() - j.get("ended", 0) < 1800))):
+                        _start("setup", _setup)   # a first run that failed, e.g. while Claude was out
                     if u["status"] == "ready":
                         _auto_refresh(store.read_json(store.EDITION))
                         _auto_sync()
@@ -202,13 +206,18 @@ def _setup(log):
             audio.ensure([t for t in library.load() if not t["long"]], log=log)
         accounts.set_status(uid, "building")
         log("了解你的口味", step=2)
-        profile.build(log=log)
+        if store.read_json(store.PROFILE):
+            profile.absorb_new(log=log)   # a retry: the stations are there, only the edition failed
+        else:
+            profile.build(log=log)
         log("挑第一批电台", step=3)
         edition.build(log=log)
         accounts.set_status(uid, "ready")
+        accounts.set_prefs(uid, setup_fails=0)
         return r
     except Exception:
         accounts.set_status(uid, "error")
+        accounts.set_prefs(uid, setup_fails=accounts.prefs(uid).get("setup_fails", 0) + 1)
         raise
 
 
@@ -228,6 +237,22 @@ def _queue_rate(vid: str, rating: str) -> str:
     con.commit()
     _wake.set()
     return "queued"
+
+
+def _backfill_likes() -> int:
+    """Likes made in Zhiyin before YouTube Music was connected go across once it is."""
+    uid = store.uid()
+    if accounts.prefs(uid).get("sync_likes") is False:
+        return 0
+    con = store.db()
+    sent = {r["vid"] for r in con.execute("select vid from outbox where uid=? and op='rate'", (uid,))}
+    todo = [r["vid"] for r in con.execute("select vid from feedback where uid=? and action='like' order by ts", (uid,))
+            if r["vid"] not in sent]
+    con.executemany("insert into outbox(uid, op, vid, arg, created) values (?, 'rate', ?, 'like', ?)",
+                    [(uid, v, time.time()) for v in todo])
+    con.commit()
+    _wake.set()
+    return len(todo)
 
 
 def _outbox_loop():
@@ -276,7 +301,8 @@ def _me() -> dict:
                        "error": u["prefs"].get("google_error")},
             "sync_likes": u["prefs"].get("sync_likes", True), "sync": _sync_view(u["id"]),
             "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"),
-            "worker": audio.worker_online() if audio.REMOTE else None}
+            "worker": audio.worker_online() if audio.REMOTE else None,
+            "claude": llm.view(u["id"]) if AUTH else None}
 
 
 # ---------- sign-in ----------
@@ -370,6 +396,7 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     con.commit()
     _wake.set()
     with store.as_user(uid):
+        _backfill_likes()
         u = accounts.get(uid)
         try:
             if u["status"] in ("new", "thin", "error"):
@@ -443,6 +470,9 @@ def jobs():
 
 @app.post("/api/refresh")
 def refresh():
+    why = llm.unavailable()
+    if why:
+        raise HTTPException(503, why)
     _start("refresh", lambda log: edition.build(log=log) and None)
     return jobs()
 
@@ -456,6 +486,9 @@ def ask_(body: Ask):
     q = body.q.strip()
     if not q:
         raise HTTPException(400, "empty")
+    why = llm.unavailable()
+    if why:
+        raise HTTPException(503, why)
     _start("ask", lambda log: ask.run(q, log=log) and None)
     return jobs()
 
@@ -641,6 +674,8 @@ def _owner_only():
 @app.post("/api/invite")
 def invite(body: InviteReq):
     _owner_only()
+    if not llm.API_KEY:
+        raise HTTPException(409, "先在服务器上配置 Claude API key：你的 Claude 订阅只能你自己用")
     name = body.name.strip()[:20]
     if not name:
         raise HTTPException(400, "写个名字")
@@ -658,7 +693,7 @@ def users():
         with store.as_user(u["id"]):
             lib = store.read_json(store.LIBRARY) or {}
         out.append({"name": u["name"], "status": u["status"], "last_seen": u["last_seen"], "created": u["created"],
-                    "songs": sum(1 for t in lib.get("tracks", []) if not t["long"])})
+                    "songs": sum(1 for t in lib.get("tracks", []) if not t["long"]), "usd7": llm.spent(u["id"])})
     return {"users": out}
 
 
@@ -672,6 +707,29 @@ def _worker(request: Request):
 def worker_wanted(request: Request, limit: int = 150):
     _worker(request)
     return audio.wanted(limit)
+
+
+@app.get("/api/worker/llm")
+def worker_llm(request: Request, wait: float = 25, have: str | None = None):
+    """The owner's Claude calls, for a server without a Claude login of its own (long poll)."""
+    _worker(request)
+    return llm.take(min(max(wait, 0), 25), None if have is None else set(filter(None, have.split(","))))
+
+
+class WorkerAnswer(BaseModel):
+    data: dict | None = None
+    usd: float = 0
+    error: str | None = None
+
+
+@app.post("/api/worker/llm/{jid}")
+def worker_llm_answer(request: Request, jid: str, body: WorkerAnswer):
+    _worker(request)
+    if body.error is not None or body.data is None:
+        llm.answer(jid, {"error": body.error or "empty answer from the worker", "usd": body.usd})
+    else:
+        llm.answer(jid, {"data": body.data, "usd": body.usd})
+    return {"ok": True}
 
 
 class WorkerResult(BaseModel):

@@ -1,9 +1,10 @@
 """Run from login with launchd: the app itself (the page is always there and the daily edition is built at 05:00),
-or, once the app lives on the server, the audio worker that listens for it."""
+or, once the app lives on the server, the worker that listens (and runs the owner's Claude calls) for it."""
 import os
 import plistlib
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 from . import store
@@ -25,7 +26,8 @@ def install(worker: bool = False):
         "Label": LABEL,
         "ProgramArguments": [uv, "run", "--project", str(store.ROOT), "zhiyin", *(["worker"] if worker else ["serve", "--no-open"])],
         "WorkingDirectory": str(store.ROOT),
-        "EnvironmentVariables": {"PATH": ":".join(dict.fromkeys(path)), "HOME": str(Path.home())},
+        # unbuffered, or the log stays empty until a buffer fills
+        "EnvironmentVariables": {"PATH": ":".join(dict.fromkeys(path)), "HOME": str(Path.home()), "PYTHONUNBUFFERED": "1"},
         "RunAtLoad": True,
         "KeepAlive": {"SuccessfulExit": False},
         "ThrottleInterval": 30,
@@ -38,10 +40,14 @@ def install(worker: bool = False):
     if PLIST.exists():
         subprocess.run(["launchctl", "bootout", f"{DOMAIN}/{LABEL}"], capture_output=True)
     PLIST.write_bytes(plistlib.dumps(spec))
-    r = subprocess.run(["launchctl", "bootstrap", DOMAIN, str(PLIST)], capture_output=True, text=True)
+    for _ in range(10):   # bootout returns before launchd has let go of the label
+        r = subprocess.run(["launchctl", "bootstrap", DOMAIN, str(PLIST)], capture_output=True, text=True)
+        if r.returncode == 0:
+            break
+        time.sleep(1)
     if r.returncode != 0:
         raise SystemExit(f"launchctl bootstrap failed: {r.stderr.strip()}")
-    what = "the audio worker" if worker else "http://localhost:8817"
+    what = "the worker" if worker else "http://localhost:8817"
     print(f"installed: {what} now starts at login ({PLIST}, log {LOG})")
 
 

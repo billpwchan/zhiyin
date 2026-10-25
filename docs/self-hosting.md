@@ -8,10 +8,37 @@ There are two setups. Start with the first; move to the second when a friend wan
 | Likes come from | `zhiyin sync` with YouTube Music headers | each listener's Google sign-in |
 | Likes you make in Zhiyin | stay in Zhiyin | are written back to YouTube Music |
 | Audio model | runs locally | runs on a Mac worker; the server only asks |
-| Needs | macOS or Linux, Python 3.13, [uv](https://docs.astral.sh/uv/), Claude | Docker, a domain, a Google Cloud project, Claude, a Mac for the audio worker |
+| Claude | your own `claude` login | your subscription for you; an API key for anyone you invite |
+| Needs | macOS or Linux, Python 3.13, [uv](https://docs.astral.sh/uv/), Claude | Docker, a domain, a Google Cloud project, a Mac for the worker |
 
-Zhiyin calls Claude through the [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude -p`), so it
-uses your Claude subscription, or an API key if `ANTHROPIC_API_KEY` is set. A daily edition is about ten calls.
+## Whose Claude
+
+Zhiyin calls Claude through the [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude -p`), and
+every call is billed to someone. Anthropic's [legal and compliance
+page](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use) sets who that can be.
+A Claude subscription (Pro, Max) is for ordinary use by its owner, and an app may not route requests through it on
+behalf of other people. An API key from the [Claude Console](https://platform.claude.com/) is different: the same
+page allows configuring your own key for use by your own authorized users, as long as the usage is billed to you
+and not resold. That fits a few people you know. Opening Zhiyin to the public is another matter: the page's section
+on offering Claude Code in products expects each end user to bring their own credentials.
+
+| Who is listening | Whose Claude runs their calls |
+|---|---|
+| you, on your Mac | your `claude` login there, a subscription or an API key |
+| you, on your server | your subscription: a token on the server if you added one, otherwise the Mac worker |
+| anyone you invite | your API key on the server, billed to you per use |
+
+The server holds to this. Your subscription only ever runs your own calls, and inviting someone stays closed until
+the server has an API key. Without a token on the server, your calls go to the Mac worker, which runs them on the
+`claude` login there, even when the server has an API key (that key is for the people you invite). While the Mac
+sleeps, the morning edition waits for it. With no worker either, your calls use the API key.
+
+On an API key, for a library of about 800 likes: a daily edition costs about $0.50 (measured: eight Opus calls),
+a first setup about $2 (tagging every like, finding the stations and the first edition; estimated from its prompt
+sizes), and an ask about $0.10 (estimated: one Opus pick plus a small plan).
+Each invited listener can spend up to $3 a day (`ZHIYIN_LISTENER_DAILY_USD`); past that, asks and rebuilds wait
+for the next day. `zhiyin users` and the 朋友 panel show what each listener used over the last seven days, priced
+as on an API key.
 
 ## On your Mac
 
@@ -35,10 +62,10 @@ The headers that `zhiyin auth` saves expire every few weeks. When `sync` starts 
 
 ## On a server
 
-The server runs one small container: about 150 MB, plus up to two `claude -p` processes of about 255 MB each.
-A 2 GB machine is enough. It has no room for the audio model, so a Mac (or any machine with the `audio`
-dependency group) runs `zhiyin worker`. The worker polls the server for songs it wants heard and sends the vectors
-back. Editions are built without waiting for it; sound fills in when the worker catches up.
+The server runs one small container: about 150 MB, plus up to two `claude -p` processes of about 255 MB each when
+it runs Claude itself. A 2 GB machine is enough. It has no room for the audio model, so a Mac (or any machine with
+the `audio` dependency group) runs `zhiyin worker`. The worker polls the server for songs it wants heard and sends
+the vectors back. Editions are built without waiting for sound; it fills in when the worker catches up.
 
 ### 1. Put it behind your reverse proxy
 
@@ -61,8 +88,10 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 | Variable | What it is |
 |---|---|
 | `ZHIYIN_PUBLIC_URL` | the site's address; set by the deploy scripts from `SITE` |
-| `CLAUDE_CODE_OAUTH_TOKEN` | from `claude setup-token`; `deploy/claude-token.sh` puts it in place without echoing it |
-| `ZHIYIN_WORKER_TOKEN` | shared with the audio worker; `deploy/worker-setup.sh` creates both ends |
+| `CLAUDE_CODE_OAUTH_TOKEN` | optional: your subscription on the server, for your own calls (`deploy/claude-token.sh`) |
+| `ANTHROPIC_API_KEY` | optional: an API key for invited listeners (`deploy/claude-token.sh --api-key`) |
+| `ZHIYIN_LISTENER_DAILY_USD` | what each invited listener may spend on your API key per day (default 3) |
+| `ZHIYIN_WORKER_TOKEN` | shared with the worker; `deploy/worker-setup.sh` creates both ends |
 | `ZHIYIN_LLM_CONCURRENCY` | parallel `claude -p` calls (the image sets 2) |
 | `TZ` | the time zone the morning edition (05:00) follows, e.g. `Asia/Taipei`; the image defaults to UTC |
 | `ZHIYIN_YT_REGION` | YouTube region code for what is available, e.g. `TW`; empty lets YouTube go by the server's IP |
@@ -70,8 +99,14 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 
 ### 2. Let Claude in
 
-Run `deploy/claude-token.sh` in your own terminal. It runs `claude setup-token`, asks you to paste the token
-(nothing is shown), stores it on the server and checks that the editor answers.
+With the worker running (step 5), your own listening needs nothing more: the server hands your calls to the Mac.
+Two optional additions, each run in your own terminal; whatever you paste is not shown and goes straight to the
+server, which then checks that Claude answers.
+
+- `deploy/claude-token.sh` puts your subscription on the server (`claude setup-token`), so your editions no longer
+  wait for the Mac to be awake.
+- `deploy/claude-token.sh --api-key` adds an API key, which is what invited listeners run on. Without one you
+  can't invite anyone. `--remove-api-key` takes it away again.
 
 ### 3. Google sign-in
 
@@ -99,13 +134,18 @@ docker exec zhiyin zhiyin users
 ```
 
 A friend opens the link and connects Google. Their first edition takes about ten minutes; the page says when it's
-ready.
+ready. Invites need an API key on the server (step 2).
 
 ### 5. Start the audio worker
 
 On the Mac, in a clone of this repository, run `deploy/worker-setup.sh`. It makes a worker token, stores it on both
-sides and installs `zhiyin worker` as a login service. One worker serves every listener, since a song's vector
-doesn't depend on who likes it.
+sides and installs `zhiyin worker` as a login service. One worker hears songs for every listener, since a song's
+vector doesn't depend on who likes it. If the server has no Claude token of its own, the worker also runs your
+Claude calls, and only yours. Run one worker, not two. Those calls reach it through the running server, so start a rebuild from the page
+(or let the morning schedule do it); a separate `docker exec zhiyin zhiyin refresh` can't reach the worker.
+
+Once the server is your home, the Mac is only its worker. Don't also keep `zhiyin serve` running there: it is a
+separate copy with its own history, and builds its own, different edition every morning.
 
 ## Data
 

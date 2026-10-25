@@ -124,6 +124,8 @@ def _migrate(con: sqlite3.Connection) -> None:
     create table if not exists kv(k text primary key, v text);
     create table if not exists outbox(id integer primary key, uid text, op text, vid text, arg text, tries integer default 0,
         created real, done real, error text);
+    create table if not exists usage(uid text, day text, source text, calls integer, usd real,
+        primary key(uid, day, source));
     create index if not exists feedback_vid on feedback(vid);
     create index if not exists shown_vid on shown(vid);
     """)

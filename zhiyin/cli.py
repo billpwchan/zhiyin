@@ -21,7 +21,7 @@ def main():
     p = sub.add_parser("serve", help="run the app")
     p.add_argument("--port", type=int, default=8817)
     p.add_argument("--no-open", action="store_true")
-    p = sub.add_parser("service", help="keep the app (or, with --worker, the audio worker) running from login (macOS launchd)")
+    p = sub.add_parser("service", help="keep the app (or, with --worker, the worker) running from login (macOS launchd)")
     p.add_argument("action", choices=["install", "uninstall", "status"])
     p.add_argument("--worker", action="store_true")
     p = sub.add_parser("invite", help="make an invite link for a friend (or, with --owner, a sign-in link for yourself)")
@@ -30,7 +30,7 @@ def main():
     sub.add_parser("users", help="who has joined")
     p = sub.add_parser("about", help="tell the editor who you are (languages, where you grew up); shown in its prompts")
     p.add_argument("text", nargs="?")
-    sub.add_parser("worker", help="on the Mac: listen to the songs the server asks for and send it the vectors")
+    sub.add_parser("worker", help="on the Mac: hear the songs the server asks for, and run the owner's Claude calls if the server has no login")
     p = sub.add_parser("eval", help="offline check: hide your newest likes and see if the engine finds them")
     p.add_argument("--holdout", type=int, default=60)
     p.add_argument("--audio", action="store_true", help="check whether sound alone predicts new likes")
@@ -65,14 +65,18 @@ def main():
         from . import service
         getattr(service, a.action)(**({"worker": a.worker} if a.action == "install" else {}))
     elif a.cmd == "invite":
-        from . import accounts, google
+        from . import accounts, google, llm
+        if not a.owner and llm.HOSTED and not llm.API_KEY:
+            raise SystemExit("set ANTHROPIC_API_KEY on the server first: a Claude subscription is for your own use, "
+                             "so other listeners run on an API key (docs/self-hosting.md)")
         tok = accounts.invite(a.name or ("me" if a.owner else "friend"), uid=store.OWNER if a.owner else None)
         print(f"{google.public_url()}/i/{tok}  (valid {accounts.INVITE_DAYS} days)")
     elif a.cmd == "users":
-        from . import accounts
+        from . import accounts, llm
         for u in accounts.users():
             seen = __import__("time").strftime("%m-%d %H:%M", __import__("time").localtime(u["last_seen"])) if u["last_seen"] else "-"
-            print(f"{u['id']:10} {u['name'] or '-':12} {u['status']:9} {u.get('email') or '-':28} last seen {seen}")
+            print(f"{u['id']:10} {u['name'] or '-':12} {u['status']:9} {u.get('email') or '-':28} last seen {seen}  "
+                  f"claude {llm.source(u['id']) or 'none'}, ${llm.spent(u['id']):.2f} in 7 days")
     elif a.cmd == "about":
         from . import accounts
         if a.text is not None:

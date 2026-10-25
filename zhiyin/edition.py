@@ -165,6 +165,7 @@ def build_focus(prof, known, rng, log, n=4):
 
 
 def build(log=print, model: str = "opus") -> dict:
+    llm.require()   # before an hour of gathering that the editor then couldn't use
     t0 = time.time()
     prof = store.read_json(store.PROFILE)
     if not prof:
@@ -192,11 +193,9 @@ def build(log=print, model: str = "opus") -> dict:
 
     def choose(b):
         lane, seeds, g, sl = b
-        try:
-            picks = rank.pick(lane, sl, seeds, negs, model=model)
-        except llm.LLMError as e:
-            log(f"{lane['name']}: 编辑失败，按分数兜底 ({e})")
-            picks = [{**c, "fit": 0.5, "reason": ""} for c in sl]
+        # No editor, no edition: graph-ranked songs nobody vetted are what cost the listener's trust before, so a
+        # failure keeps the previous edition up and the scheduler tries again.
+        picks = rank.pick(lane, sl, seeds, negs, model=model)
         # fewer, surer picks: what the editor isn't confident about doesn't go out (but always a few to play)
         sure = [p for p in picks if p["fit"] >= rank.MIN_FIT] or picks[:3]
         chosen = rank.enforce_quota(sure, n, lane["discovery"])

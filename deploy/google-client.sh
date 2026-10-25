@@ -19,4 +19,4 @@ if sys.argv[2] not in w.get("redirect_uris", []):
 print("client ok:", w["client_id"].split("-")[0] + "-…")
 PY
 ssh -i "$KEY" "$HOST" "sudo install -m 600 -o 1000 -g 1000 /dev/stdin /opt/zhiyin/data/google_client.json" < "$F"
-curl -fsS -o /dev/null -w "Google sign-in: %{http_code} (302 means it is on)\n" "$SITE/auth/google/start"
+curl -sS -o /dev/null -w "Google sign-in: %{http_code} (303 means it is on)\n" "$SITE/auth/google/start?mode=login"

@@ -1059,6 +1059,11 @@ const STATUS = { new: '还没连接', importing: '读取喜欢中', building: '�
 const ago = (ts) => (ts ? when(ts) : '');
 let friends = null;
 let shownLink = null;
+const CLAUDE_SRC = {
+  worker: (c) => `用你的 Claude 订阅，在你的 Mac 上跑。${c.online ? '' : 'Mac 现在不在线：新一期会等它醒来再做，点歌也要等它在线。'}`,
+  subscription: () => '用你的 Claude 订阅，在服务器上跑。',
+  key: () => '用服务器上的 Claude API key，按用量计费。',
+};
 
 function accountHTML() {
   const me = S.me;
@@ -1077,6 +1082,10 @@ function accountHTML() {
     const state = sy.pending ? `${sy.pending} 首等待同步${sy.error === 'quota' ? `：今天的额度用完了，${quotaReset()}后继续` : sy.error === 'reconnect' ? '：需要重新连接' : ''}` : sy.done ? `已同步 ${sy.done} 首` : '在这里点 ♥，YouTube Music 里也会是喜欢';
     rows.push(`<li><span>把这里的喜欢同步到 YouTube Music<small>${esc(state)}。「不要」只记在知音，不会变成 YouTube 上的踩。</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="同步喜欢"></button></li>`);
   }
+  if (me.owner && me.claude) {
+    const c = me.claude;
+    rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) : '还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。'}</small></span><span>${c.source === 'worker' ? (c.online ? '在线' : '离线') : ''}</span></li>`);
+  }
   if (me.auth) {
     rows.push(`<li><span>在另一台设备上登录<small>${g.connected ? '用同一个 Google 账号登录就行；也可以' : ''}生成一个 14 天内有效的登录链接，发给自己。</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">生成链接</button></li>`);
     rows.push(`<li><span>退出登录<small>只退出这台设备。</small></span><button class="tb" data-k="logout">退出</button></li>`);
@@ -1089,11 +1098,17 @@ function linkHTML(url) {
   return `<span class="link"><input readonly value="${esc(url)}" aria-label="链接"><button class="tb" data-k="copy">复制</button></span>`;
 }
 
+const FRIEND_KEY_NOTE = 'Claude 订阅按 Anthropic 的规定只给订阅者本人用，所以朋友的推荐要走 API key，按用量计费。在你的终端运行 <code>deploy/claude-token.sh --api-key</code>。';
+
 function friendsHTML() {
   if (!friends) { api('/api/users').then((r) => { friends = r.users; if (view === 'ear') renderEar(); }).catch(() => {}); return ''; }
-  const list = friends.map((u) => `<li><span>${esc(u.name)}<small>${STATUS[u.status] || u.status}${u.songs ? ` · ${u.songs} 首喜欢` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : '还没来过'}</span></li>`).join('');
-  return `<section class="sec"><h2>朋友<small>每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到。</small></h2>
-    <ul class="plain">${list}<li><form class="invite" id="invite"><input name="name" placeholder="朋友的名字" maxlength="20" autocomplete="off"><button class="tb">生成邀请链接</button></form>${shownLink?.kind === 'invite' ? linkHTML(shownLink.url) : ''}</li></ul></section>`;
+  const others = S.me.claude?.others;
+  const list = friends.map((u) => `<li><span>${esc(u.name)}<small>${STATUS[u.status] || u.status}${u.songs ? ` · ${u.songs} 首喜欢` : ''}${u.usd7 ? ` · 近 7 天 $${u.usd7.toFixed(2)}` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : '还没来过'}</span></li>`).join('');
+  const add = others
+    ? `<li><form class="invite" id="invite"><input name="name" placeholder="朋友的名字" maxlength="20" autocomplete="off"><button class="tb">生成邀请链接</button></form>${shownLink?.kind === 'invite' ? linkHTML(shownLink.url) : ''}</li>`
+    : `<li><span>邀请朋友前，先配置 Claude API key<small>${FRIEND_KEY_NOTE}</small></span><span></span></li>`;
+  return `<section class="sec"><h2>朋友<small>每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到${others ? '；他们的推荐用你的 API key 计费' : ''}。</small></h2>
+    <ul class="plain">${list}${add}</ul></section>`;
 }
 
 /* ---------- ear view ---------- */

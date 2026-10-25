@@ -235,6 +235,7 @@ def assign(profile: dict, batch: int = 150, workers: int = 4, only: set | None =
 
 
 def build(model: str = "opus", log=print) -> dict:
+    llm.require()
     log("给每首喜欢的歌标上听感和场景")
     tag()
     log("找出你的几种听歌状态")

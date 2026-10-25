@@ -83,7 +83,9 @@ uv run zhiyin serve      # open http://localhost:8817
 `uv run zhiyin service install` keeps it running from login, with a new edition every morning at 05:00.
 
 To share it with a few friends, each signing in with their own Google account, see
-[running it on a server](docs/self-hosting.md).
+[running it on a server](docs/self-hosting.md). Your Claude subscription covers only your own listening, since
+Anthropic doesn't let an app route other people's requests through it; friends run on an API key you add
+([whose Claude](docs/self-hosting.md#whose-claude)).
 
 <details>
 <summary>Keyboard</summary>

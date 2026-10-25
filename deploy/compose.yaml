@@ -1,5 +1,6 @@
 # Installed at /opt/zhiyin/compose.yaml. ./current is the release being run, ./data holds every listener's data,
-# ./secrets/zhiyin.env holds ZHIYIN_WORKER_TOKEN and CLAUDE_CODE_OAUTH_TOKEN (see docs/self-hosting.md).
+# ./secrets/zhiyin.env holds ZHIYIN_WORKER_TOKEN and, optionally, CLAUDE_CODE_OAUTH_TOKEN and ANTHROPIC_API_KEY
+# (see docs/self-hosting.md, "Whose Claude").
 services:
   zhiyin:
     build: ./current
@@ -11,7 +12,7 @@ services:
       ZHIYIN_PUBLIC_URL: ${ZHIYIN_PUBLIC_URL:?set ZHIYIN_PUBLIC_URL}
     volumes:
       - ./data:/data
-    # one uvicorn process (~150 MB) plus up to two `claude -p` processes (~255 MB each)
+    # one uvicorn process (~150 MB) plus up to two `claude -p` processes (~255 MB each) when Claude runs here
     mem_limit: 900m
     cpus: 1.5
     pids_limit: 256

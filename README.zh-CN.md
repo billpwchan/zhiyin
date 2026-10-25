@@ -72,7 +72,7 @@ uv run zhiyin serve      # 打开 http://localhost:8817
 
 `uv run zhiyin service install` 让它开机常驻，每天早上 05:00 出新一期。
 
-想给几个朋友用，每人用自己的 Google 账号登录，见 [部署到服务器](docs/self-hosting.md)（英文）。
+想给几个朋友用，每人用自己的 Google 账号登录，见 [部署到服务器](docs/self-hosting.md)（英文）。Anthropic 不允许应用把别人的请求转到你的 Claude 订阅上，所以订阅只覆盖你自己，朋友的推荐用你另外配置的 API key（见 [Whose Claude](docs/self-hosting.md#whose-claude)）。
 
 <details>
 <summary>快捷键</summary>

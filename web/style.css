@@ -436,7 +436,8 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 img.lb { transform: scale(1.34); }
 .yt-cover.lb { transform: scale(1.34); }
 .tr .mid { min-width: 0; }
-.empty code, .note code { font: 12px ui-monospace, "SF Mono", monospace; color: var(--fg-2); }
+.empty code, .note code, .plain small code { font: 12px ui-monospace, "SF Mono", monospace; color: var(--fg-2); }
+.plain small code { white-space: nowrap; }
 @container (max-width: 760px) { .ctl .tb .lbl { display: none; } }
 @media (max-width: 1099px) { .top { background: var(--bg); } }
 

@@ -122,7 +122,7 @@ def delete(uid: str) -> None:
     if uid == store.OWNER:
         raise ValueError("the owner's data stays")
     con = store.db()
-    for t in ("feedback", "shown", "plays", "outbox"):
+    for t in ("feedback", "shown", "plays", "outbox", "usage"):
         con.execute(f"delete from {t} where uid=?", (uid,))
     for t, col in (("sessions", "uid"), ("invites", "uid"), ("users", "id")):
         con.execute(f"delete from {t} where {col}=?", (uid,))

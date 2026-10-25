@@ -4,6 +4,7 @@ Sources, best first: NetEase (word timing, a Chinese translation line for Japane
 LRCLIB (line timing), YouTube Music's own timed lyrics (line timing, same catalogue we play from).
 Lyrics are only cached locally and shown in the player; nothing is redistributed."""
 import concurrent.futures as cf
+import contextvars
 import difflib
 import json
 import re
@@ -363,6 +364,8 @@ def translate_later(vid: str) -> bool:
     d = json.loads(path.read_text())
     if not d.get("found") or d.get("translated") or d.get("lang") == "zh" or d.get("tr_failed"):
         return False
+    if d.get("tr_retry", 0) > time.time() or llm.unavailable():
+        return False
     _tr_running.add(vid)
 
     def run():
@@ -375,10 +378,14 @@ def translate_later(vid: str) -> bool:
                     d["lines"][x["i"]]["tr"] = x["tr"].strip()
             d["translated"] = any(l.get("tr") for l in d["lines"])
             d["tr_by"] = "AI"
+            d.pop("tr_retry", None)
+        except llm.LLMError:
+            d["tr_retry"] = time.time() + 3600   # Claude failed, not the lyric: try again later, not every play
         except Exception:
             d["tr_failed"] = True
         finally:
             path.write_text(json.dumps(d, ensure_ascii=False))
             _tr_running.discard(vid)
-    threading.Thread(target=run, daemon=True).start()
+    # the listener who pressed play is the one whose Claude translates
+    threading.Thread(target=contextvars.copy_context().run, args=(run,), daemon=True).start()
     return True
