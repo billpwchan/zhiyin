@@ -37,9 +37,12 @@ const fb = new Map();
 const prefs = { lyr: store.get('lyr') ?? true, lyrNarrow: true, imm: false };
 
 async function api(path, body) {
-  const r = await fetch(path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  // Say which account this page shows, so a tab left open after switching accounts can't write into the other one.
+  const headers = S?.me?.uid ? { 'X-Zhiyin-Uid': S.me.uid } : {};
+  const r = await fetch(path, body === undefined ? { headers } : { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await r.json().catch(() => ({}));
   if (r.status === 401) { location.href = '/login'; throw new Error(data.detail || '需要重新登录'); }
+  if (r.status === 409 && data.detail === 'account-changed') { location.reload(); throw new Error('这个浏览器已经换了账号'); }
   if (!r.ok) throw new Error(data.detail || r.statusText);
   return data;
 }
@@ -159,7 +162,7 @@ function selectStation(key, play = true) {
   if (!st || st.pending || !st.tracks.length) return;
   const same = Q?.key === key;
   Q = queueOf(st);
-  store.set('last', key);
+  store.set(`${S.me?.uid}.last`, key);
   if (view !== 'listen') { location.hash = ''; return loadTrack(play); }
   renderStations();
   renderQueue();
@@ -178,7 +181,7 @@ const cur = () => Q?.tracks[Q.i];
 function trackChanged() {
   const p = cur();
   if (!p) return;
-  store.set('pos', { ed: S.edition?.id, key: Q.key, vid: p.vid });
+  store.set(`${S.me?.uid}.pos`, { ed: S.edition?.id, key: Q.key, vid: p.vid });
   paintNow();
   ambient(p);
   Lyr.load(p);
@@ -878,8 +881,8 @@ async function like(p) {
   if (!on) adapt('pos', p);
   try {
     const r = await api('/api/feedback', { ...track(p), action: on ? 'undo' : 'like' });
-    if (!on && r.sync === 'queued' && !store.get('syncHint')) {
-      store.set('syncHint', true);
+    if (!on && r.sync === 'queued' && !store.get(`${S.me?.uid}.syncHint`)) {
+      store.set(`${S.me?.uid}.syncHint`, true);
       toast('喜欢会同步到你的 YouTube Music', [['在哪里关', () => { location.hash = '#ear'; }]]);
     }
   } catch {
@@ -1836,11 +1839,11 @@ async function boot() {
     const msg = { cancelled: '没有连接，随时可以再试', noscope: 'Google 那一步没有勾选 YouTube 的权限，知音读不到你的喜欢。再连接一次，记得勾上', taken: '这个 Google 账号已经连在另一位听众名下', stale: '连接超时了，再试一次' }[g];
     if (msg) setTimeout(() => toast(msg, [], 7000), 400);
   }
-  const last = store.get('last');
+  const last = store.get(`${S.me?.uid}.last`);
   const first = ST.find((s) => s.key === last && !s.pending && s.tracks.length) || defaultStation();
   if (first) {
     Q = queueOf(first);
-    const pos = store.get('pos');
+    const pos = store.get(`${S.me?.uid}.pos`);
     if (pos?.ed === S.edition?.id && pos.key === Q.key) Q.i = Math.max(0, Q.tracks.findIndex((p) => p.vid === pos.vid));
   }
   Player.init();

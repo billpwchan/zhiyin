@@ -59,6 +59,11 @@ async def _who(request: Request, call_next):
         if request.url.path.startswith("/api/"):
             return JSONResponse({"detail": "需要重新登录"}, 401)
         return RedirectResponse("/login", 303)
+    # A page belongs to the account it was opened as. After signing in as someone else in another tab, the old tab
+    # must not keep writing likes, plays or "不要" into the new account: its requests are refused and it reloads.
+    page = request.headers.get("x-zhiyin-uid")
+    if page and page != uid and request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "account-changed"}, 409)
     token = store._uid.set(uid)
     try:
         return await call_next(request)

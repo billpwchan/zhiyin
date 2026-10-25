@@ -88,3 +88,19 @@ def test_starting_a_sign_in_leaves_the_database_writable(monkeypatch):
     raw = sqlite3.connect(store.DB, timeout=1)
     raw.execute("insert or replace into kv values ('probe', '1')")
     raw.commit()
+
+
+def test_a_tab_left_open_as_another_account_cannot_write(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts
+    monkeypatch.setattr(server, "AUTH", True)
+    a = accounts.redeem(accounts.invite("A"))
+    b = accounts.redeem(accounts.invite("B", mine=True))
+    c = TestClient(server.app)
+    c.cookies.set(accounts.COOKIE, accounts.new_session(b))
+    stale = c.post("/api/feedback", json={"vid": "abc", "action": "like"}, headers={"X-Zhiyin-Uid": a})
+    assert stale.status_code == 409 and stale.json()["detail"] == "account-changed"
+    assert store.db().execute("select count(*) from feedback where vid='abc'").fetchone()[0] == 0
+    ok = c.post("/api/feedback", json={"vid": "abc", "action": "like"}, headers={"X-Zhiyin-Uid": b})
+    assert ok.status_code == 200
+    assert store.db().execute("select uid from feedback where vid='abc'").fetchone()[0] == b
