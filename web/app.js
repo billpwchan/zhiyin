@@ -1500,13 +1500,15 @@ function mountDisc() {
     // an era runs until the next one starts, so a short era never lies under its neighbour's label
     const er = EAR.eras[i], next = EAR.eras[order[k + 1]];
     const l = pos(er.t0), r = next ? pos(next.t0) : Math.min(1, Math.max(pos(er.t1), l + 0.3 / span));
-    return `<button class="era2" data-era="${i}" aria-label="${esc(er.years)} ${esc(er.label)}" style="left:${(l * 100).toFixed(2)}%;width:${((r - l) * 100).toFixed(2)}%"><span class="y num"><span class="yf">${esc(er.years)}</span><span class="ys">${esc(er.years.split(/[–-]/)[0])}</span></span><span class="l">${esc(er.label)}</span></button>`;
+    return `<button class="era2" data-era="${i}" aria-label="${esc(er.years)} ${esc(er.label)}" style="left:${(l * 100).toFixed(2)}%;width:${((r - l) * 100).toFixed(2)}%"><span class="y num"><span class="yf">${esc(er.years)}</span><span class="ys">${esc((er.years.match(/\d{4}/) || [er.years])[0])}</span></span><span class="l">${esc(er.label)}</span></button>`;
   }).join('');
   // Sized by pixels, not by share of the span: six two-year eras are each a fifth of the track but too narrow for a label.
   $$('.era2').forEach((b) => {
     const px = b.offsetWidth;
     b.classList.toggle('tiny', px < 40);
     b.classList.toggle('narrow', px >= 40 && px < 110);
+    const y = b.querySelector('.y');
+    if (y.scrollWidth > y.clientWidth) b.classList.add('tiny');
   });
   showEra(-1);
   bindDisc(box);
