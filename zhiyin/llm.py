@@ -6,7 +6,7 @@ import subprocess
 import threading
 import time
 
-from . import store
+from . import i18n, store
 
 # Through the Claude Code CLI, so the same call runs on a Claude login or an API key.
 # --tools "" and --setting-sources "" keep each call to ~600 tokens of overhead instead of ~35k.
@@ -56,12 +56,12 @@ def unavailable(uid: str | None = None) -> str | None:
     src = source(uid)
     mine = store.is_owners(uid)
     if src is None:
-        return "服务器上还没有配置 Claude" if mine else "主人还没有为其他听众配置 Claude API key"
+        return i18n.tr("服务器上还没有配置 Claude" if mine else "主人还没有为其他听众配置 Claude API key", i18n.of(uid))
     if src == "worker" and not worker_online():
-        return "Mac 不在线（睡着或关机了）"
+        return i18n.tr("Mac 不在线（睡着或关机了）", i18n.of(uid))
     cap = OWNER_DAILY_USD if mine else DAILY_USD
     if HOSTED and spent(uid, days=1) >= cap:
-        return f"今天的 Claude 额度（${cap:g}）用完了，明天再来"
+        return i18n.tr("今天的 Claude 额度（${cap}）用完了，明天再来", i18n.of(uid), cap=f"{cap:g}")
     return None
 
 
@@ -172,7 +172,7 @@ def worker_online() -> bool:
 
 def _via_worker(req: dict, wait: float) -> dict:
     if not worker_online():
-        raise NoClaude("Mac 不在线（睡着或关机了）")
+        raise NoClaude(i18n.tr("Mac 不在线（睡着或关机了）"))
     jid = secrets.token_hex(8)
     job = {"req": req, "taken": False, "done": threading.Event(), "out": None}
     with _queue_cv:
@@ -182,9 +182,9 @@ def _via_worker(req: dict, wait: float) -> dict:
         deadline = time.time() + wait
         while not job["done"].wait(5):
             if not worker_online():
-                raise LLMError("Mac 中途离线了")
+                raise LLMError(i18n.tr("Mac 中途离线了"))
             if time.time() > deadline:
-                raise LLMError("Mac 上的 Claude 没有按时答复")
+                raise LLMError(i18n.tr("Mac 上的 Claude 没有按时答复"))
         if "error" in job["out"]:
             err = LLMError(job["out"]["error"])
             err.usd = job["out"].get("usd") or 0

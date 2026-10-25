@@ -12,28 +12,54 @@
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 </head>
 <body>
-<header class="top">
-  <a class="mark" href="#" aria-label="知音"><svg class="wm" viewBox="20 -930 2060 1050" aria-hidden="true"><g transform="scale(1 -1)" fill="currentColor" stroke="currentColor" stroke-width="44" stroke-linejoin="round"><path d="M554 747V-46H601V37H853V-37H901V747Z M601 84V701H853V84Z M173 836C147 709 104 586 41 507C53 499 74 486 82 478C115 525 145 584 169 650H268V468L267 426H49V379H265C253 238 206 82 40 -36C51 -43 67 -62 74 -72C199 17 262 131 292 245C346 186 441 76 474 30L508 71C476 107 346 252 303 295C308 323 311 351 314 379H519V426H316L317 467V650H487V696H185C199 738 211 781 221 826Z"/><path transform="translate(1040 0)" d="M258 668C290 617 318 548 326 501L375 516C366 561 337 629 303 680Z M115 737V692H892V737Z M703 683C682 629 646 550 615 499H57V454H944V499H666C696 548 727 614 753 668Z M251 139H757V8H251Z M251 182V308H757V182Z M203 351V-76H251V-35H757V-72H806V351Z"/><circle cx="1543" cy="862" r="82" fill="#E9A55B" stroke="none"/></g></svg></a>
-  <form class="ask" id="ask" autocomplete="off">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
-    <input id="askInput" name="q" placeholder="想听点什么？比如：下雨的周日下午，做饭时听的日语 city pop" enterkeyhint="go">
-    <kbd>/</kbd>
-  </form>
-  <nav class="top-r"><a href="#ear" id="earLink">你的耳朵</a></nav>
-</header>
+<div class="backdrop" id="backdrop" aria-hidden="true"></div>
 <div class="app">
-  <aside class="stations" id="stations" aria-label="电台"></aside>
+  <aside class="rail" id="rail">
+    <div class="rail-top">
+      <a class="mark" href="#" aria-label="知音" data-i18n-label="知音"><svg class="lg" viewBox="8 26 84 52" aria-hidden="true"><path d="M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33"/><circle cx="69" cy="52" r="7"/></svg><span class="wm-t" data-i18n="知音">知音</span></a>
+      <button class="me-mini" data-k="menu" aria-label="账号" data-i18n-label="账号"></button>
+    </div>
+    <nav class="rail-nav">
+      <button class="ask-open" data-k="ask" id="askOpen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><span data-i18n="想听点什么">想听点什么</span><kbd>/</kbd></button>
+      <a class="nav" href="#ear" id="earLink"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span data-i18n="你的耳朵">你的耳朵</span></a>
+    </nav>
+    <div class="stations" id="stations" aria-label="电台" data-i18n-label="电台"></div>
+    <div class="pcard" id="pcard" hidden>
+      <div class="pc-frame" id="pcFrame"></div>
+      <div class="pc-meta">
+        <a class="pc-txt" href="#" title="回到电台" data-i18n-title="回到电台"><span class="tt" id="dTitle"></span><span class="ar" id="dArtist"></span></a>
+        <div class="pc-ctl"></div>
+      </div>
+    </div>
+    <button class="me" id="meBtn" data-k="menu" aria-haspopup="menu"></button>
+  </aside>
   <main class="view" id="view"></main>
 </div>
-<div class="backdrop" id="backdrop" aria-hidden="true"></div>
+<nav class="tabs" id="tabs" aria-label="导航" data-i18n-label="导航">
+  <a href="#" data-tab="listen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="13.5" width="4" height="6.5" rx="1.5"/><rect x="17" y="13.5" width="4" height="6.5" rx="1.5"/></svg><span data-i18n="电台">电台</span></a>
+  <button data-k="ask"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><span data-i18n="点歌">点歌</span></button>
+  <a href="#ear" data-tab="ear"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span data-i18n="你的耳朵">你的耳朵</span></a>
+</nav>
 <div class="yt-host" id="ytHost" hidden>
   <div class="yt-crop on"><div id="ytA"></div></div>
   <div class="yt-crop"><div id="ytB"></div></div>
   <img class="yt-cover" id="ytCover" alt="">
-  <button class="yt-play" id="ytPlay" aria-label="播放"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></button>
+  <button class="yt-play" id="ytPlay" aria-label="播放" data-i18n-label="播放"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></button>
 </div>
 <div class="mini" id="mini" hidden></div>
+<dialog class="composer" id="composer" aria-label="点歌" data-i18n-label="点歌">
+  <form class="ask" id="ask" autocomplete="off" method="dialog">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+    <input id="askInput" name="q" placeholder="想听点什么？说说场景或心情" data-i18n-ph="想听点什么？说说场景或心情" enterkeyhint="go">
+    <kbd>↵</kbd>
+  </form>
+  <div class="c-body" id="cBody"></div>
+</dialog>
+<div class="menu" id="menu" popover role="menu"></div>
+<dialog class="sheet" id="sheet" aria-label="设置" data-i18n-label="设置"></dialog>
+<dialog class="keys-d" id="keysD" aria-label="快捷键" data-i18n-label="快捷键"></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/static/i18n.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

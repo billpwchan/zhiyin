@@ -1,6 +1,6 @@
 import datetime as dt
 
-from . import store, ytm
+from . import i18n, store, ytm
 from .text import display_title, dur_s, fold, song_key
 
 MV = {"A": "ATV", "O": "OMV", "U": "UGC", "S": "OFFICIAL_SOURCE_MUSIC"}
@@ -111,7 +111,7 @@ def sync_from_google(log=print) -> dict:
         except (AttributeError, ValueError):
             return 0
     new = [it for it in items if it["vid"] not in have_ids and liked_ts(it) > since - 86400]
-    log(f"查看 {len(new)} 个新喜欢的视频是不是歌")
+    log(i18n.tr("查看 {n} 个新喜欢的视频是不是歌", n=len(new)))
     info = google.videos(uid, [it["vid"] for it in new])
     music = [it for it in new if info.get(it["vid"], {}).get("cat") == google.MUSIC_CATEGORY
              and not info[it["vid"]].get("live")]
@@ -121,7 +121,7 @@ def sync_from_google(log=print) -> dict:
         r = _from_like(it, info[it["vid"]])
         done[0] += 1
         if done[0] % 20 == 0:
-            log(f"整理歌曲 {done[0]} / {len(music)}")
+            log(i18n.tr("整理歌曲 {d} / {n}", d=done[0], n=len(music)))
         return r
     with store.Pool(6) as ex:
         resolved = list(ex.map(resolve, music))

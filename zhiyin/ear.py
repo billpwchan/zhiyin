@@ -8,7 +8,7 @@ from datetime import date
 
 import numpy as np
 
-from . import audio, store
+from . import audio, i18n, store
 from .text import fold, song_key
 
 TOP_GAP = 16.0          # degrees left open at 12 o'clock for the year ruler
@@ -78,7 +78,8 @@ def build() -> dict:
         return {"songs": []}
     real = any(t.get("source") == "google" for t in tracks)
     assign = prof.get("assign", {})
-    lanes = {ln["key"]: ln["name"] for ln in prof.get("lanes", [])}
+    rl, pl = i18n.of(), prof.get("lang", "zh-Hans")
+    lanes = {ln["key"]: i18n.convert(ln["name"], pl, rl) for ln in prof.get("lanes", [])}
     lane_of = {t["vid"]: (assign.get(t["vid"]) or ["none"])[0] for t in tracks}
     lane_of = {v: (k if k in lanes else "none") for v, k in lane_of.items()}
     ts = dict(zip((t["rank"] for t in tracks), _times(tracks)))   # by rank: a song liked twice sits on two rings
@@ -113,7 +114,7 @@ def build() -> dict:
         span = arcs[k] * scale
         members = sorted(by_lane[k], key=lambda t: energy[t["vid"]])
         n = len(members)
-        sectors.append({"key": k, "name": lanes.get(k, "其他"), "a0": round(a, 2), "a1": round(a + span, 2), "n": n,
+        sectors.append({"key": k, "name": lanes.get(k) or i18n.tr("其他", rl), "a0": round(a, 2), "a1": round(a + span, 2), "n": n,
                         "covers": [t["vid"] for t in sorted(members, key=lambda t: t["rank"])[:4]]})
         for j, t in enumerate(members):
             ang = a + span * (j + 0.5) / n
@@ -128,18 +129,20 @@ def build() -> dict:
     for er in (prof.get("portrait") or {}).get("eras", []):
         inside = [x for r, x in rank_t.items() if er["to_rank"] >= r >= er["from_rank"]]
         if inside:
-            eras.append({"years": er["years"], "label": er["label"], "text": er["text"],
+            eras.append({"years": er["years"], "label": i18n.convert(er["label"], pl, rl), "text": i18n.convert(er["text"], pl, rl),
                          "t0": round(min(inside), 3), "t1": round(max(inside), 3)})
     return {"songs": songs, "sectors": sectors, "span": [round(t0, 3), round(t1, 3)], "eras": eras,
-            "facts": facts(tracks, ts, lane_of, lanes, tags, real), "real_dates": real,
+            "facts": facts(tracks, ts, lane_of, lanes, tags, real, rl), "real_dates": real,
             "built": time.time()}
 
 
-def facts(tracks, ts, lane_of, lanes, tags, real) -> list[dict]:
+def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans") -> list[dict]:
+    def tr(text, **kw):
+        return i18n.tr(text, lang, **kw)
     out = []
     first = min(tracks, key=lambda t: (ts[t["rank"]], -t["rank"]))
     who = first["artists"][0]["name"] if first["artists"] else ""
-    out.append({"key": "first", "lead": f"{int(ts[first['rank']])}", "text": f"最早的一首是《{first['title']}》，{who}。",
+    out.append({"key": "first", "lead": f"{int(ts[first['rank']])}", "text": tr("最早的一首是《{title}》，{who}。", title=first["title"], who=who),
                 "vids": [first["vid"]]})
 
     span = defaultdict(list)
@@ -150,17 +153,22 @@ def facts(tracks, ts, lane_of, lanes, tags, real) -> list[dict]:
     if long_:
         yrs, n, name, songs = max(long_)
         a, b = int(min(ts[t["rank"]] for t in songs)), int(max(ts[t["rank"]] for t in songs))
-        if b > a:
-            out.append({"key": "longest", "lead": f"{b - a} 年", "text": f"陪你最久的是 {name}：从 {a} 到 {b}，一共 {n} 首。",
+        if yrs >= 2:   # a year together says little about who stayed
+            out.append({"key": "longest", "lead": tr("{n} 年", n=b - a), "text": tr("陪你最久的是 {name}：从 {a} 到 {b}，一共 {n} 首。", name=name, a=a, b=b, n=n),
                         "vids": [t["vid"] for t in songs]})
 
-    langs = Counter((tags.get(t["vid"]) or {}).get("lang") for t in tracks)
-    langs = [(k, n) for k, n in langs.most_common() if k in LANG]
+    lang_of = {t["vid"]: (tags.get(t["vid"]) or {}).get("lang") for t in tracks}
+    langs = [(k, n) for k, n in Counter(lang_of.values()).most_common() if k in LANG and k != "instrumental"]
     if len(langs) >= 2:
         tot = sum(n for _, n in langs)
-        groups = [{"label": LANG[k], "n": n, "pct": round(100 * n / tot),
-                   "vids": [t["vid"] for t in tracks if (tags.get(t["vid"]) or {}).get("lang") == k]} for k, n in langs[:5]]
-        out.append({"key": "langs", "lead": f"{len(langs)} 种语言", "text": "", "groups": groups,
+        shown = langs if len(langs) <= 5 else langs[:4]   # the rest share one "other" so every language counted is listed
+        groups = [{"label": tr(LANG[k]), "n": n, "pct": round(100 * n / tot), "vids": [v for v, x in lang_of.items() if x == k]}
+                  for k, n in shown]
+        if len(shown) < len(langs):
+            rest = {k for k, _ in langs[4:]}
+            n = sum(n for k, n in langs[4:])
+            groups.append({"label": tr("其他"), "n": n, "pct": round(100 * n / tot), "vids": [v for v, x in lang_of.items() if x in rest]})
+        out.append({"key": "langs", "lead": tr("{n} 种语言", n=len(langs)), "text": "", "groups": groups,
                     "vids": groups[0]["vids"]})
 
     now = max(ts.values())
@@ -172,7 +180,7 @@ def facts(tracks, ts, lane_of, lanes, tags, real) -> list[dict]:
         grow = max(lanes, key=lambda k: share(recent, k) - share(older, k))
         p1, p0 = round(100 * share(recent, grow)), round(100 * share(older, grow))
         if p1 - p0 >= 4 and p1 >= 1.6 * max(p0, 1):
-            out.append({"key": "rising", "lead": f"{p1}%", "text": f"最近一年的新喜欢里，「{lanes[grow]}」占了 {p1}%，之前只有 {p0}%。",
+            out.append({"key": "rising", "lead": f"{p1}%", "text": tr("最近一年的新喜欢里，「{lane}」占了 {p1}%，之前只有 {p0}%。", lane=lanes[grow], p1=p1, p0=p0),
                         "vids": [t["vid"] for t in recent if lane_of[t["vid"]] == grow], "lane": grow})
 
     first_year = {}
@@ -184,7 +192,7 @@ def facts(tracks, ts, lane_of, lanes, tags, real) -> list[dict]:
         k = max(first_year, key=first_year.get)
         if first_year[k] - min(ts.values()) >= 2:
             members = [t["vid"] for t in tracks if lane_of[t["vid"]] == k]
-            out.append({"key": "newest", "lead": f"{int(first_year[k])}", "text": f"「{lanes[k]}」是最晚出现的一种口味，那年才有第一首，现在已经 {len(members)} 首。",
+            out.append({"key": "newest", "lead": f"{int(first_year[k])}", "text": tr("「{lane}」是最晚出现的一种口味，那年才有第一首，现在已经 {n} 首。", lane=lanes[k], n=len(members)),
                         "vids": members, "lane": k})
 
     again = defaultdict(list)
@@ -194,7 +202,7 @@ def facts(tracks, ts, lane_of, lanes, tags, real) -> list[dict]:
     if len(back) >= 2:
         ex = max(back, key=lambda v: max(ts[t["rank"]] for t in v) - min(ts[t["rank"]] for t in v))
         gap = max(ts[t["rank"]] for t in ex) - min(ts[t["rank"]] for t in ex)
-        out.append({"key": "again", "lead": f"{len(back)} 首", "text": f"隔了一阵又点了一次喜欢，像《{ex[0]['title']}》，前后隔了 {gap:.0f} 年。" if gap >= 1.5 else f"隔了一阵又点了一次喜欢，像《{ex[0]['title']}》。",
+        out.append({"key": "again", "lead": tr("{n} 首", n=len(back)), "text": tr("隔了一阵又点了一次喜欢，像《{title}》，前后隔了 {gap} 年。", title=ex[0]["title"], gap=f"{gap:.0f}") if gap >= 1.5 else tr("隔了一阵又点了一次喜欢，像《{title}》。", title=ex[0]["title"]),
                     "vids": [t["vid"] for v in back for t in v]})
 
     if real:
@@ -202,14 +210,14 @@ def facts(tracks, ts, lane_of, lanes, tags, real) -> list[dict]:
         (m, n), = months.most_common(1)
         if n >= 12:
             y, mo = m.split("-")
-            out.append({"key": "month", "lead": f"{n} 首", "text": f"点得最密的一个月是 {y} 年 {int(mo)} 月。",
+            out.append({"key": "month", "lead": tr("{n} 首", n=n), "text": tr("点得最密的一个月是 {y} 年 {m} 月。", y=y, m=int(mo), month=date(int(y), int(mo), 1).strftime("%B %Y")),
                         "vids": [t["vid"] for t in tracks if _month(ts[t["rank"]]) == m]})
         lag = [ts[t["rank"]] - (tags.get(t["vid"]) or {}).get("year", 0) for t in tracks
                if (tags.get(t["vid"]) or {}).get("year", 0) > 1950]
         if len(lag) >= 30:
             fresh = [t["vid"] for t in tracks if 0 <= ts[t["rank"]] - ((tags.get(t["vid"]) or {}).get("year") or -99) < 1]
             p = round(100 * len(fresh) / len(lag))
-            out.append({"key": "fresh", "lead": f"{p}%", "text": f"{p}% 的歌，你在它发行的当年就点了喜欢。",
+            out.append({"key": "fresh", "lead": f"{p}%", "text": tr("{p}% 的歌，你在它发行的当年就点了喜欢。", p=p),
                         "vids": fresh})
     return out[:6]
 

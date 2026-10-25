@@ -357,42 +357,75 @@ def get(vid: str, title: str, artists: list[str], album: str = "", dur: float = 
 
 TR_SCHEMA = {"type": "object", "properties": {"lines": {"type": "array", "items": {"type": "object", "properties": {
     "i": {"type": "integer"}, "tr": {"type": "string"}}, "required": ["i", "tr"]}}}, "required": ["lines"]}
-TR_SYSTEM = ("Translate song lyrics into natural Simplified Chinese for a listener reading along while the song plays. "
+TR_SYSTEM = ("Translate song lyrics into natural {lang} for a listener reading along while the song plays. "
              "One translation per input line, same index. Keep it singable-plain, faithful, short; no notes, no romanisation. "
              "Lines that are only vocalisations (oh, yeah, la la) keep as-is.")
+# Chinese readers share one translation (sources give Simplified; Traditional readers get it converted); English
+# readers get their own, kept beside it.
+TR_FIELD = {"zh": "tr", "en": "tr_en"}
+
+
+def _fits(tr: str | None, x: str) -> bool:
+    """A line's translation, not a paragraph about the song (what a refusal puts in the first slot)."""
+    return bool(tr) and len(tr) <= 3 * len(x) + 40
 _tr_running: set[str] = set()
 
 
-def translate_later(vid: str) -> bool:
-    """Start a background translation for a Japanese/Korean/English lyric without one. Returns True if started."""
+def translate_later(vid: str, to: str = "zh") -> bool:
+    """Start a background translation of a lyric into Chinese (to="zh") or English (to="en") when no source gave one.
+    Returns True if started."""
     path = _path(vid)
-    if not path.exists() or vid in _tr_running:
+    key = f"{vid}:{to}"
+    if not path.exists() or key in _tr_running:
         return False
     d = json.loads(path.read_text())
-    if not d.get("found") or d.get("translated") or d.get("lang") == "zh" or d.get("tr_failed"):
+    field, done = TR_FIELD[to], "translated" if to == "zh" else "translated_en"
+    if not d.get("found") or d.get(done) or d.get("lang") == to or d.get(f"tr_failed_{to}", d.get("tr_failed") if to == "zh" else None):
         return False
-    if d.get("tr_retry", 0) > time.time() or llm.unavailable():
+    if d.get(f"tr_retry_{to}", d.get("tr_retry", 0) if to == "zh" else 0) > time.time() or llm.unavailable():
         return False
-    _tr_running.add(vid)
+    _tr_running.add(key)
 
     def run():
         try:
             idx = [i for i, l in enumerate(d["lines"]) if l["x"]]
             prompt = "\n".join(f"{i}\t{d['lines'][i]['x']}" for i in idx)
-            res = llm.call(prompt, TR_SYSTEM, TR_SCHEMA, model="sonnet", timeout=180, retries=1)
-            for x in res["lines"]:
-                if 0 <= x["i"] < len(d["lines"]) and x["tr"].strip() and x["tr"].strip() != d["lines"][x["i"]]["x"]:
-                    d["lines"][x["i"]]["tr"] = x["tr"].strip()
-            d["translated"] = any(l.get("tr") for l in d["lines"])
-            d["tr_by"] = "AI"
-            d.pop("tr_retry", None)
+            system = TR_SYSTEM.format(lang="Simplified Chinese" if to == "zh" else "English")
+            res = llm.call(prompt, system, TR_SCHEMA, model="sonnet", timeout=180, retries=1)
+            got = {x["i"]: x["tr"].strip() for x in res["lines"] if 0 <= x["i"] < len(d["lines"]) and x["tr"].strip()}
+            # a reply covering a few lines is a refusal or a summary, not a translation; don't show it as one
+            if len(got) < len(idx) / 2:
+                raise ValueError(f"translated {len(got)} of {len(idx)} lines")
+            for i, tr in got.items():
+                if tr != d["lines"][i]["x"] and _fits(tr, d["lines"][i]["x"]):
+                    d["lines"][i][field] = tr
+            d[done] = any(l.get(field) for l in d["lines"])
+            if not d[done]:
+                d[f"tr_failed_{to}"] = True   # every line came back as it was: nothing to translate, don't ask again
+            d["tr_by" if to == "zh" else "tr_en_by"] = "AI"
+            d.pop(f"tr_retry_{to}", None)
         except llm.LLMError:
-            d["tr_retry"] = time.time() + 3600   # Claude failed, not the lyric: try again later, not every play
+            d[f"tr_retry_{to}"] = time.time() + 3600   # Claude failed, not the lyric: try again later, not every play
         except Exception:
-            d["tr_failed"] = True
+            d[f"tr_failed_{to}"] = True
         finally:
             path.write_text(json.dumps(d, ensure_ascii=False))
-            _tr_running.discard(vid)
+            _tr_running.discard(key)
     # the listener who pressed play is the one whose Claude translates
     threading.Thread(target=contextvars.copy_context().run, args=(run,), daemon=True).start()
     return True
+
+
+def for_reader(d: dict, lang: str) -> dict:
+    """The cached lyric as a reader of `lang` sees it: their translation in `tr`, credits in their script."""
+    from . import i18n
+    if not d.get("found"):
+        return d
+    if lang == "en":
+        lines = [{**{k: v for k, v in l.items() if k not in ("tr", "tr_en")}, **({"tr": l["tr_en"]} if _fits(l.get("tr_en"), l["x"]) else {})}
+                 for l in d["lines"]]
+        return {**d, "lines": lines, "translated": any(l.get("tr") for l in lines), "tr_by": d.get("tr_en_by", "AI")}
+    lines = [{k: v for k, v in l.items() if k != "tr_en" and (k != "tr" or _fits(v, l["x"]))} for l in d["lines"]]
+    if lang == "zh-Hant":
+        lines = [{**l, "tr": i18n.convert(l["tr"], "zh-Hans", "zh-Hant")} if l.get("tr") else l for l in lines]
+    return {**d, "lines": lines}

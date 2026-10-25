@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from . import audio, candidates, library, llm, rank, settings, store, taste, ytm
+from . import audio, candidates, i18n, library, llm, rank, settings, store, taste, ytm
 from .text import display_title, fold, song_key
 
 FOCUS_MIN_S = 20 * 60
@@ -109,7 +109,7 @@ def build_lane(lane, tracks, prof, known, rng, n, log):
     for c in g["cands"].values():
         c["shown_before"] = c["vid"] in known.recent_shown
     pre = candidates.shortlist(lane, g["cands"], k=PRE_K)
-    log(f"{lane['name']}: {len(g['cands'])} 首候选，{len(pre)} 首进入试听")
+    log(i18n.tr("{lane}: {c} 首候选，{p} 首进入试听", lane=lane["name"], c=len(g["cands"]), p=len(pre)))
     return lane, seeds, g, pre
 
 
@@ -119,9 +119,9 @@ def listen(built, taste_args, log, itunes_budget=None, text=None):
     pool = [c for b in built for c in b[3]]
     try:
         stats = audio.ensure(pool, log=log, itunes_budget=itunes_budget, texts=[text] if text else [])
-        log(f"试听完成 {stats}")
+        log(i18n.tr("试听完成 {stats}", stats=stats))
     except Exception as e:  # a missing preview service must never cost the listener their edition
-        log(f"试听失败，按图谱排序 ({e})")
+        log(i18n.tr("试听失败，按图谱排序 ({e})", e=e))
     t = taste.Taste(*taste_args)
     out = []
     tv = audio.wait_text(text) if text else None
@@ -160,7 +160,7 @@ def build_focus(prof, known, rng, log, n=4):
         picks.append(c)
         if len(picks) >= n:
             break
-    log(f"专注: {len(found)} 个长歌单候选")
+    log(i18n.tr("专注: {n} 个长歌单候选", n=len(found)))
     return {"blurb": focus["blurb"], "when": focus["when"], "picks": [_public(c) for c in picks]}
 
 
@@ -189,7 +189,7 @@ def build(log=print, model: str = "opus") -> dict:
     built, tst = listen(built, (tracks, prof), log)
 
     negs = negatives()
-    log(f"编辑精选中（{len(built)} 条线并行）")
+    log(i18n.tr("编辑精选中（{n} 条线并行）", n=len(built)))
 
     def choose(b):
         lane, seeds, g, sl = b
@@ -208,7 +208,7 @@ def build(log=print, model: str = "opus") -> dict:
     with store.Pool(4) as ex:
         chosen = list(ex.map(choose, built))
 
-    log("整理歌曲信息")
+    log(i18n.tr("整理歌曲信息"))
     every = [p for _, _, _, picks, reserve in chosen for p in picks + reserve]
     prefer_record(every, known)
     one_each([picks for _, _, _, picks, _ in chosen] + [reserve for *_, reserve in chosen])
@@ -235,9 +235,9 @@ def build(log=print, model: str = "opus") -> dict:
                         [(p["vid"], edition_id, "focus", store.now(), store.uid()) for p in focus["picks"]])
     con.commit()
     ed = {"id": edition_id, "created": store.now(), "took": round(time.time() - t0), "lanes": out_lanes, "focus": focus,
-          "audio_coverage": round(tst.coverage, 2)}
+          "audio_coverage": round(tst.coverage, 2), "lang": i18n.of()}
     store.write_json(store.EDITION, ed)
-    log(f"完成，用时 {ed['took']} 秒")
+    log(i18n.tr("完成，用时 {s} 秒", s=ed["took"]))
     return ed
 
 

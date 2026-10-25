@@ -16,6 +16,7 @@ def main():
     p.add_argument("--model", default="opus")
     sub.add_parser("listen", help="fetch a preview of every liked song and learn what it sounds like (once, ~1 hour)")
     sub.add_parser("refresh", help="build a new edition of recommendations")
+    sub.add_parser("setup", help="first run: sync, profile, listen and refresh in one go (about an hour)")
     p = sub.add_parser("ask", help="ask for songs in your own words")
     p.add_argument("question")
     p = sub.add_parser("serve", help="run the app")
@@ -37,6 +38,13 @@ def main():
     p.add_argument("--holdout", type=int, default=60)
     p.add_argument("--audio", action="store_true", help="check whether sound alone predicts new likes")
     a = ap.parse_args()
+
+    if a.cmd in ("setup", "profile", "refresh", "ask"):
+        from . import accounts, i18n
+        i18n.migrate()
+        if not accounts.prefs(store.uid()).get("lang"):   # nobody has opened the app yet to say which language
+            accounts.set_prefs(store.uid(), lang=i18n.system())
+            print(f"writing in {i18n.of()} (set ZHIYIN_LANG=en, zh-Hans or zh-Hant to choose; switch later in Settings)")
 
     if a.cmd == "import":
         from . import library
@@ -91,6 +99,17 @@ def main():
     elif a.cmd == "refresh":
         from . import edition
         edition.build()
+    elif a.cmd == "setup":
+        from . import audio, edition, library, profile
+        recs = library.sync_from_account()
+        library.estimate_like_dates(recs)
+        library.save(recs)
+        print(f"{len(recs)} likes synced")
+        prof = profile.build()
+        print(f"{len(prof['lanes'])} lanes: " + ", ".join(l["name"] for l in prof["lanes"]))
+        print(audio.ensure([t for t in library.load() if not t["long"]], timeout=4 * 3600, itunes_budget=2000))
+        edition.build()
+        print("ready: uv run zhiyin serve")
     elif a.cmd == "ask":
         from . import ask
         r = ask.run(a.question)

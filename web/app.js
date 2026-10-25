@@ -1,12 +1,15 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const names = (arts) => (arts || []).map((a) => a.name).join('、');
+const names = (arts) => (arts || []).map((a) => a.name).join(t('、'));
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(`zhiyin.${k}`)); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(`zhiyin.${k}`, JSON.stringify(v)); } catch { /* private mode */ } },
+  del(k) { try { localStorage.removeItem(`zhiyin.${k}`); } catch { /* private mode */ } },
 };
+// what this browser remembers about an account stays with that account
+const acct = (k) => `${S?.me?.uid}.${k}`;
 
 const I = {
   play: '<svg class="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>',
@@ -23,6 +26,15 @@ const I = {
   pip: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><rect x="12" y="11.5" width="6" height="4.5" rx="1" fill="currentColor" stroke="none"/></svg>',
   full: '<svg viewBox="0 0 24 24"><path d="M4.5 9V4.5H9M15 4.5h4.5V9M19.5 15v4.5H15M9 19.5H4.5V15"/></svg>',
   shrink: '<svg viewBox="0 0 24 24"><path d="M9 4.5V9H4.5M19.5 9H15V4.5M15 19.5V15h4.5M4.5 15H9v4.5"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>',
+  updown: '<svg viewBox="0 0 24 24"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="m5.5 12.5 4 4 9-9"/></svg>',
+  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6"/></svg>',
+  out: '<svg viewBox="0 0 24 24"><path d="M14 5H6.5v14H14M10 12h10M17 8.5 20.5 12 17 15.5"/></svg>',
+  keyb: '<svg viewBox="0 0 24 24"><rect x="3.5" y="6.5" width="17" height="11" rx="2"/><path d="M7 10h.01M10.5 10h.01M14 10h.01M17 10h.01M8 14h8"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
+  swap: '<svg viewBox="0 0 24 24"><path d="M7 8h12M15.5 4.5 19 8l-3.5 3.5M17 16H5M8.5 12.5 5 16l3.5 3.5"/></svg>',
 };
 
 let S = null;          // server state
@@ -41,8 +53,9 @@ async function api(path, body) {
   const headers = S?.me?.uid ? { 'X-Zhiyin-Uid': S.me.uid } : {};
   const r = await fetch(path, body === undefined ? { headers } : { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await r.json().catch(() => ({}));
-  if (r.status === 401) { location.href = '/login'; throw new Error(data.detail || '需要重新登录'); }
-  if (r.status === 409 && data.detail === 'account-changed') { location.reload(); throw new Error('这个浏览器已经换了账号'); }
+  if (r.status === 401) { location.href = '/login'; throw new Error(data.detail || t('需要重新登录')); }
+  if (r.status === 409 && data.detail === 'account-changed') { location.reload(); throw new Error(t('这个浏览器已经换了账号')); }
+  if (r.status === 409 && data.detail === 'busy') throw Object.assign(new Error(t('上一次还没做完，稍等一下')), { code: 'busy' });
   if (!r.ok) throw new Error(data.detail || r.statusText);
   return data;
 }
@@ -75,13 +88,13 @@ function when(ts) {
   const d = new Date(ts * 1000), now = new Date();
   const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const days = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
-  return days === 0 ? `今天 ${hm}` : days === 1 ? `昨天 ${hm}` : `${d.getMonth() + 1}月${d.getDate()}日`;
+  return days === 0 ? t('今天 {hm}', { hm }) : days === 1 ? t('昨天 {hm}', { hm }) : d.toLocaleDateString(LANG, { month: 'short', day: 'numeric' });
 }
 function reasonOf(p) {
   if (p.reason) return p.reason;
-  if (p.near) return `听感接近你收藏的〈${p.near}〉`;
+  if (p.near) return t('听感接近你收藏的〈{s}〉', { s: p.near });
   const v = p.via?.[0];
-  return v ? `和你喜欢的〈${v.split(' - ')[0]}〉一路` : '';
+  return v ? t('和你喜欢的〈{s}〉一路', { s: v.split(' - ')[0] }) : '';
 }
 
 /* ---------- toast ---------- */
@@ -95,55 +108,56 @@ function toast(msg, actions = [], ms) {
 }
 
 /* ---------- stations ---------- */
-const artistLine = (picks) => [...new Set((picks || []).map((p) => p.artists?.[0]?.name).filter(Boolean))].slice(0, 3).join('、');
+const artistLine = (picks) => [...new Set((picks || []).map((p) => p.artists?.[0]?.name).filter(Boolean))].slice(0, 3).join(t('、'));
 
 function buildStations() {
   const ed = S.edition;
   const out = [];
-  if (WARM?.tracks?.length) out.push({ key: 'warm', group: 'warm', name: WARM.name, sub: WARM.sub, when: WARM.seeds?.length ? `从〈${WARM.seeds[0]}〉等你最近的喜欢出发` : '', tracks: WARM.tracks, reserve: [] });
-  if (pendingAsk) out.push({ key: 'ask:pending', group: 'ask', name: pendingAsk, sub: '正在找…', tracks: [], pending: true });
+  if (WARM?.tracks?.length) out.push({ key: 'warm', group: 'warm', name: WARM.name, sub: WARM.sub, when: WARM.seeds?.length ? t('从〈{s}〉等你最近的喜欢出发', { s: WARM.seeds[0] }) : '', tracks: WARM.tracks, reserve: [] });
+  if (pendingAsk) out.push({ key: 'ask:pending', group: 'ask', name: pendingAsk, sub: t('正在找…'), tracks: [], pending: true });
   (S.asks || []).slice(0, 4).forEach((a) => out.push({
-    key: `ask:${a.created}`, group: 'ask', name: a.intent, sub: artistLine(a.picks), when: `你说：${a.q}`, tracks: a.picks, reserve: [],
+    key: `ask:${a.created}`, group: 'ask', name: a.intent, sub: artistLine(a.picks), when: t('你说：{q}', { q: a.q }), tracks: a.picks, reserve: [],
   }));
   for (const l of ed?.lanes || []) out.push({ key: l.key, group: 'lane', name: l.name, sub: artistLine(l.picks), when: l.when, tracks: l.picks, reserve: l.reserve || [] });
-  if (ed?.focus?.picks?.length) out.push({ key: 'focus', group: 'lane', name: '专注', sub: '一小时左右的长歌单', when: ed.focus.when, tracks: ed.focus.picks, reserve: [] });
+  if (ed?.focus?.picks?.length) out.push({ key: 'focus', group: 'lane', name: t('专注'), sub: t('一小时左右的长歌单'), when: ed.focus.when, tracks: ed.focus.picks, reserve: [] });
   ST = out;
 }
 
 function stHTML(s) {
   const imgs = s.tracks.slice(0, s.tracks.length >= 4 ? 4 : 1).map((p) => imgTag(p, 120)).join('');
-  return `<button class="st" data-st="${esc(s.key)}" ${Q?.key === s.key ? 'aria-current="true"' : ''} title="${esc(s.when || '')}">
+  return `<button class="st ${s.pending ? 'pending' : ''}" data-st="${esc(s.key)}" ${Q?.key === s.key ? 'aria-current="true"' : ''} title="${esc(s.when || '')}">
     <span class="mosaic ${s.pending ? 'wait' : ''} ${s.tracks.length < 4 ? 'one' : ''}">${s.pending ? '' : imgs}</span>
-    <span class="txt"><span class="nm">${esc(s.name)}</span><span class="sb">${esc(s.sub)}</span></span></button>`;
+    <span class="txt"><span class="nm">${esc(s.name)}</span><span class="sb">${esc(s.sub)}</span></span><span class="eqs"><i></i><i></i><i></i></span></button>`;
 }
 
-const STEPS = ['读取你的喜欢', '了解你的口味', '挑第一批电台'];
+const STEPS = () => [t('读取你的喜欢'), t('了解你的口味'), t('挑第一批电台')];
 function prepHTML() {
   const me = S.me;
   if (!me) return '';
-  if (me.google?.error === 'revoked') return `<div class="prep"><b>YouTube Music 的连接失效了</b><p>喜欢暂时同步不过去。重新连接一下就好。</p><a class="tb" href="/auth/google/start">重新连接</a></div>`;
+  if (me.google?.error === 'revoked') return `<div class="prep"><b>${t('YouTube Music 的连接失效了')}</b><p>${t('喜欢暂时同步不过去。重新连接一下就好。')}</p><a class="tb" href="/auth/google/start">${t('重新连接')}</a></div>`;
   if (me.status === 'importing' || me.status === 'building') {
     const j = S.jobs?.setup, step = Math.max(1, j?.step || (me.status === 'building' ? 2 : 1));
-    return `<div class="prep"><b>正在准备你的电台 · ${step}/3</b><p>${esc(STEPS[step - 1])}。${step === 1 ? '几分钟' : '大约一刻钟'}，可以先听着，好了会告诉你。</p></div>`;
+    return `<div class="prep"><b>${t('正在准备你的电台 · {n}/3', { n: step })}</b><p>${esc(STEPS()[step - 1])}${t('。')}${step === 1 ? t('要几分钟，可以先听着，好了会告诉你。') : t('大约一刻钟，可以先听着，好了会告诉你。')}</p></div>`;
   }
-  if (me.status === 'thin') return `<div class="prep"><b>还不够认识你</b><p>你在 YouTube 只点过 ${me.last_sync?.songs ?? 0} 首歌的喜欢，至少要 20 首才分得出你的几种口味。先听「先听着」，喜欢的点 ♥，会同步回你的 YouTube Music。</p><button class="tb" data-k="setup">攒够了，重新读取</button></div>`;
-  if (me.status === 'error') return `<div class="prep"><b>准备电台时出了问题</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">再试一次</button></div>`;
+  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${t('你在 YouTube 只点过 {n} 首歌的喜欢，至少要 20 首才分得出你的几种口味。先听「先听着」，喜欢的点 ♥，会同步回你的 YouTube Music。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('攒够了，重新读取')}</button></div>`;
+  if (me.status === 'error') return `<div class="prep"><b>${t('准备电台时出了问题')}</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">${t('再试一次')}</button></div>`;
   return '';
 }
 
 function renderStations() {
   const asks = ST.filter((s) => s.group === 'ask'), lanes = ST.filter((s) => s.group === 'lane'), warm = ST.filter((s) => s.group === 'warm');
   const busy = S.jobs?.refresh?.running;
-  const label = busy ? '正在挑新的一批…' : S.edition ? `电台 · ${when(S.edition.created)} 更新` : '';
+  const label = busy ? t('正在挑新的一批…') : S.edition ? t('电台 · {when} 更新', { when: when(S.edition.created) }) : '';
+  renderMe();
   if (!ready() || !lanes.length) {
-    $('#stations').innerHTML = `${prepHTML()}${warm.map(stHTML).join('')}${lanes.map(stHTML).join('')}`;
+    $('#stations').innerHTML = `${prepHTML()}${warm.length ? `<div class="st-h"><span>${t('先听着')}</span></div>` : ''}${warm.map(stHTML).join('')}${lanes.map(stHTML).join('')}`;
     return;
   }
   $('#stations').innerHTML = `${prepHTML()}
-    ${asks.length ? `<div class="st-h"><span>你点的</span></div>${asks.map(stHTML).join('')}` : ''}
-    <div class="st-h"><span>${label}</span><button class="${busy ? 'busy' : ''}" data-k="refresh" title="现在重新挑一批" ${busy ? 'disabled' : ''}>${I.refresh}</button></div>
+    ${asks.length ? `<div class="st-h"><span>${t('你点的')}</span></div>${asks.map(stHTML).join('')}` : ''}
+    <div class="st-h"><span>${label}</span><button class="${busy ? 'busy' : ''}" data-k="refresh" title="${t('现在重新挑一批')}" ${busy ? 'disabled' : ''}>${I.refresh}</button></div>
     ${lanes.map(stHTML).join('')}
-    ${warm.length ? `<div class="st-h"><span>先听着</span></div>${warm.map(stHTML).join('')}` : ''}`;
+    ${warm.length ? `<div class="st-h"><span>${t('先听着')}</span></div>${warm.map(stHTML).join('')}` : ''}`;
 }
 
 function queueOf(st) {
@@ -162,17 +176,20 @@ function selectStation(key, play = true) {
   if (!st || st.pending || !st.tracks.length) return;
   const same = Q?.key === key;
   Q = queueOf(st);
-  store.set(`${S.me?.uid}.last`, key);
+  store.set(acct('last'), key);
   if (view !== 'listen') { location.hash = ''; return loadTrack(play); }
   renderStations();
   renderQueue();
   if (!same || play) loadTrack(play);
 }
 
+// The first station of a visit fits the hour: something quiet late at night, something with a pulse by day.
 function defaultStation() {
   const h = new Date().getHours();
-  const prefer = h >= 19 || h < 5 ? ['asian_rnb', 'hk_rnb'] : h < 11 ? ['tender_acoustic', 'groove_soul'] : ['groove_soul', 'asian_rnb'];
-  return prefer.map((k) => ST.find((s) => s.key === k)).find(Boolean) || ST.find((s) => s.group === 'lane') || ST.find((s) => s.group === 'warm');
+  const want = h >= 22 || h < 5 ? 1.5 : h >= 19 ? 2.5 : h < 11 ? 2 : 3.5;
+  const mid = (k) => { const e = S.lanes?.find((l) => l.key === k)?.energy; return e ? (e[0] + e[1]) / 2 : 3; };
+  const lanes = ST.filter((x) => x.group === 'lane' && x.key !== 'focus' && x.tracks.length);
+  return lanes.sort((a, b) => Math.abs(mid(a.key) - want) - Math.abs(mid(b.key) - want))[0] || ST.find((x) => x.group === 'warm');
 }
 
 /* ---------- playback ---------- */
@@ -181,7 +198,7 @@ const cur = () => Q?.tracks[Q.i];
 function trackChanged() {
   const p = cur();
   if (!p) return;
-  store.set(`${S.me?.uid}.pos`, { ed: S.edition?.id, key: Q.key, vid: p.vid });
+  store.set(acct('pos'), { ed: S.edition?.id, key: Q.key, vid: p.vid });
   paintNow();
   ambient(p);
   Lyr.load(p);
@@ -232,8 +249,8 @@ async function extend(silent) {
     const r = await api(`/api/more?vid=${seed.vid}&exclude=${Q.tracks.map((p) => p.vid).join(',')}`);
     Q.tracks.push(...r.tracks.slice(0, 8));
     renderQueue();
-    if (!r.tracks.length && !silent) toast('这条线暂时没有更多了');
-  } catch { if (!silent) toast('没取到更多的歌，稍后再试'); }
+    if (!r.tracks.length && !silent) toast(t('这条线暂时没有更多了'));
+  } catch { if (!silent) toast(t('没取到更多的歌，稍后再试')); }
 }
 
 async function continueFrom(btn) {
@@ -245,8 +262,8 @@ async function continueFrom(btn) {
     const add = r.tracks.slice(0, 8);
     Q.tracks.splice(Q.i + 1, 0, ...add);
     renderQueue();
-    toast(add.length ? `接下来沿着〈${p.title}〉放 ${add.length} 首` : '这首的电台里没有新的了');
-  } catch { toast('没取到，稍后再试'); }
+    toast(add.length ? t('接下来沿着〈{s}〉放 {n} 首', { s: p.title, n: add.length }) : t('这首的电台里没有新的了'));
+  } catch { toast(t('没取到，稍后再试')); }
   btn && (btn.disabled = false);
 }
 
@@ -298,7 +315,7 @@ function adapt(event, p) {
   if (keep.map((c) => c.vid).join() === before) return;
   renderQueue();
   Lyr.prefetch();
-  if (event && p) s.note = event === 'neg' ? `少放和〈${p.title}〉相近的` : `多放和〈${p.title}〉相近的`;
+  if (event && p) s.note = event === 'neg' ? t('少放和〈{s}〉相近的', { s: p.title }) : t('多放和〈{s}〉相近的', { s: p.title });
   paintSteer();
 }
 
@@ -307,8 +324,14 @@ function steer(k) {
   const s = sessionOf(Q);
   if (k === 'fresh') s.fresh = !s.fresh;
   else s.steer = s.steer === (k === 'up' ? 1 : -1) ? 0 : (k === 'up' ? 1 : -1);
-  s.note = '';
+  const before = Q.tracks.slice(Q.i + 1).map((c) => c.vid);
   adapt();
+  // say what the switch did to the songs ahead, or that they already fit
+  const after = Q.tracks.slice(Q.i + 1).map((c) => c.vid);
+  const moved = after.filter((v, j) => before[j] !== v).length;
+  const what = { calm: t('更安静'), up: t('更带劲'), fresh: t('多些新歌手') }[k];
+  const on = k === 'fresh' ? s.fresh : s.steer === (k === 'up' ? 1 : -1);
+  s.note = !on ? t('取消了「{what}」', { what }) : moved ? t('{what}：接下来换了 {n} 首', { what, n: moved }) : t('{what}：接下来的歌已经是这样了', { what });
   paintSteer();
 }
 
@@ -317,8 +340,9 @@ function paintSteer() {
   $$('[data-k="calm"]').forEach((b) => b.classList.toggle('on', s.steer === -1));
   $$('[data-k="up"]').forEach((b) => b.classList.toggle('on', s.steer === 1));
   $$('[data-k="fresh"]').forEach((b) => b.classList.toggle('on', !!s.fresh));
-  const w = $('#qWhen');
-  if (w && Q) w.textContent = s.note || Q.st.when || '';
+  const w = $('#qWhen'), n = $('#sNote');
+  if (w && Q) w.textContent = Q.st.when || '';
+  if (n) n.textContent = s.note || '';
 }
 
 /* ---------- player: two YouTube decks so one song can run into the next ---------- */
@@ -419,7 +443,7 @@ const Player = {
   onError(d) {
     if (d !== this.on) return;
     this.endFade();
-    toast(`〈${cur()?.title || ''}〉不允许在网页里播放，已跳过`);
+    toast(t('〈{s}〉不允许在网页里播放，已跳过', { s: cur()?.title || '' }));
     setTimeout(next, 400);
   },
   onState(d, s) {
@@ -513,7 +537,7 @@ const MS = {
   meta(p) {
     if (!this.ok || !p) return;
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: p.title, artist: names(p.artists), album: p.album?.name || Q?.st?.name || '知音',
+      title: p.title, artist: names(p.artists), album: p.album?.name || Q?.st?.name || t('知音'),
       artwork: [{ src: new URL(px(cover(p, 544).replace('maxresdefault', 'hqdefault')), location.href).href, sizes: '544x544' }],
     });
   },
@@ -527,8 +551,8 @@ const MS = {
 const Lyr = {
   cache: new Map(), vid: null, data: null, idx: -2, hold: 0, raf: 0, lastF: [],
   tr: store.get('tr') ?? true, ro: store.get('ro') ?? false,
-  get delay() { return (store.get('off') || {})[this.vid] || 0; },
-  set delay(v) { const o = store.get('off') || {}; o[this.vid] = Math.round(v * 100) / 100; if (!o[this.vid]) delete o[this.vid]; store.set('off', o); },
+  get delay() { return (store.get(acct('off')) || {})[this.vid] || 0; },
+  set delay(v) { const o = store.get(acct('off')) || {}; o[this.vid] = Math.round(v * 100) / 100; if (!o[this.vid]) delete o[this.vid]; store.set(acct('off'), o); },
   fetch(p) {
     if (this.cache.has(p.vid)) return this.cache.get(p.vid);
     const q = new URLSearchParams({ vid: p.vid, t: p.title, a: (p.artists || []).map((a) => a.name).join('|'), al: p.album?.name || '', d: p.dur || 0 });
@@ -563,15 +587,15 @@ const Lyr = {
   html() {
     const d = this.data;
     if (!d) return '';
-    const by = [d.source && `歌词来自${d.source}`, d.tr_by === 'AI' && d.translated && '翻译由 AI 生成'].filter(Boolean).join(' · ');
+    const by = [d.source && t('歌词来自{src}', { src: /^[A-Za-z]/.test(d.source) && LANG !== 'en' ? ` ${d.source}` : d.source }), d.tr_by === 'AI' && d.translated && t('翻译由 AI 生成')].filter(Boolean).join(' · ');
     return `<div class="ly-scroll"><div class="ly-in ${this.tr ? 'tr-on' : ''} ${this.ro ? 'ro-on' : ''}">${d.lines.map((l, i) => {
       if (l.gap) return `<p class="ll gap" data-i="${i}"><span class="dots"><i></i><i></i><i></i></span></p>`;
       const main = l.w ? l.w.map((w) => `<span class="wd">${esc(w[2])}</span>`).join('') : esc(l.x);
       return `<p class="ll ${l.w ? 'w' : ''}" data-i="${i}"><span class="lx">${main}</span>${l.tr ? `<span class="lt">${esc(l.tr)}</span>` : ''}${l.ro ? `<span class="lr">${esc(l.ro)}</span>` : ''}</p>`;
     }).join('')}</div></div>
     <div class="ly-foot"><span>${esc(by)}</span>
-      ${d.lines.some((l) => l.tr) ? `<button class="lk ${this.tr ? 'on' : ''}" data-k="lytr" title="翻译（T）">译</button>` : ''}
-      ${d.lines.some((l) => l.ro) ? `<button class="lk ${this.ro ? 'on' : ''}" data-k="lyro" title="罗马音（R）">音</button>` : ''}</div>`;
+      ${d.lines.some((l) => l.tr) ? `<button class="lk ${this.tr ? 'on' : ''}" data-k="lytr" title="${t('翻译（T）')}">${t('译')}</button>` : ''}
+      ${d.lines.some((l) => l.ro) ? `<button class="lk ${this.ro ? 'on' : ''}" data-k="lyro" title="${t('罗马音（R）')}">${t('音')}</button>` : ''}</div>`;
   },
   render() {
     for (const el of this.hosts()) {
@@ -649,7 +673,7 @@ const Lyr = {
     if (!this.data) return;
     this.delay += dt;
     const v = this.delay;
-    toast(v === 0 ? '歌词时间已复原' : `歌词${v > 0 ? '延后' : '提前'} ${Math.abs(v).toFixed(2).replace(/0$/, '')} 秒`);
+    toast(v === 0 ? t('歌词时间已复原') : t(v > 0 ? '歌词延后 {s} 秒' : '歌词提前 {s} 秒', { s: Math.abs(v).toFixed(2).replace(/0$/, '') }));
     this.sync(true);
   },
 };
@@ -658,7 +682,7 @@ function paintCredits() {
   const el = $('#nCred');
   if (!el) return;
   const c = (Lyr.data?.credits || []).filter(([r]) => r === '作曲' || r === '作词' || r === '编曲').slice(0, 3);
-  el.textContent = c.map(([r, n]) => `${r} ${n}`).join(' · ');
+  el.textContent = c.map(([r, n]) => `${t(r)} ${n}`).join(' · ');
 }
 
 /* ---------- stage layout: lyrics beside the cover when there is room ---------- */
@@ -674,26 +698,33 @@ function layoutStage() {
   const has = !!Lyr.data;
   const on = has && (prefs.imm || (wide ? prefs.lyr : prefs.lyrNarrow));
   st.classList.toggle('lyr-on', on);
-  $$('[data-k="lyrics"]').forEach((b) => { b.classList.toggle('on', on); b.toggleAttribute('aria-disabled', !has); b.title = has ? '歌词（G）' : '这首没有找到歌词'; });
+  // a phone scrolls the page under the station strip and the tab bar: size the cover so play is on the first screen
+  const fr = $('.frame', st), meta = $('.meta', st);
+  if (PHONE.matches && fr && meta) {
+    const room = innerHeight - $('#tabs').offsetHeight - (fr.getBoundingClientRect().top + scrollY) - meta.offsetHeight - 32;
+    st.style.setProperty('--fit', `${Math.max(120, Math.round(room))}px`);
+  } else st.style.removeProperty('--fit');
+  $$('[data-k="lyrics"]').forEach((b) => { b.classList.toggle('on', on); b.toggleAttribute('aria-disabled', !has); b.title = has ? t('歌词（G）') : t('这首没有找到歌词'); });
   placeHost();
   if (on) { Lyr.sync(true); Lyr.run(); }
 }
 function toggleLyrics() {
   const st = $('.stage');
-  if (!st || !Lyr.data) { if (st) toast('这首没有找到歌词'); return; }
+  if (!st || !Lyr.data) { if (st) toast(t('这首没有找到歌词')); return; }
   const wide = stageWidth(st) >= LYR_SIDE || prefs.imm;
   if (prefs.imm) return;
   if (wide) { prefs.lyr = !st.classList.contains('lyr-on'); store.set('lyr', prefs.lyr); } else prefs.lyrNarrow = !st.classList.contains('lyr-on');
   layoutStage();
 }
 const stageRO = new ResizeObserver(() => layoutStage());
+const PHONE = matchMedia('(max-width: 899px)');
 
 /* ---------- immersive: just the song, the cover and the words ---------- */
 function immersive(on = !prefs.imm) {
   if (view !== 'listen' || !cur()) return;
   prefs.imm = on;
   document.body.classList.toggle('imm', on);
-  $$('[data-k="imm"]').forEach((b) => { b.innerHTML = on ? I.shrink : I.full; b.title = on ? '退出沉浸（F / Esc）' : '沉浸（F）'; });
+  $$('[data-k="imm"]').forEach((b) => { b.innerHTML = on ? I.shrink : I.full; b.title = on ? t('退出沉浸（F / Esc）') : t('沉浸（F）'); });
   paintBackdrop();
   requestAnimationFrame(() => { layoutStage(); placeHost(); });
 }
@@ -705,11 +736,23 @@ addEventListener('mousemove', () => {
   idleT = setTimeout(() => document.body.classList.add('idle'), 2600);
 });
 
+// The cover lights the room. Two layers crossfade so a new song washes in instead of cutting.
 function paintBackdrop() {
   const p = cur(), el = $('#backdrop');
   if (!p || !el) return;
   const u = px(cover(p, 120).replace('maxresdefault', 'mqdefault'));
-  if (el.dataset.u !== u) { el.dataset.u = u; el.style.backgroundImage = `url("${u}")`; }
+  if (el.dataset.u === u) return;
+  el.dataset.u = u;
+  if (el.children.length < 2) el.innerHTML = '<i></i><i></i>';
+  const [a, b] = el.children, nx = a.classList.contains('on') ? b : a, old = nx === a ? b : a;
+  const img = new Image();
+  img.onload = () => {
+    if (el.dataset.u !== u) return;
+    nx.style.backgroundImage = `url("${u}")`;
+    nx.classList.add('on');
+    old.classList.remove('on');
+  };
+  img.src = u;
 }
 
 /* ---------- picture-in-picture mini player (stays on top of other apps) ---------- */
@@ -717,7 +760,7 @@ const Pip = {
   w: null,
   async toggle() {
     if (this.w) { this.w.close(); return; }
-    if (!window.documentPictureInPicture) { toast('这个浏览器不支持小窗，用 Chrome 116 以上'); return; }
+    if (!window.documentPictureInPicture) { toast(t('这个浏览器不支持小窗，用 Chrome 116 以上')); return; }
     if (!cur()) return;
     const w = await documentPictureInPicture.requestWindow({ width: 400, height: 176, preferInitialWindowPlacement: true });
     this.w = w;
@@ -729,10 +772,10 @@ const Pip = {
       <img id="pImg" alt="">
       <div class="pm"><div class="tt" id="pTitle"></div><div class="ar" id="pArtist"></div></div>
       <div class="pc">
-        <button class="ib" data-k="prev" title="上一首">${I.prev}</button>
-        <button class="ib play" data-k="toggle" title="播放 / 暂停">${I.play}${I.pause}</button>
-        <button class="ib" data-k="next" title="下一首">${I.next}</button>
-        <button class="ib like" data-k="like" title="喜欢">${I.heart}</button>
+        <button class="ib" data-k="prev" title="${t('上一首')}">${I.prev}</button>
+        <button class="ib play" data-k="toggle" title="${t('播放 / 暂停')}">${I.play}${I.pause}</button>
+        <button class="ib" data-k="next" title="${t('下一首')}">${I.next}</button>
+        <button class="ib like" data-k="like" title="${t('喜欢')}">${I.heart}</button>
       </div>
       <div class="pl"><div id="pLine"></div><div id="pTr"></div></div>
       <div class="bar"><i></i></div>
@@ -840,36 +883,52 @@ function paintNow() {
   });
   keepCurrentRowVisible();
   document.title = `${p.title} · ${names(p.artists)}`;
-  if (prefs.imm) paintBackdrop();
+  paintBackdrop();
   tick();
   placeHost();
 }
 
-// Scroll only the queue's own list; on phones the list is part of the page and must not drag the page along.
+// Scroll only the programme's own row; on phones the list is part of the page and must not drag the page along.
 function keepCurrentRowVisible() {
   const list = $('#qList'), row = $('.tr.cur');
-  if (!list || !row || list.scrollHeight <= list.clientHeight) return;
-  const top = row.offsetTop - list.offsetTop, bottom = top + row.offsetHeight;
-  if (top < list.scrollTop) list.scrollTop = top - 8;
-  else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight + 8;
+  if (!list || !row || list.scrollWidth <= list.clientWidth + 2) return;
+  const a = list.getBoundingClientRect(), b = row.getBoundingClientRect();
+  if (b.left < a.left + 24 || b.right > a.right - 48) list.scrollBy({ left: b.left - a.left - 36, behavior: document.hidden ? 'auto' : 'smooth' });
 }
 
+// One player, two homes: the stage while listening, the card in the rail (or above the tabs) everywhere else.
+// When it changes home it flies there, so the song you hear never looks like it vanished and came back.
+let hostAt = null;
 function placeHost() {
   const host = $('#ytHost');
-  const target = view === 'ear' ? $('#dockFrame') : $('#frame');
-  if (!target || !cur()) { host.hidden = true; return; }
+  const docked = view !== 'listen';
+  const target = docked ? $('#pcFrame') : $('#frame');
+  if (!target || !cur() || !target.offsetParent) { host.hidden = true; hostAt = null; return; }
+  const was = host.hidden ? null : host.getBoundingClientRect();
   host.hidden = false;
   const r = target.getBoundingClientRect();
-  const docked = view === 'ear';
+  // YouTube's embed won't play below 200×200, so a smaller home (the phone's player card) gets it scaled down
+  const k = Math.min(1, r.width / 200), end = k < 1 ? `scale(${k})` : 'none';
   host.classList.toggle('docked', docked);
   Object.assign(host.style, {
     top: `${docked ? r.top : r.top + scrollY}px`, left: `${docked ? r.left : r.left + scrollX}px`,
-    width: `${r.width}px`, height: `${r.height}px`,
+    width: `${r.width / k}px`, height: `${r.height / k}px`, transformOrigin: '0 0', transform: k < 1 ? end : '',
   });
+  const moved = hostAt && hostAt !== target.id;
+  hostAt = target.id;
+  if (moved && was && was.width && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const s = was.width / (r.width / k);
+    host.animate([
+      { transformOrigin: '0 0', transform: `translate(${was.left - r.left}px, ${was.top - r.top}px) scale(${s})` },
+      { transformOrigin: '0 0', transform: end },
+    ], { duration: 420, easing: 'cubic-bezier(.32, .72, 0, 1)' });
+  }
 }
 const ro = new ResizeObserver(() => placeHost());
+// the player card rises into place; measure it again once it has landed
+addEventListener('animationend', (e) => { if (e.target.id === 'pcard') placeHost(); });
 ro.observe(document.body);
-addEventListener('resize', placeHost);
+addEventListener('resize', () => (PHONE.matches ? layoutStage() : placeHost()));   // a phone's height changes with its address bar
 
 /* ---------- feedback ---------- */
 function track(p) { return { vid: p.vid, lane: Q?.key, title: p.title, artist: p.artists?.[0]?.name, artist_id: p.artists?.[0]?.id }; }
@@ -881,14 +940,14 @@ async function like(p) {
   if (!on) adapt('pos', p);
   try {
     const r = await api('/api/feedback', { ...track(p), action: on ? 'undo' : 'like' });
-    if (!on && r.sync === 'queued' && !store.get(`${S.me?.uid}.syncHint`)) {
-      store.set(`${S.me?.uid}.syncHint`, true);
-      toast('喜欢会同步到你的 YouTube Music', [['在哪里关', () => { location.hash = '#ear'; }]]);
+    if (!on && r.sync === 'queued' && !store.get(acct('syncHint'))) {
+      store.set(acct('syncHint'), true);
+      toast(t('喜欢会同步到你的 YouTube Music'), [[t('在哪里关'), openSettings]]);
     }
   } catch {
     on ? fb.set(p.vid, 'like') : fb.delete(p.vid);
     paintLikes();
-    toast('没保存上，稍后再试');
+    toast(t('没保存上，稍后再试'));
   }
 }
 function paintLikes() {
@@ -913,8 +972,8 @@ function nope(p) {
     Q.i >= Q.tracks.length ? extend(true).then(go) : go();
   }
   api('/api/feedback', { ...track(p), action: 'dislike', scope: 'song' }).catch(() => {});
-  toast(`以后不推〈${p.title}〉`, [
-    ['撤销', () => {
+  toast(t('以后不推〈{s}〉', { s: p.title }), [
+    [t('撤销'), () => {
       fb.delete(p.vid);
       api('/api/feedback', { ...track(p), action: 'undo' }).catch(() => {});
       Q.tracks.splice(idx, 0, p);
@@ -922,7 +981,7 @@ function nope(p) {
       else if (wasCur && idx <= Q.i) Q.i++;
       renderQueue();
     }],
-    [`${spaced(p.artists?.[0]?.name || '这位歌手')}也不要`, () => blockArtist(p)],
+    [t('{a}也不要', { a: spaced(p.artists?.[0]?.name || t('这位歌手')) }), () => blockArtist(p)],
   ]);
 }
 
@@ -942,52 +1001,56 @@ function blockArtist(p) {
   renderQueue();
   if (playingGone) loadTrack(Player.playing);
   api('/api/feedback', { ...track(p), action: 'dislike', scope: 'artist' }).catch(() => {});
-  toast(`以后不推 ${a.name}${before - Q.tracks.length > 0 ? `，队列里去掉了 ${before - Q.tracks.length} 首` : ''}`, [['撤销', () => {
+  toast(before - Q.tracks.length > 0 ? t('以后不推 {a}，队列里去掉了 {n} 首', { a: a.name, n: before - Q.tracks.length }) : t('以后不推 {a}', { a: a.name }), [[t('撤销'), () => {
     api('/api/feedback', { ...track(p), action: 'dislike', scope: 'song' }).catch(() => {});
-    toast(`${a.name} 的其他歌会照常出现`);
+    toast(t('{a} 的其他歌会照常出现', { a: a.name }));
   }]]);
 }
 
 /* ---------- listen view ---------- */
 function welcomeHTML() {
-  const me = S.me, owner = S.owner_name || '朋友';
-  if (!me.google.configured) return `<div class="empty"><h2>你好${me.name ? `，${esc(me.name)}` : ''}</h2><p>${esc(owner)}还在设置连接 YouTube Music 的那一步。好了之后，回到这个页面就能开始。</p></div>`;
+  const me = S.me, owner = S.owner_name || t('一位朋友');
+  if (!me.google.configured) return `<div class="empty"><h2>${me.name ? t('你好，{name}', { name: esc(me.name) }) : t('你好')}</h2><p>${t('{owner}还在设置连接 YouTube Music 的那一步。好了之后，回到这个页面就能开始。', { owner: esc(owner) })}</p></div>`;
   return `<div class="welcome">
-    <h1>你好${me.name ? `，${esc(me.name)}` : ''}</h1>
-    <p class="lede">知音从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。</p>
-    <a class="btn" href="/auth/google/start">连接 YouTube Music</a>
+    <h1>${me.name ? t('你好，{name}', { name: esc(me.name) }) : t('你好')}</h1>
+    <p class="lede">${t('知音从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')}</p>
+    <a class="btn" href="/auth/google/start">${t('连接 YouTube Music')}</a>
     <dl class="scope">
-      <dt>会读取</dt><dd>你点过喜欢的歌和视频，只用来给你算推荐</dd>
-      <dt>会写回</dt><dd>你在这里点的喜欢，会成为 YouTube Music 里的喜欢；可以随时关掉</dd>
-      <dt>不会</dt><dd>发布、评论、删除，或碰你的其他 Google 数据</dd>
+      <dt>${t('会读取')}</dt><dd>${t('你点过喜欢的歌和视频，只用来给你算推荐')}</dd>
+      <dt>${t('会写回')}</dt><dd>${t('你在这里点的喜欢，会成为 YouTube Music 里的喜欢；可以随时关掉')}</dd>
+      <dt>${t('不会')}</dt><dd>${t('发布、评论、删除，或碰你的其他 Google 数据')}</dd>
     </dl>
-    <p class="fine">Google 会提示「Google 尚未验证此应用」。这是${esc(owner)}自己做的小工具，没有拿去申请审核。点「高级」，再点「前往 ${esc(location.host)}」就能继续。你的喜欢和反馈存在${esc(owner)}的服务器上，随时可以在「你的耳朵」里断开并全部删除。</p>
+    <p class="fine">${t('Google 会提示「Google 尚未验证此应用」。这是{owner}自己做的小工具，没有拿去申请审核。点「高级」，再点「前往 {host}」就能继续。你的喜欢和反馈存在{owner}的服务器上，随时可以在设置里断开并全部删除。', { owner: esc(owner), host: esc(location.host) })}</p>
   </div>`;
 }
 
 function renderListen() {
   if (!Q && S.me?.status === 'new') { $('#view').innerHTML = welcomeHTML(); placeHost(); return; }
   if (!Q && !ready()) {
-    $('#view').innerHTML = `<div class="empty"><h2>${S.me.status === 'thin' ? '先听点什么' : '马上就能听'}</h2><p>${S.me.status === 'thin' ? '左边的「先听着」从你最近的喜欢出发。' : '正在从你最近的喜欢里找第一首歌。'}</p></div>`;
+    $('#view').innerHTML = `<div class="empty"><h2>${S.me.status === 'thin' ? t('先听点什么') : t('马上就能听')}</h2><p>${S.me.status === 'thin' ? t('「先听着」从你最近的喜欢出发。') : t('正在从你最近的喜欢里找第一首歌。')}</p></div>`;
     placeHost();
     return;
   }
   if (!Q) {
     const busy = S.jobs?.refresh?.running;
-    $('#view').innerHTML = `<div class="empty"><h2>${busy ? '第一批电台正在准备' : '还没有电台'}</h2><p>${busy
-      ? '大约三分钟。好了会自动出现，不用刷新。'
-      : S.portrait ? '点左边的刷新按钮挑第一批。' : '先在终端运行 <code>uv run zhiyin profile</code> 读一遍你的喜欢。'}</p></div>`;
+    $('#view').innerHTML = `<div class="empty"><h2>${busy ? t('第一批电台正在准备') : t('还没有电台')}</h2><p>${busy
+      ? t('大约三分钟。好了会自动出现，不用刷新。')
+      : S.portrait ? t('点电台旁边的刷新按钮挑第一批。') : t('先在终端运行 <code>uv run zhiyin profile</code> 读一遍你的喜欢。')}</p></div>`;
     placeHost();
     return;
   }
   $('#view').innerHTML = `
   <div class="listen">
-    <section class="stage">
+    <header class="l-head">
+      <div class="ttl"><h2 id="qName"></h2><p id="qWhen"></p></div>
       <div class="views">
-        <button class="ib sm" data-k="lyrics" title="歌词（G）">${I.lyrics}</button>
-        <button class="ib sm" data-k="pip" title="小窗（M）">${I.pip}</button>
-        <button class="ib sm" data-k="imm" title="沉浸（F）">${prefs.imm ? I.shrink : I.full}</button>
+        <button class="ib sm" data-k="lyrics" title="${t('歌词（G）')}">${I.lyrics}</button>
+        <button class="ib sm" data-k="pip" title="${t('小窗（M）')}">${I.pip}</button>
+        <button class="ib sm" data-k="imm" title="${prefs.imm ? t('退出沉浸（F / Esc）') : t('沉浸（F）')}">${prefs.imm ? I.shrink : I.full}</button>
+        <button class="ib sm" data-k="stmenu" title="${t('更多')}" aria-haspopup="menu">${I.more}</button>
       </div>
+    </header>
+    <section class="stage">
       <div class="stage-in">
         <div class="frame" id="frame"></div>
         <div class="meta">
@@ -998,30 +1061,27 @@ function renderListen() {
           <p class="t-why" id="nWhy"></p>
           <div class="prog"><span class="num" id="tCur">0:00</span><div class="bar" id="bar"><i></i></div><span class="num" id="tDur"></span></div>
           <div class="ctl">
-            <button class="ib" data-k="prev" title="上一首（P）">${I.prev}</button>
-            <button class="ib play" data-k="toggle" title="播放 / 暂停（空格）">${I.play}${I.pause}</button>
-            <button class="ib" data-k="next" title="下一首（N）">${I.next}</button>
+            <button class="ib" data-k="prev" title="${t('上一首（P）')}">${I.prev}</button>
+            <button class="ib play" data-k="toggle" title="${t('播放 / 暂停（空格）')}">${I.play}${I.pause}</button>
+            <button class="ib" data-k="next" title="${t('下一首（N）')}">${I.next}</button>
             <span class="gap"></span>
-            <button class="ib like" data-k="like" title="喜欢（L）">${I.heart}</button>
-            <button class="ib" data-k="nope" title="不要这首（X）">${I.x}</button>
+            <button class="ib like" data-k="like" title="${t('喜欢（L）')}">${I.heart}</button>
+            <button class="ib" data-k="nope" title="${t('不要这首（X）')}">${I.x}</button>
             <span class="push"></span>
-            <button class="tb" data-k="radio" title="用这首歌的电台接着往下放">${I.branch}<span class="lbl">沿着这首继续</span></button>
-            <a class="ib" id="nOpen" target="_blank" rel="noopener" title="在 YouTube Music 打开">${I.ext}</a>
+            <button class="tb" data-k="radio" title="${t('用这首歌的电台接着往下放')}">${I.branch}<span class="lbl">${t('沿着这首继续')}</span></button>
+            <a class="ib" id="nOpen" target="_blank" rel="noopener" title="${t('在 YouTube Music 打开')}">${I.ext}</a>
           </div>
         </div>
         <div class="lyr" id="lyrStage"></div>
       </div>
     </section>
-    <section class="queue">
-      <div class="q-head"><h2 id="qName"></h2><p id="qWhen"></p>
-        <div class="steer"><button class="tb" data-k="calm" title="接下来放安静一点的">更安静</button><button class="tb" data-k="up" title="接下来放带劲一点的">更带劲</button><button class="tb" data-k="fresh" title="多放你没收藏过的歌手">多些新歌手</button></div></div>
-      <ol class="q-list" id="qList"></ol>
-      <div class="q-foot">
-        <button class="tb" data-k="extend">${I.plus}再来几首</button>
-        <button class="tb" data-k="ytm">${I.ext}在 YouTube Music 里接着放</button>
-        ${S.me?.google?.connected ? `<button class="tb" data-k="save">存到 YouTube Music</button>` : ''}
-        <div class="keys"><b>空格</b> 播放　<b>N</b> 下一首　<b>L</b> 喜欢　<b>X</b> 不要　<b>G</b> 歌词　<b>F</b> 沉浸　<b>M</b> 小窗</div>
+    <section class="strip" aria-label="${t('接下来')}">
+      <div class="s-head">
+        <h3>${t('接下来')}</h3>
+        <button class="tb" data-k="calm" title="${t('接下来放安静一点的')}">${t('更安静')}</button><button class="tb" data-k="up" title="${t('接下来放带劲一点的')}">${t('更带劲')}</button><button class="tb" data-k="fresh" title="${t('多放你没收藏过的歌手')}">${t('多些新歌手')}</button>
+        <span class="s-note" id="sNote"></span>
       </div>
+      <ol class="s-list" id="qList"></ol>
     </section>
   </div>`;
   renderQueue();
@@ -1029,6 +1089,7 @@ function renderListen() {
   Lyr.render();
   stageRO.disconnect();
   stageRO.observe($('.stage'));
+  stageRO.observe($('.meta'));   // the cover moves when the words under it change height, though the stage keeps its size
   layoutStage();
   if (Pip.w) $$('[data-k="pip"]').forEach((b) => b.classList.add('on'));
   watchFrame();
@@ -1040,12 +1101,13 @@ function renderQueue() {
   $('#qName').textContent = Q.st.name;
   paintSteer();
   list.innerHTML = Q.tracks.map((p, i) => `
-    <li class="tr ${i === Q.i ? 'cur' : ''} ${i !== Q.i && Q.played.has(p.vid) ? 'done' : ''}" data-i="${i}">
-      <div class="cv">${imgTag(p, 120)}<span class="eq"><i></i><i></i><i></i></span></div>
+    <li class="tr ${i === Q.i ? 'cur' : ''} ${i !== Q.i && Q.played.has(p.vid) ? 'done' : ''}" data-i="${i}" title="${esc(p.title)} · ${esc(names(p.artists))}${p.dur ? ` · ${fmt(p.dur)}` : ''}">
+      <div class="cv">${imgTag(p, 226)}<span class="eq"><i></i><i></i><i></i></span></div>
       <div class="mid"><div class="tt">${esc(p.title)}</div><div class="ar">${esc(names(p.artists))}</div></div>
-      <div class="rt"><button class="ib like ${fb.get(p.vid) === 'like' ? 'on' : ''}" data-a="like" title="喜欢">${I.heart}</button><button class="ib" data-a="nope" title="不要">${I.x}</button><span class="d num">${p.dur ? fmt(p.dur) : ''}</span></div>
-    </li>`).join('');
+      <div class="acts"><button class="ib like ${fb.get(p.vid) === 'like' ? 'on' : ''}" data-a="like" aria-label="${t('喜欢')}">${I.heart}</button><button class="ib" data-a="nope" aria-label="${t('不要')}">${I.x}</button></div>
+    </li>`).join('') + `<li class="tile more"><button class="cv" data-k="extend" aria-label="${t('再来几首')}">${I.plus}</button><div class="tt">${t('再来几首')}</div></li>`;
   $$('.st').forEach((b) => b.toggleAttribute('aria-current', b.dataset.st === Q.key));
+  keepCurrentRowVisible();
 }
 
 let frameIO = null;
@@ -1058,14 +1120,14 @@ function watchFrame() {
 }
 
 /* ---------- account ---------- */
-const STATUS = { new: '还没连接', importing: '读取喜欢中', building: '准备电台中', ready: '在听', thin: '喜欢太少', error: '出错了' };
+const STATUS = () => ({ new: t('还没连接'), importing: t('读取喜欢中'), building: t('准备电台中'), ready: t('在听'), thin: t('喜欢太少'), error: t('出错了') });
 const ago = (ts) => (ts ? when(ts) : '');
 let friends = null;
 let shownLink = null;
 const CLAUDE_SRC = {
-  worker: (c) => `用你的 Claude 订阅，在你的 Mac 上跑。${c.online ? '' : 'Mac 现在不在线：新一期会等它醒来再做，点歌也要等它在线。'}`,
-  subscription: () => '用你的 Claude 订阅，在服务器上跑。',
-  key: () => '用服务器上的 Claude API key，按用量计费。',
+  worker: (c) => t('用你的 Claude 订阅，在你的 Mac 上跑。') + (c.online ? '' : t('Mac 现在不在线：新一期会等它醒来再做，点歌也要等它在线。')),
+  subscription: () => t('用你的 Claude 订阅，在服务器上跑。'),
+  key: () => t('用服务器上的 Claude API key，按用量计费。'),
 };
 
 function accountHTML() {
@@ -1074,52 +1136,191 @@ function accountHTML() {
   const g = me.google, sy = me.sync, ls = me.last_sync;
   const rows = [];
   if (!g.configured) {
-    rows.push(`<li><span>YouTube Music<small>连接 YouTube Music 需要先在服务器上配置 Google 登录。</small></span><span></span></li>`);
+    rows.push(`<li><span>YouTube Music<small>${t('连接 YouTube Music 需要先在服务器上配置 Google 登录。')}</small></span><span></span></li>`);
   } else if (g.error === 'revoked') {
-    rows.push(`<li><span>YouTube Music<small>连接失效了：可能在 Google 账号里移除了授权。重新连接一下。</small></span><a class="tb" href="/auth/google/start">重新连接</a></li>`);
+    rows.push(`<li><span>YouTube Music<small>${t('连接失效了：可能在 Google 账号里移除了授权。重新连接一下。')}</small></span><a class="tb" href="/auth/google/start">${t('重新连接')}</a></li>`);
   } else if (!g.connected) {
-    rows.push(`<li><span>YouTube Music<small>还没连接。连接之后，你在这里点的喜欢会同步到账号，你在 YouTube Music 里新点的喜欢也会自动进来。</small></span><a class="tb" href="/auth/google/start">连接</a></li>`);
+    rows.push(`<li><span>YouTube Music<small>${t('还没连接。连接之后，你在这里点的喜欢会同步到账号，你在 YouTube Music 里新点的喜欢也会自动进来。')}</small></span><a class="tb" href="/auth/google/start">${t('连接')}</a></li>`);
   } else {
     const busy = S.jobs?.sync?.running;
-    rows.push(`<li><span>YouTube Music<small>${esc(g.email || '已连接')}${me.synced ? ` · ${ago(me.synced)} 读过一次${ls?.added ? `，新增 ${ls.added} 首` : ''}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? '读取中…' : '现在读取'}</button></li>`);
-    const state = sy.pending ? `${sy.pending} 首等待同步${sy.error === 'quota' ? `：今天的额度用完了，${quotaReset()}后继续` : sy.error === 'reconnect' ? '：需要重新连接' : ''}` : sy.done ? `已同步 ${sy.done} 首` : '在这里点 ♥，YouTube Music 里也会是喜欢';
-    rows.push(`<li><span>把这里的喜欢同步到 YouTube Music<small>${esc(state)}。「不要」只记在知音，不会变成 YouTube 上的踩。</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="同步喜欢"></button></li>`);
+    rows.push(`<li><span>YouTube Music<small>${esc(g.email || t('已连接'))}${me.synced ? ` · ${ls?.added ? t('{when} 读过一次，新增 {n} 首', { when: ago(me.synced), n: ls.added }) : t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
+    const state = sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
+    rows.push(`<li><span>${t('把这里的喜欢同步到 YouTube Music')}<small>${esc(state)}${t('。「不要」只记在知音，不会变成 YouTube 上的踩。')}</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="${t('同步喜欢')}"></button></li>`);
   }
   if (me.mine && me.claude) {
     const c = me.claude;
-    rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) : '还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。'}</small></span><span>${c.source === 'worker' ? (c.online ? '在线' : '离线') : ''}</span></li>`);
+    rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) : t('还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。')}</small></span><span>${c.source === 'worker' ? (c.online ? t('在线') : t('离线')) : ''}</span></li>`);
   }
   if (me.auth) {
-    if (g.email) rows.push(`<li><span>用书签切换账号<small>把这个链接存成书签，点一下就回到这个账号，在别的设备上也一样。有几个账号就各存一个，来回切换；浏览器里要登着 ${esc(g.email)}。</small>${linkHTML(`${location.origin}/auth/google/start?mode=login&as=${encodeURIComponent(g.email)}`)}</span><span></span></li>`);
-    else rows.push(`<li><span>在另一台设备上登录<small>生成一个 14 天内有效的登录链接，发给自己。</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">生成链接</button></li>`);
-    rows.push(`<li><span>退出登录<small>只退出这台设备。</small></span><button class="tb" data-k="logout">退出</button></li>`);
-    if (!me.owner) rows.push(`<li><span>断开并删除我的数据<small>撤销 Google 授权，删掉你的喜欢、电台和反馈。</small></span><button class="tb danger" data-k="delete">删除</button></li>`);
+    if (g.email) rows.push(`<li><span>${t('这个账号的登录书签')}<small>${t('在别的浏览器里想一键进来，就把这个链接存成书签（那里要登着 {email}）。', { email: esc(g.email) })}</small>${linkHTML(`${location.origin}/auth/google/start?mode=login&as=${encodeURIComponent(g.email)}`)}</span><span></span></li>`);
+    else rows.push(`<li><span>${t('在另一台设备上登录')}<small>${t('生成一个 14 天内有效的登录链接，发给自己。')}</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">${t('生成链接')}</button></li>`);
+    rows.push(`<li><span>${t('退出登录')}<small>${t('只退出这台设备。')}</small></span><button class="tb" data-k="logout">${t('退出')}</button></li>`);
+    if (!me.owner) rows.push(`<li><span>${t('断开并删除我的数据')}<small>${t('撤销 Google 授权，删掉你的喜欢、电台和反馈。')}</small></span><button class="tb danger" data-k="delete">${t('删除')}</button></li>`);
   }
-  return `<section class="sec"><h2>账号</h2><ul class="plain acct">${rows.join('')}</ul></section>${me.owner && me.auth ? friendsHTML() : ''}`;
+  return `<section class="sh-sec"><h3>${t('账号')}</h3><ul class="plain acct">${rows.join('')}</ul></section>${me.owner && me.auth ? friendsHTML() : ''}`;
 }
 
 function linkHTML(url) {
-  return `<span class="link"><input readonly value="${esc(url)}" aria-label="链接"><button class="tb" data-k="copy">复制</button></span>`;
+  return `<span class="link"><input readonly value="${esc(url)}" aria-label="${t('链接')}"><button class="tb" data-k="copy">${t('复制')}</button></span>`;
 }
 
-const FRIEND_KEY_NOTE = 'Claude 订阅按 Anthropic 的规定只给订阅者本人用，所以朋友的推荐要走 API key，按用量计费。在你的终端运行 <code>deploy/claude-token.sh --api-key</code>。';
+const FRIEND_KEY_NOTE = () => t('Claude 订阅按 Anthropic 的规定只给订阅者本人用，所以朋友的推荐要走 API key，按用量计费。在你的终端运行 <code>deploy/claude-token.sh --api-key</code>。');
 
 function friendsHTML() {
-  if (!friends) { api('/api/users').then((r) => { friends = r.users; if (view === 'ear') renderEar(); }).catch(() => {}); return ''; }
+  if (!friends) { api('/api/users').then((r) => { friends = r.users; renderSheet(); }).catch(() => {}); return ''; }
   const others = S.me.claude?.others;
-  const list = friends.map((u) => `<li><span>${esc(u.mine ? u.email || '你的另一个账号' : u.name)}<small>${u.mine && u.email ? '你的另一个账号 · ' : ''}${STATUS[u.status] || u.status}${u.songs ? ` · ${u.songs} 首喜欢` : ''}${u.usd7 ? ` · 近 7 天 $${u.usd7.toFixed(2)}` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : '还没来过'}</span></li>`).join('');
+  const list = friends.map((u) => `<li><span>${esc(u.mine ? u.email || t('你的另一个账号') : u.name)}<small>${u.mine && u.email ? `${t('你的另一个账号')} · ` : ''}${STATUS()[u.status] || u.status}${u.songs ? ` · ${t('{n} 首喜欢', { n: u.songs })}` : ''}${u.usd7 ? ` · ${t('近 7 天 ${usd}', { usd: u.usd7.toFixed(2) })}` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : t('还没来过')}</span></li>`).join('');
   const add = others
-    ? `<li><form class="invite" id="invite"><input name="name" placeholder="朋友的名字" maxlength="20" autocomplete="off"><button class="tb">生成邀请链接</button></form>${shownLink?.kind === 'invite' ? linkHTML(shownLink.url) : ''}</li>`
-    : `<li><span>邀请朋友前，先配置 Claude API key<small>${FRIEND_KEY_NOTE}</small></span><span></span></li>`;
-  const mine = `<li><span>加你自己的另一个账号<small>比如你的另一个 YouTube Music 账号：喜欢和电台各自独立，和你一样用你的 Claude。只给你自己用。</small>${shownLink?.kind === 'mine' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="mine">生成登录链接</button></li>`;
-  return `<section class="sec"><h2>朋友<small>每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到${others ? '；他们的推荐用你的 API key 计费' : ''}。</small></h2>
+    ? `<li><form class="invite" id="invite"><input name="name" placeholder="${t('朋友的名字')}" maxlength="20" autocomplete="off"><button class="tb">${t('生成邀请链接')}</button></form>${shownLink?.kind === 'invite' ? linkHTML(shownLink.url) : ''}</li>`
+    : `<li><span>${t('邀请朋友前，先配置 Claude API key')}<small>${FRIEND_KEY_NOTE()}</small></span><span></span></li>`;
+  const mine = `<li><span>${t('加你自己的另一个账号')}<small>${t('比如你的另一个 YouTube Music 账号：它是一个完全独立的账号，用自己的 Google 登录，喜欢、电台和反馈都分开，只是背后同样用你的 Claude。只给你自己用。')}</small>${shownLink?.kind === 'mine' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="mine">${t('生成登录链接')}</button></li>`;
+  return `<section class="sh-sec"><h3>${t('朋友')}</h3><p>${others ? t('每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到；他们的推荐用你的 API key 计费。') : t('每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到。')}</p>
     <ul class="plain">${list}${add}${mine}</ul></section>`;
+}
+
+function langHTML() {
+  const busy = S.jobs?.retell?.running;
+  return `<section class="sh-sec"><h3>${t('语言')}</h3><ul class="plain acct"><li><span>${t('界面和推荐的语言')}<small>${busy ? t('正在把画像和推荐理由改写成{lang}…', { lang: LANGS[LANG] }) : t('画像和每首歌的推荐理由也用这种语言写。')}</small></span>
+    <div class="seg" role="radiogroup" aria-label="${t('语言')}">${Object.entries(LANGS).map(([k, v]) => `<button role="radio" data-lang="${k}" lang="${k}" aria-checked="${k === LANG}">${v}</button>`).join('')}</div></li></ul></section>`;
+}
+
+async function setLang(lang) {
+  if (lang === LANG) return;
+  try {
+    await api('/api/account/lang', { lang });
+    location.reload();
+  } catch (err) { toast(t('没保存上，稍后再试')); }
+}
+
+// Claude wrote the portrait and reasons for a reader of the other language (the listener switched since).
+function staleLangNote() {
+  if (!S.stale_lang) return;
+  if (S.jobs?.retell?.running) { toast(t('正在把画像和推荐理由改写成{lang}…', { lang: LANGS[LANG] }), [], 6000); return; }
+  toast(t('画像和推荐理由还是用另一种语言写的'), [[t('改写成{lang}', { lang: LANGS[LANG] }), async () => {
+    try { S.jobs = await api('/api/account/retell', {}); poll(); toast(t('正在把画像和推荐理由改写成{lang}…', { lang: LANGS[LANG] }), [], 6000); } catch (err) { toast(err.message); }
+  }]], 12000);
+}
+
+/* ---------- settings: a drawer over the page, the music keeps playing ---------- */
+function renderSheet() {
+  const d = $('#sheet');
+  if (!d.open) return;
+  const keep = d.scrollTop;
+  d.innerHTML = `<header class="sh-head"><h2>${t('设置')}</h2><button class="ib sm" data-k="closesheet" aria-label="${t('关闭')}">${I.close}</button></header>
+    <div class="sh-body">${langHTML()}${accountHTML()}</div>`;
+  d.scrollTop = keep;
+}
+function openSettings() {
+  closeMenu();
+  const d = $('#sheet');
+  if (!d.open) d.showModal();
+  renderSheet();
+}
+$('#sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+/* ---------- the account button and its menu ---------- */
+const initial = (s) => esc(([...(s || '').trim()][0] || t('你')).toUpperCase());
+function renderMe() {
+  const me = S.me, g = me?.google || {};
+  const name = me?.name || (g.email ? g.email.split('@')[0] : t('你'));
+  const sub = g.email && g.email.split('@')[0] !== name ? g.email : me?.owner ? t('主人') : '';
+  $('#meBtn').innerHTML = `<span class="av">${initial(name)}</span><span class="who"><b>${esc(name)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</span>${I.updown}`;
+  $('.me-mini').innerHTML = `<span class="av">${initial(name)}</span>`;
+}
+function closeMenu() { const m = $('#menu'); if (m.matches(':popover-open')) m.hidePopover(); }
+// A small popover placed against whatever opened it: above the account button, below the station's ⋯.
+function openMenu(anchor, html) {
+  const m = $('#menu');
+  if (m.matches(':popover-open') && m.dataset.for === anchor.dataset.k) { closeMenu(); return; }
+  m.innerHTML = html;
+  m.dataset.for = anchor.dataset.k;
+  m.showPopover();
+  const a = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  const left = clamp(a.left, 8, innerWidth - w - 8);
+  const top = a.top - h - 8 > 8 && a.top > innerHeight / 2 ? a.top - h - 6 : a.bottom + 6;
+  Object.assign(m.style, { left: `${left}px`, top: `${Math.min(top, innerHeight - h - 8)}px` });
+  anchor.setAttribute('aria-expanded', 'true');
+  m.addEventListener('toggle', (e) => { if (e.newState === 'closed') anchor.setAttribute('aria-expanded', 'false'); }, { once: true });
+}
+function accountMenu(anchor) {
+  const me = S.me, g = me?.google || {};
+  const name = me?.name || (g.email ? g.email.split('@')[0] : t('你'));
+  // Switching is a fresh Google sign-in: accounts never list or reach each other.
+  openMenu(anchor, `
+    <div class="m-acct"><span class="av">${initial(name)}</span><span><b>${esc(name)}</b><span>${esc(g.email || (me?.owner ? t('主人') : ''))}</span></span></div>
+    <hr>
+    <button class="m-item" role="menuitem" data-k="settings">${I.gear}${t('设置')}</button>
+    <button class="m-item" role="menuitem" data-k="keys">${I.keyb}${t('快捷键')}<kbd>?</kbd></button>
+    ${me?.auth && g.configured ? `<a class="m-item" role="menuitem" href="/auth/google/start?mode=login">${I.swap}${t('用另一个账号登录')}</a>` : ''}
+    ${me?.auth ? `<button class="m-item" role="menuitem" data-k="logout">${I.out}${t('退出登录')}</button>` : ''}`);
+}
+function stationMenu(anchor) {
+  if (!Q) return;
+  openMenu(anchor, `
+    <button class="m-item" role="menuitem" data-k="ytm">${I.ext}${t('在 YouTube Music 里接着放')}</button>
+    ${S.me?.google?.connected ? `<button class="m-item" role="menuitem" data-k="save">${I.plus}${t('把这个电台存成歌单')}</button>` : ''}
+    <button class="m-item" role="menuitem" data-k="radio">${I.branch}${t('沿着这首继续')}</button>`);
+}
+
+/* ---------- shortcuts ---------- */
+const KEYS = () => [[t('空格'), t('播放 / 暂停')], ['N', t('下一首')], ['P', t('上一首')], ['L', t('喜欢')], ['X', t('不要')], ['← →', t('快退 / 快进 10 秒')],
+  ['/', t('点歌')], ['1–9', t('换电台')], ['G', t('歌词')], ['T', t('歌词翻译')], ['R', t('罗马音')], ['[ ]', t('歌词早一点 / 晚一点')], ['F', t('沉浸')], ['M', t('小窗')], ['?', t('快捷键')]];
+function openKeys() {
+  closeMenu();
+  const d = $('#keysD');
+  d.innerHTML = `<h2>${t('快捷键')}</h2><dl>${KEYS().map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+  d.showModal();
+}
+$('#keysD').addEventListener('click', (e) => e.currentTarget.close());
+
+/* ---------- ask: say what you want to hear; it is found in the background ---------- */
+const IDEAS = () => ({
+  morning: [t('早上通勤，轻快一点'), t('周末早晨煮咖啡'), t('开工前热热身，不要太吵')],
+  day: [t('下午写代码，人声少一点'), t('下雨的周日下午'), t('做饭时听的日语 city pop')],
+  evening: [t('下班路上，想放松'), t('晚饭后出去散步'), t('和朋友喝一杯')],
+  night: [t('深夜一个人开车'), t('睡前，安静的钢琴和人声'), t('失眠的时候')],
+});
+function composerHTML() {
+  const h = new Date().getHours();
+  const ideas = IDEAS()[h >= 22 || h < 5 ? 'night' : h < 11 ? 'morning' : h < 17 ? 'day' : 'evening'];
+  const asks = (S.asks || []).slice(0, 4);
+  return `<div class="c-h">${t('试试')}</div><div class="chips">${ideas.map((x) => `<button class="chip" data-idea="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+    ${asks.length ? `<div class="c-h">${t('你点过的')}</div>${asks.map((a) => `<button class="c-row" data-st="ask:${a.created}"><span class="mosaic ${a.picks.length < 4 ? 'one' : ''}">${a.picks.slice(0, 4).map((p) => imgTag(p, 120)).join('')}</span><span><b>${esc(a.intent)}</b><span>${t('你说：{q}', { q: esc(a.q) })}</span></span></button>`).join('')}` : ''}`;
+}
+function openAsk() {
+  closeMenu();
+  const d = $('#composer'), input = $('#askInput');
+  if (input.disabled) { toast(t('电台准备好之后，就能在这里点歌了')); return; }
+  $('#cBody').innerHTML = composerHTML();
+  if (!d.open) d.showModal();
+  input.focus();
+}
+$('#composer').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) return e.currentTarget.close();
+  const idea = e.target.closest('[data-idea]');
+  if (idea) { $('#askInput').value = idea.dataset.idea; submitAsk(); }
+});
+// The request flies from the composer into the station list, where it waits as a station being made.
+function flyAsk(text, a) {
+  const row = $('.st.pending .nm');
+  if (!row || !a || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const b = row.getBoundingClientRect();
+  if (!b.width) return;
+  const el = document.createElement('p');
+  el.className = 'fly';
+  el.textContent = text;
+  Object.assign(el.style, { left: `${a.left}px`, top: `${a.top + (a.height - 22) / 2}px` });
+  document.body.append(el);
+  row.style.opacity = '0';
+  const s = 14 / 18;
+  el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${b.left - a.left}px, ${b.top - a.top - (a.height - 22) / 2 - 2}px) scale(${s})`, opacity: 1 }],
+    { duration: 480, easing: 'cubic-bezier(.32, .72, 0, 1)' }).finished.then(() => { el.remove(); row.style.opacity = ''; });
 }
 
 /* ---------- ear view ---------- */
 // The record: every like is a dot, ring by year (centre = the first like, edge = now), wedge by taste.
-let EAR = null, earKey = '', earLoading = false, earRevealed = false;
-const earCol = new Map(Object.entries(store.get('earCol') || {}));
+let EAR = null, earKey = '', earLoading = false, earRevealed = false, earFailed = false;
+const earCol = new Map();
 const TRAIL = 0.026;   // half the angle each trail spans, in radians
 const E = { hi: null, hover: null, T: Infinity, anim: 0, era: -1, geo: null, pts: [], touch: false, ro: null };
 
@@ -1134,17 +1335,22 @@ async function loadEar() {
     EAR = d;
     if (view === 'ear') renderEar();
     earColors();
-  } catch { /* the page still reads without the record */ }
+  } catch {
+    // the page still reads without the record
+    earFailed = true;
+    if (view === 'ear') renderEar();
+  }
   earLoading = false;
 }
 
 const yearOf = (t) => Math.floor(t);
-const whenLiked = (t) => (EAR?.real_dates ? `${yearOf(t)} 年 ${Math.min(12, Math.floor((t - yearOf(t)) * 12) + 1)} 月` : `${yearOf(t)} 年前后`);
+const whenLiked = (y) => (EAR?.real_dates ? new Date(yearOf(y), Math.min(11, Math.floor((y - yearOf(y)) * 12))).toLocaleDateString(LANG, { year: 'numeric', month: 'short' }) : t('{y} 年前后', { y: yearOf(y) }));
 const songByTitle = (t) => EAR?.list.findLast((s) => s.title === t) || EAR?.list.findLast((s) => s.title.startsWith(t));
-// 《title》 in the portrait and the facts plays that like
-const playable = (text) => esc(text).replace(/《([^》]+)》/g, (m, t) => {
-  const s = songByTitle(t.replace(/&amp;/g, '&'));
-  return s ? `<button class="song" data-play="${s.vid}">《${t}》</button>` : m;
+// 《title》 (“title” in English) in the portrait and the facts plays that like
+const playable = (text) => esc(text).replace(/《([^》]+)》|“([^”]+)”/g, (m, a, b) => {
+  const s = songByTitle((a ?? b).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+  // a link, not a button: a button is laid out as one box, so a long title would break away from its sentence
+  return s ? `<a class="song" href="#" role="button" data-play="${s.vid}">${m}</a>` : m;
 });
 
 // YouTube Data API quotas reset at midnight Pacific time.
@@ -1153,70 +1359,75 @@ function quotaReset() {
   const pt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
   const at = new Date(now.getTime() + ((24 - pt.getHours()) * 3600 - pt.getMinutes() * 60 - pt.getSeconds()) * 1000);
   const hm = `${at.getHours()}:${String(at.getMinutes()).padStart(2, '0')}`;
-  return `${at.toDateString() === now.toDateString() ? '今天' : '明天'} ${hm} `;
+  return at.toDateString() === now.toDateString() ? t('今天 {hm}', { hm }) : t('明天 {hm}', { hm });
 }
 
-function dockHTML() {
-  return `<div class="dock"><div class="dock-frame" id="dockFrame"></div><div class="dock-meta">
-    <div class="tt" id="dTitle"></div><div class="ar" id="dArtist"></div>
-    <div class="ctl"><button class="ib" data-k="prev" title="上一首">${I.prev}</button><button class="ib play" data-k="toggle" title="播放 / 暂停">${I.play}${I.pause}</button><button class="ib" data-k="next" title="下一首">${I.next}</button><button class="ib like" data-k="like" title="喜欢">${I.heart}</button></div>
-    <a class="back" href="#">回到电台</a></div></div>`;
+const DISC = () => [[t('少'), 0.2], [t('中'), 0.4], [t('多'), 0.6]];
+function laneRow(l, sec) {
+  const covers = (sec?.covers || l.covers || []).slice(0, 4).map((v) => `<img src="${px(`https://i.ytimg.com/vi/${v}/mqdefault.jpg`)}" alt="" loading="lazy">`).join('');
+  const lv = DISC().reduce((a, b) => (Math.abs(b[1] - l.discovery) < Math.abs(a[1] - l.discovery) ? b : a))[1];
+  const playable = ST.some((x) => x.key === l.key && x.tracks.length);
+  return `<div class="lrow ${l.enabled ? '' : 'off'}">
+    ${playable ? `<button class="lc-play" data-st="${esc(l.key)}" aria-label="${t('放{name}', { name: esc(l.name) })}">${covers}</button>` : `<span class="lc-play">${covers}</span>`}
+    <div class="lc-t"><div class="n">${esc(l.name)}<span class="num">${t('{n} 首', { n: l.size })}</span></div><div class="w">${esc(l.when)}</div></div>
+    <div class="lc-ctl">
+      <button class="sw" role="switch" aria-checked="${l.enabled}" data-lane="${esc(l.key)}" aria-label="${t('把{name}放进推荐', { name: esc(l.name) })}"></button>
+      <div class="seg" role="radiogroup" aria-label="${t('没收藏过的歌手占多少')}"><span>${t('新面孔')}</span>${DISC().map(([w, v]) => `<button role="radio" aria-checked="${v === lv}" data-lane="${esc(l.key)}" data-disc="${v}" title="${t('没收藏过的歌手约占 {p}%', { p: Math.round(v * 100) })}">${w}</button>`).join('')}</div>
+    </div></div>`;
 }
 
 function renderEar() {
   if (!ready() || !S.portrait) {
-    $('#view').innerHTML = `<div class="ear-wrap"><div class="ear"><h1>${S.me?.status === 'new' ? '还没开始' : '还在了解你'}</h1>
-      <p class="meta">${S.library.songs ? `${S.library.songs} 首喜欢` : '连接 YouTube Music 之后，这里会写出你的口味。'}</p>${accountHTML()}</div></div>`;
+    $('#view').innerHTML = `<div class="ear-wrap"><div class="ear"><div class="ear-hero"><div>
+      <h1>${S.me?.status === 'new' ? t('还没开始') : t('还在了解你')}</h1>
+      <p class="lede">${S.library.songs ? t('读到了 {n} 首喜欢。电台准备好之后，这里会写出你的口味：你一直在听什么，它们怎么变过来，你可以怎么调。', { n: S.library.songs }) : t('连接 YouTube Music 之后，这里会写出你的口味。')}</p></div></div></div></div>`;
     placeHost();
     return;
   }
-  if (!EAR) loadEar();
+  if (!EAR && !earFailed) loadEar();
   const keep = $('.ear-wrap')?.scrollTop || 0;
   const po = S.portrait;
-  const cut = po.headline.search(/[。！？]/);
+  const cut = po.headline.search(/[。！？]|[.!?](?=\s)/);   // the first sentence is the heading, in either script
   const head = cut > 0 ? po.headline.slice(0, cut + 1) : po.headline;
   const lede = po.headline.slice(head.length).trim();
   const first = EAR ? yearOf(EAR.span[0]) : (S.timeline.map((p) => p[1]).filter(Boolean).sort()[0] || '').slice(0, 4);
-  const fbRows = S.feedback.filter((f) => f.action !== 'known').slice(0, 12);
-  const label = (f) => (f.action === 'like' ? '喜欢' : f.scope === 'artist' ? '不要这位歌手' : '不要这首');
-  const sec = (k) => EAR?.sectors.find((s) => s.key === k);
+  const fbRows = S.feedback.filter((f) => f.action !== 'known').slice(0, 30);
+  const label = (f) => (f.action === 'like' ? t('喜欢') : f.scope === 'artist' ? t('不要这位歌手') : t('不要这首'));
+  const sec = (k) => EAR?.sectors.find((x) => x.key === k);
+  const on = S.lanes.filter((l) => l.enabled).length;
+  const skeleton = `<div class="fact sk"><b class="lead">00%</b><p>${t('正在把你的喜欢按年份排开')}</p></div>`.repeat(3);
   $('#view').innerHTML = `
   <div class="ear-wrap"><div class="ear">
     <header class="ear-hero">
-      <h1>${esc(head)}</h1>
-      ${lede ? `<p class="lede">${esc(lede)}</p>` : ''}
-      <p class="meta num">${S.library.songs} 首喜欢 · ${first} 年至今 · ${S.lanes.length} 种口味</p>
-    </header>
-    <section class="record">
-      <div class="rec-l">
-        <div class="disc" id="disc" aria-label="你的喜欢，按年份一圈一圈往外长，按口味分成扇区">
+      <div class="hero-t">
+        <h1>${esc(head)}</h1>
+        ${lede ? `<p class="lede">${esc(lede)}</p>` : ''}
+        <p class="meta-line num">${t('{n} 首喜欢 · {y} 年至今 · {k} 种口味', { n: S.library.songs, y: first, k: S.lanes.length })}</p>
+        <div class="facts" id="facts">${EAR ? factsHTML() : earFailed ? '' : skeleton}</div>
+      </div>
+      ${earFailed ? '' : `<div class="rec-l">
+        <div class="disc ${EAR ? '' : 'loading'}" id="disc" aria-label="${t('你的喜欢，按年份一圈一圈往外长，按口味分成扇区')}">
           <canvas></canvas><svg class="disc-svg"></svg><div class="hub" id="hub"></div><div class="tip"></div>
         </div>
-        <div class="eras2"><button class="replay" data-k="replay" title="从第一首喜欢开始，重放一遍">${I.play}<span>回放</span></button><div class="eratrack" id="eraTrack"></div></div>
+        <div class="eras2"><button class="replay" data-k="replay" title="${t('从第一首喜欢开始，重放一遍')}">${I.play}<span>${t('回放')}</span></button><div class="eratrack" id="eraTrack"></div></div>
         <p class="era-now" id="eraNow"></p>
-      </div>
-      <aside class="facts" id="facts">${EAR ? factsHTML() : ''}</aside>
+      </div>`}
+    </header>
+    <section class="sec"><h2>${t('你的口味')}<small>${t('{n} 种在推荐里。点封面就放这个口味的电台；关掉的下一批起不再出现；新面孔是没收藏过的歌手占多少。', { n: on })}</small></h2>
+      <div class="lanes">${S.lanes.map((l) => laneRow(l, sec(l.key))).join('')}</div></section>
+    <section class="sec"><h2>${t('完整的画像')}</h2>
+      <div class="portrait">
+        <div><div class="prose" id="prose">${po.paragraphs.map((x) => `<p>${playable(x)}</p>`).join('')}</div>
+          ${po.paragraphs.length > 1 ? `<button class="tb readmore" data-k="readmore">${t('读完整段')}</button>` : ''}</div>
+        ${po.threads.length ? `<div class="threads"><h3>${t('一直没变的')}</h3><ol class="threads">${po.threads.map((x) => `<li>${playable(x)}</li>`).join('')}</ol></div>` : ''}
+      </div></section>
+    <section class="sec folds">
+      ${S.set_aside.length ? `<details class="fold"><summary><b>${t('不算进口味的')}</b><span>${t('{n} 类，留在你的喜欢里，但不拿来推歌', { n: S.set_aside.length })}</span>${I.down}</summary>
+        <ul class="plain">${S.set_aside.map((x) => `<li><span>${esc(x.what)}<small>${esc(x.why)}</small></span><span class="num">${t('{n} 首', { n: x.n })}</span></li>`).join('')}</ul></details>` : ''}
+      ${fbRows.length ? `<details class="fold"><summary><b>${t('最近的反馈')}</b><span>${t('{n} 条，点错了可以撤销', { n: fbRows.length })}</span>${I.down}</summary>
+        <ul class="plain">${fbRows.map((f) => `<li><span>${esc(f.title || f.vid)}<small>${esc(f.artist || '')} · ${label(f)} · ${new Date(f.ts * 1000).toLocaleDateString(LANG, { month: 'short', day: 'numeric' })}</small></span><button class="tb" data-undo="${esc(f.vid)}">${t('撤销')}</button></li>`).join('')}</ul></details>` : ''}
     </section>
-    <section class="sec"><h2>完整的画像</h2><div class="prose">${po.paragraphs.map((p) => `<p>${playable(p)}</p>`).join('')}</div></section>
-    <section class="sec"><h2>一直没变的</h2><ol class="threads">${po.threads.map((t) => `<li>${playable(t)}</li>`).join('')}</ol></section>
-    <section class="sec"><h2>口味与电台<small>关掉的口味下一批起不再出现。滑块是没收藏过的歌手所占的比例。</small></h2><div>
-    ${S.lanes.map((l) => {
-      const d = Math.round(l.discovery * 100);
-      const covers = (sec(l.key)?.covers || []).map((v) => `<img src="${px(`https://i.ytimg.com/vi/${v}/mqdefault.jpg`)}" alt="" loading="lazy">`).join('');
-      return `<div class="lset ${l.enabled ? '' : 'off'}">
-        <span class="stack">${covers}</span>
-        <div><div class="n">${esc(l.name)}<span class="num">${l.size} 首</span></div><div class="w">${esc(l.when)}</div></div>
-        <button class="sw" role="switch" aria-checked="${l.enabled}" data-lane="${esc(l.key)}" aria-label="把${esc(l.name)}放进推荐"></button>
-        <label class="rng"><span>没收藏过的歌手 <b class="num" data-v="${esc(l.key)}">${d}%</b></span><input type="range" min="0" max="100" step="10" value="${d}" data-lane="${esc(l.key)}"></label>
-      </div>`;
-    }).join('')}</div></section>
-    ${S.set_aside.length ? `<section class="sec"><h2>不算进口味的<small>它们留在你的喜欢里，但不拿来推歌。</small></h2>
-      <ul class="plain">${S.set_aside.map((s) => `<li><span>${esc(s.what)}<small>${esc(s.why)}</small></span><span class="num">${s.n} 首</span></li>`).join('')}</ul></section>` : ''}
-    ${fbRows.length ? `<section class="sec"><h2>最近的反馈</h2><ul class="plain">${fbRows.map((f) => `<li><span>${esc(f.title || f.vid)}<small>${esc(f.artist || '')}</small></span><span>${label(f)} · ${new Date(f.ts * 1000).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span></li>`).join('')}</ul></section>` : ''}
-    ${accountHTML()}
-  </div></div>
-  ${cur() ? dockHTML() : ''}`;
-  document.body.classList.toggle('has-dock', !!cur());
+  </div></div>`;
   $('.ear-wrap').scrollTop = keep;
   if (EAR) mountDisc();
   paintNow();
@@ -1226,7 +1437,7 @@ function renderEar() {
 function factsHTML() {
   return EAR.facts.map((f, i) => {
     const body = f.groups
-      ? f.groups.map((g, j) => `<span class="lg" data-f="${i}" data-g="${j}">${esc(g.label)} <span class="num">${g.pct}%</span></span>`).join('<span class="sep">·</span>')
+      ? f.groups.map((g, j) => `<span class="lg" data-f="${i}" data-g="${j}">${esc(g.label)} <span class="num">${g.pct}%</span></span>`).join('<span class="sep">·</span><wbr>')
       : playable(f.text);
     return `<div class="fact" data-f="${i}"><b class="lead num">${esc(f.lead)}</b><p>${body}</p></div>`;
   }).join('');
@@ -1284,9 +1495,12 @@ function mountDisc() {
   const hub = $('#hub');
   const hr = R0 - 4;
   Object.assign(hub.style, { width: `${hr * 2}px`, height: `${hr * 2}px`, left: `${c - hr}px`, top: `${c - hr}px` });
-  $('#eraTrack').innerHTML = EAR.eras.map((er, i) => {
-    const w = Math.max(0.3, er.t1 - er.t0) / span;
-    return `<button class="era2" data-era="${i}" aria-label="${esc(er.years)} ${esc(er.label)}" style="left:${((er.t0 - t0) / span * 100).toFixed(2)}%;width:${(w * 100).toFixed(2)}%"><span class="y num"><span class="yf">${esc(er.years)}</span><span class="ys">${esc(er.years.split(/[–-]/)[0])}</span></span><span class="l">${esc(er.label)}</span></button>`;
+  const pos = (t) => (t - t0) / span, order = EAR.eras.map((_, i) => i).sort((a, b) => EAR.eras[a].t0 - EAR.eras[b].t0);
+  $('#eraTrack').innerHTML = order.map((i, k) => {
+    // an era runs until the next one starts, so a short era never lies under its neighbour's label
+    const er = EAR.eras[i], next = EAR.eras[order[k + 1]];
+    const l = pos(er.t0), r = next ? pos(next.t0) : Math.min(1, Math.max(pos(er.t1), l + 0.3 / span));
+    return `<button class="era2" data-era="${i}" aria-label="${esc(er.years)} ${esc(er.label)}" style="left:${(l * 100).toFixed(2)}%;width:${((r - l) * 100).toFixed(2)}%"><span class="y num"><span class="yf">${esc(er.years)}</span><span class="ys">${esc(er.years.split(/[–-]/)[0])}</span></span><span class="l">${esc(er.label)}</span></button>`;
   }).join('');
   // Sized by pixels, not by share of the span: six two-year eras are each a fifth of the track but too narrow for a label.
   $$('.era2').forEach((b) => {
@@ -1348,7 +1562,7 @@ function paintHub() {
   }
   hub.dataset.u = '';
   hub.className = 'hub';
-  hub.innerHTML = `<b class="num">${EAR.list.length}</b><span>首喜欢</span>`;
+  hub.innerHTML = `<b class="num">${EAR.list.length}</b><span>${t('首喜欢')}</span>`;
 }
 
 function showEra(i) {
@@ -1487,7 +1701,7 @@ function playFromDisc(p) {
     tracks.push(q.s);
   }
   const sec = EAR.sectors.find((s) => s.key === p.s.lane);
-  const st = { key: 'ear', group: 'ear', name: `${sec?.name || '你的喜欢'} · 从〈${p.s.title}〉放起`, sub: '你自己的喜欢', when: '在「你的耳朵」里点的，接着放它附近的喜欢', tracks, reserve: [] };
+  const st = { key: 'ear', group: 'ear', name: t('{lane} · 从〈{s}〉放起', { lane: sec?.name || t('你的喜欢'), s: p.s.title }), sub: t('你自己的喜欢'), when: t('在「你的耳朵」里点的，接着放它附近的喜欢'), tracks, reserve: [] };
   Q = { key: 'ear', st, tracks, reserve: [], i: 0, played: new Set() };
   if (!$('.dock')) {
     $('#view').insertAdjacentHTML('beforeend', dockHTML());
@@ -1505,6 +1719,7 @@ function playVid(vid) {
 
 // dot colours come from each song's own cover; kept per browser so the record is in colour from the second visit
 async function earColors() {
+  if (!earCol.size) for (const [v, c] of Object.entries(store.get(acct('earCol')) || {})) earCol.set(v, c);
   const todo = [...new Set(EAR.list.map((s) => s.vid))].filter((v) => !earCol.has(v));
   if (!todo.length) return;
   let i = 0, dirty = false;
@@ -1519,7 +1734,7 @@ async function earColors() {
   await Promise.all(Array.from({ length: 6 }, work));
   clearInterval(flush);
   paintDisc();
-  store.set('earCol', Object.fromEntries([...earCol].filter(([, c]) => c)));
+  store.set(acct('earCol'), Object.fromEntries([...earCol].filter(([, c]) => c)));
 }
 
 function dotColor(src) {
@@ -1564,10 +1779,12 @@ function route() {
   if (view !== 'ear' && E.anim) stopReplay();
   if (view === 'ear' && prefs.imm) immersive(false);
   $('#earLink').toggleAttribute('aria-current', view === 'ear');
-  document.body.classList.remove('has-dock');
+  $$('#tabs [data-tab]').forEach((t) => t.toggleAttribute('aria-current', t.dataset.tab === view));
   $('#mini').hidden = true;
+  $('#pcard').hidden = view === 'listen' || !cur();
   if (view === 'ear') renderEar(); else renderListen();
   renderStations();
+  scrollTo(0, 0);
 }
 addEventListener('hashchange', route);
 
@@ -1579,10 +1796,10 @@ async function act(k, btn) {
   else if (k === 'prev') prev();
   else if (k === 'like' && p) like(p);
   else if (k === 'nope' && p) nope(p);
-  else if (k === 'radio') continueFrom(btn);
+  else if (k === 'radio') { closeMenu(); continueFrom(null); }
   else if (k === 'lyrics') toggleLyrics();
   else if (k === 'calm' || k === 'up' || k === 'fresh') steer(k);
-  else if (k === 'pip') Pip.toggle().catch(() => toast('小窗打不开'));
+  else if (k === 'pip') Pip.toggle().catch(() => toast(t('小窗打不开')));
   else if (k === 'imm') immersive();
   else if (k === 'lytr' || k === 'lyro') {
     const key = k === 'lytr' ? 'tr' : 'ro';
@@ -1593,35 +1810,44 @@ async function act(k, btn) {
   } else if (k === 'extend') { btn.disabled = true; await extend(false); btn.disabled = false; }
   else if (k === 'refresh') startRefresh();
   else if (k === 'setup') { try { await api('/api/setup', {}); await reload(); poll(); } catch (err) { toast(err.message); } }
-  else if (k === 'resync') { try { S.jobs = await api('/api/sync', {}); renderEar(); poll(); } catch (err) { toast(err.message); } }
+  else if (k === 'resync') { try { S.jobs = await api('/api/sync', {}); renderSheet(); poll(); } catch (err) { toast(err.message); } }
   else if (k === 'synclikes') {
     const on = btn.getAttribute('aria-checked') !== 'true';
     btn.setAttribute('aria-checked', on);
     S.me = await api('/api/account/sync-likes', { on });
-    toast(on ? '之后的喜欢会同步到 YouTube Music' : '喜欢只记在知音，不再同步');
-  } else if (k === 'device') { const r = await api('/api/account/device', {}); shownLink = { kind: 'device', url: r.url }; renderEar(); }
-  else if (k === 'mine') { const r = await api('/api/invite', { mine: true }); shownLink = { kind: 'mine', url: r.url }; friends = null; renderEar(); }
+    toast(on ? t('之后的喜欢会同步到 YouTube Music') : t('喜欢只记在知音，不再同步'));
+  } else if (k === 'device') { const r = await api('/api/account/device', {}); shownLink = { kind: 'device', url: r.url }; renderSheet(); }
+  else if (k === 'mine') { const r = await api('/api/invite', { mine: true }); shownLink = { kind: 'mine', url: r.url }; friends = null; renderSheet(); }
   else if (k === 'copy') {
     const input = btn.parentElement.querySelector('input');
-    try { await navigator.clipboard.writeText(input.value); toast('已复制'); } catch { input.select(); }
+    try { await navigator.clipboard.writeText(input.value); toast(t('已复制')); } catch { input.select(); }
   } else if (k === 'logout') { await api('/auth/logout', {}); location.href = '/login'; }
   else if (k === 'delete') {
     if (!btn.dataset.armed) {
       btn.dataset.armed = '1';
-      btn.textContent = '再点一次确认删除';
-      setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = '删除'; } }, 4000);
+      btn.textContent = t('再点一次确认删除');
+      setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = t('删除'); } }, 4000);
       return;
     }
     await api('/api/account/delete', {});
     location.href = '/login';
   }
   else if (k === 'replay') replay();
+  else if (k === 'menu') accountMenu(btn);
+  else if (k === 'stmenu') stationMenu(btn);
+  else if (k === 'settings') openSettings();
+  else if (k === 'closesheet') $('#sheet').close();
+  else if (k === 'keys') openKeys();
+  else if (k === 'ask') openAsk();
+  else if (k === 'readmore') { $('#prose').classList.add('open'); btn.remove(); }
   else if (k === 'ytm') {
+    closeMenu();
     const vids = Q.tracks.slice(Q.i).map((x) => x.vid);
     const w = window.open('', '_blank');
-    try { const r = await api('/api/queue-link', { vids }); Player.pause(); w.location = r.url; } catch (err) { w?.close(); toast(`打不开：${err.message}`); }
+    try { const r = await api('/api/queue-link', { vids }); Player.pause(); w.location = r.url; } catch (err) { w?.close(); toast(t('打不开：{e}', { e: err.message })); }
   } else if (k === 'save') {
-    try { const r = await api('/api/playlist', { name: Q.st.name, vids: Q.tracks.map((x) => x.vid) }); toast(`已存成「知音 · ${Q.st.name}」`, [['打开', () => window.open(r.url, '_blank')]]); } catch (err) { toast(err.message); }
+    closeMenu();
+    try { const r = await api('/api/playlist', { name: Q.st.name, vids: Q.tracks.map((x) => x.vid) }); toast(t('已存成「知音 · {name}」', { name: Q.st.name }), [[t('打开'), () => window.open(r.url, '_blank')]]); } catch (err) { toast(err.message); }
   }
 }
 
@@ -1650,33 +1876,52 @@ document.addEventListener('click', async (e) => {
   }
   if (e.target.closest('#ytHost')) return Player.toggle();
   const pl = e.target.closest('[data-play]');
-  if (pl) return playVid(pl.dataset.play);
+  if (pl) { e.preventDefault(); return playVid(pl.dataset.play); }
   const bar = e.target.closest('.bar');
   if (bar) { const b = bar.getBoundingClientRect(); return Player.seek((e.clientX - b.left) / b.width); }
   const btn = e.target.closest('[data-k]');
   if (btn) act(btn.dataset.k, btn);
 });
 
-document.addEventListener('change', (e) => {
-  const r = e.target.closest('input[type=range][data-lane]');
-  if (r) api('/api/settings/lane', { key: r.dataset.lane, discovery: r.value / 100 }).then(() => toast('下一批开始生效'));
-});
-document.addEventListener('input', (e) => {
-  const r = e.target.closest('input[type=range][data-lane]');
-  if (r) $(`[data-v="${r.dataset.lane}"]`).textContent = `${r.value}%`;
-});
 document.addEventListener('click', (e) => {
+  const lb = e.target.closest('button[data-lang]');
+  if (lb) { setLang(lb.dataset.lang); return; }
+  const seg = e.target.closest('[data-disc][data-lane]');
+  if (seg) {
+    const v = +seg.dataset.disc, l = S.lanes.find((x) => x.key === seg.dataset.lane);
+    $$('button', seg.parentElement).forEach((b) => b.setAttribute('aria-checked', b === seg));
+    if (l) l.discovery = v;
+    api('/api/settings/lane', { key: seg.dataset.lane, discovery: v }).then(() => toast(t('新面孔约占 {p}%，下一批开始生效', { p: Math.round(v * 100) })));
+    return;
+  }
+  const un = e.target.closest('[data-undo]');
+  if (un) {
+    const f = S.feedback.find((x) => x.vid === un.dataset.undo);
+    un.disabled = true;
+    api('/api/feedback', { vid: un.dataset.undo, title: f?.title, artist: f?.artist, action: 'undo' }).then(() => {
+      fb.delete(un.dataset.undo);
+      S.feedback = S.feedback.filter((x) => x.vid !== un.dataset.undo);
+      un.closest('li').classList.add('undone');
+      un.textContent = t('已撤销');
+      paintLikes();
+    }).catch(() => { un.disabled = false; toast(t('没撤销成功，稍后再试')); });
+    return;
+  }
   const sw = e.target.closest('.sw[data-lane]');
   if (!sw) return;
   const on = sw.getAttribute('aria-checked') !== 'true';
   sw.setAttribute('aria-checked', on);
-  sw.closest('.lset').classList.toggle('off', !on);
-  api('/api/settings/lane', { key: sw.dataset.lane, enabled: on }).then(() => toast(on ? '下一批起会出现' : '下一批起不再出现'));
+  sw.closest('.lrow').classList.toggle('off', !on);
+  const l = S.lanes.find((x) => x.key === sw.dataset.lane);
+  if (l) l.enabled = on;
+  api('/api/settings/lane', { key: sw.dataset.lane, enabled: on }).then(() => toast(on ? t('下一批起会出现') : t('下一批起不再出现')));
 });
 
 function onKey(e) {
-  if (e.target.closest?.('input, textarea')) { if (e.key === 'Escape') e.target.blur(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); return $('#composer').open ? $('#composer').close() : openAsk(); }
+  if (e.target.closest?.('input, textarea')) { if (e.key === 'Escape' && !e.target.closest('dialog')) e.target.blur(); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (document.querySelector('dialog[open]')) return;
   MS.arm();
   const k = e.key.toLowerCase(), p = cur();
   if (e.code === 'Space') { e.preventDefault(); Player.toggle(); }
@@ -1686,14 +1931,15 @@ function onKey(e) {
   else if (k === 'x' && p) nope(p);
   else if (k === 'g') toggleLyrics();
   else if (k === 'f') immersive();
-  else if (k === 'm') Pip.toggle().catch(() => toast('小窗打不开'));
+  else if (k === 'm') Pip.toggle().catch(() => toast(t('小窗打不开')));
   else if (k === 't' && Lyr.data) act('lytr');
   else if (k === 'r' && Lyr.data) act('lyro');
   else if (e.key === '[') Lyr.nudge(-0.25);
   else if (e.key === ']') Lyr.nudge(0.25);
   else if (e.key === 'ArrowRight') Player.seekTo(Player.time()[0] + 10);
   else if (e.key === 'ArrowLeft') Player.seekTo(Player.time()[0] - 10);
-  else if (k === '/') { e.preventDefault(); window.focus(); $('#askInput').focus(); }
+  else if (k === '/') { e.preventDefault(); window.focus(); openAsk(); }
+  else if (e.key === '?') openKeys();
   else if (/^[1-9]$/.test(e.key)) { const s = ST.filter((x) => !x.pending)[+e.key - 1]; if (s) selectStation(s.key); }
   else if (k === 'escape') { if (prefs.imm) immersive(false); else if (view === 'ear') location.hash = ''; }
 }
@@ -1708,28 +1954,30 @@ document.addEventListener('submit', async (e) => {
     const r = await api('/api/invite', { name });
     shownLink = { kind: 'invite', url: r.url };
     friends = null;
-    renderEar();
-    toast(`把链接发给${name}，${r.days} 天内有效`);
+    renderSheet();
+    toast(t('把链接发给{name}，{n} 天内有效', { name, n: r.days }));
   } catch (err) { toast(err.message); }
 });
 
-$('#ask').onsubmit = async (e) => {
-  e.preventDefault();
+async function submitAsk() {
   const input = $('#askInput'), q = input.value.trim();
   if (!q) return;
   try {
     await api('/api/ask', { q });
+    const box = input.getBoundingClientRect();
     pendingAsk = q.length > 16 ? `${q.slice(0, 16)}…` : q;
     input.value = '';
-    input.blur();
+    $('#composer').close();
     buildStations();
     renderStations();
+    flyAsk(pendingAsk, box);
     poll();
-    toast('在找了，一分钟左右。先接着听');
+    toast(t('在找了，一分钟左右。先接着听'));
   } catch (err) {
-    toast(err.message === '已经在进行' ? '上一个还在找，稍等一下' : `没发出去：${err.message}`);
+    toast(err.code === 'busy' ? t('上一个还在找，稍等一下') : t('没发出去：{e}', { e: err.message }));
   }
-};
+}
+$('#ask').onsubmit = (e) => { e.preventDefault(); submitAsk(); };
 
 async function startRefresh() {
   try { await api('/api/refresh', {}); } catch { /* already running */ }
@@ -1767,24 +2015,29 @@ async function finished(done) {
       pendingAsk = null;
       buildStations();
       renderStations();
-      if (j.error) { toast(`没找到合适的：${j.error.slice(0, 60)}`); continue; }
+      if (j.error) { toast(t('没找到合适的：{e}', { e: j.error.slice(0, 60) })); continue; }
       const a = ST.find((s) => s.group === 'ask');
       if (!a) continue;
       if (!Player.playing) selectStation(a.key, true);
-      else toast(`「${a.name}」准备好了`, [['现在听', () => selectStation(a.key)]], 9000);
+      else toast(t('「{name}」准备好了', { name: a.name }), [[t('现在听'), () => selectStation(a.key)]], 9000);
     }
     if (k === 'setup' && !j.error && ready()) {
       if (!Q || Q.key === 'warm') {
         const d = defaultStation();
-        if (Q && Player.playing) toast('你的电台准备好了', [['现在听', () => selectStation(d.key)]], 12000);
-        else if (d) { Q = queueOf(d); renderListen(); loadTrack(false); toast('你的电台准备好了'); }
-      } else toast('你的电台准备好了');
+        if (Q && Player.playing) toast(t('你的电台准备好了'), [[t('现在听'), () => selectStation(d.key)]], 12000);
+        else if (d) { Q = queueOf(d); renderListen(); loadTrack(false); toast(t('你的电台准备好了')); }
+      } else toast(t('你的电台准备好了'));
       continue;
     }
     if (k === 'sync' && !j.error) { if (view === 'ear') renderEar(); continue; }
+    if (k === 'retell') {
+      if (j.error) toast(t('没改写成功：{e}', { e: j.error.slice(0, 60) }));
+      else { EAR = null; route(); renderSheet(); toast(t('改写好了')); }
+      continue;
+    }
     if (k === 'refresh' && !j.error && S.edition?.id !== prevEd) {
       if (!Q) { const d = defaultStation(); if (d) { Q = queueOf(d); renderListen(); loadTrack(false); } }
-      toast('今天的电台换了新的一批，点电台就能听到');
+      toast(t('今天的电台换了新的一批，点电台就能听到'));
     }
   }
 }
@@ -1809,47 +2062,58 @@ async function reload() {
   if (!ready() && S.me.status !== 'new' && !WARM) loadWarm();
   if (ready() && Q?.key !== 'warm') WARM = null;
   $('#askInput').disabled = !ready() || !S.portrait;
-  if ($('#askInput').disabled) $('#askInput').placeholder = '电台准备好之后，可以在这里说想听什么';
+  $('#askOpen').classList.toggle('wait', $('#askInput').disabled);
   fb.clear();
   for (const f of [...S.feedback].reverse()) fb.set(f.vid, f.action);
   buildStations();
+  // a retold or converted edition brings new words for the station that is playing; keep its order and place
+  // only the same edition: a new morning's station of the same name holds other songs
+  const st = Q && queues.get(`${S.edition?.id}|${Q.key}`) === Q && ST.find((x) => x.key === Q.key);
+  if (st) {
+    Q.st = st;
+    const why = new Map([...st.tracks, ...(st.reserve || [])].map((p) => [p.vid, p.reason]));
+    for (const p of [...Q.tracks, ...Q.reserve]) if (why.has(p.vid)) p.reason = why.get(p.vid);
+    if (view === 'listen' && $('#qName')) { renderQueue(); paintNow(); }
+  }
   renderStations();
   if (view === 'ear') renderEar();
 }
 
-if (matchMedia('(max-width: 760px)').matches) $('#askInput').placeholder = '想听点什么？说说场景或心情';
-
 function buildMini() {
+  $('.pc-ctl').innerHTML = `<button class="ib" data-k="prev" aria-label="${t('上一首')}">${I.prev}</button><button class="ib play" data-k="toggle" aria-label="${t('播放 / 暂停')}">${I.play}${I.pause}</button><button class="ib" data-k="next" aria-label="${t('下一首')}">${I.next}</button><span class="push"></span><button class="ib like" data-k="like" aria-label="${t('喜欢')}">${I.heart}</button>`;
   $('#mini').innerHTML = `<img id="mImg" alt=""><div style="min-width:0"><div class="tt" id="mTitle"></div><div class="ar" id="mArtist"></div></div>
-    <button class="ib play" data-k="toggle" aria-label="播放 / 暂停">${I.play}${I.pause}</button><button class="ib" data-k="next" aria-label="下一首">${I.next}</button>`;
+    <button class="ib play" data-k="toggle" aria-label="${t('播放 / 暂停')}">${I.play}${I.pause}</button><button class="ib" data-k="next" aria-label="${t('下一首')}">${I.next}</button>`;
 }
 
 async function boot() {
+  for (const k of ['last', 'pos', 'syncHint', 'earCol', 'off']) store.del(k);  // from before keys were per account
   buildMini();
   MS.init();
   try {
     await reload();
   } catch (err) {
-    $('#view').innerHTML = `<div class="empty"><h2>连不上知音</h2><p>${esc(err.message)}。在终端运行 <code>uv run zhiyin serve</code> 后刷新。</p></div>`;
+    $('#view').innerHTML = `<div class="empty"><h2>${t('连不上知音')}</h2><p>${t('{e}。在终端运行 <code>uv run zhiyin serve</code> 后刷新。', { e: esc(err.message) })}</p></div>`;
     return;
   }
   const g = new URLSearchParams(location.search).get('google');
   if (g) {
     history.replaceState(null, '', location.pathname + location.hash);
-    const msg = { cancelled: '没有连接，随时可以再试', noscope: 'Google 那一步没有勾选 YouTube 的权限，知音读不到你的喜欢。再连接一次，记得勾上', taken: '这个 Google 账号已经连在另一位听众名下', stale: '连接超时了，再试一次' }[g];
+    const msg = { cancelled: t('没有连接，随时可以再试'), noscope: t('Google 那一步没有勾选 YouTube 的权限，知音读不到你的喜欢。再连接一次，记得勾上'), taken: t('这个 Google 账号已经连在另一位听众名下'), stale: t('连接超时了，再试一次') }[g];
     if (msg) setTimeout(() => toast(msg, [], 7000), 400);
   }
-  const last = store.get(`${S.me?.uid}.last`);
+  const last = store.get(acct('last'));
   const first = ST.find((s) => s.key === last && !s.pending && s.tracks.length) || defaultStation();
   if (first) {
     Q = queueOf(first);
-    const pos = store.get(`${S.me?.uid}.pos`);
+    const pos = store.get(acct('pos'));
     if (pos?.ed === S.edition?.id && pos.key === Q.key) Q.i = Math.max(0, Q.tracks.findIndex((p) => p.vid === pos.vid));
   }
   Player.init();
   route();
   if (cur()) { Player.load(cur(), false); trackChanged(); }
   if (Object.values(S.jobs || {}).some((j) => j?.running)) poll();
+  setTimeout(staleLangNote, 1200);
 }
 
+applyLang();
 boot();

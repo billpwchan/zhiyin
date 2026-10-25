@@ -10,6 +10,7 @@ services:
     env_file: ./secrets/zhiyin.env
     environment:
       ZHIYIN_PUBLIC_URL: ${ZHIYIN_PUBLIC_URL:?set ZHIYIN_PUBLIC_URL}
+      ZHIYIN_YT_LANGUAGE: ${ZHIYIN_YT_LANGUAGE:-en}
     volumes:
       - ./data:/data
     # one uvicorn process (~150 MB) plus up to two `claude -p` processes (~255 MB each) when Claude runs here

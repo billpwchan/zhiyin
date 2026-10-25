@@ -1,6 +1,6 @@
 import random
 
-from . import llm
+from . import i18n, llm
 from .text import fold
 
 PICK_SCHEMA = {
@@ -14,8 +14,8 @@ PICK_SCHEMA = {
 }
 
 SYSTEM = """You are the listener's music editor. Choose from a shortlist of real tracks for one listening lane.
-Write reasons in natural Simplified Chinese (keep song titles and artist names
-exactly as given), plain and specific, at most 34 characters, no exclamation marks, no clichés, no "你一定会喜欢".
+Write reasons in natural @LANG@ (keep song titles and artist names
+exactly as given; @TITLES@), plain and specific, @REASON@, no exclamation marks, no clichés, no "@CLICHE@".
 
 What a pick is for: a song this listener would add to their likes on the first listen. Fewer picks that are surely
 right beat more picks that might be. Quality and texture come first: songs that are genuinely good, with real
@@ -46,7 +46,9 @@ MIN_FIT = 0.7
 
 
 def system() -> str:
-    return SYSTEM
+    w = i18n.WRITE[i18n.of()]
+    return (SYSTEM.replace("@LANG@", w["lang"]).replace("@TITLES@", w["titles"]).replace("@REASON@", w["reason"])
+            .replace("@CLICHE@", w["cliche"]))
 
 
 def _fmt(i, c):

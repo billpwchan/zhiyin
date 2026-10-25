@@ -107,3 +107,34 @@ def test_a_tab_left_open_as_another_account_cannot_write(monkeypatch):
     ok = c.post("/api/feedback", json={"vid": "abc", "action": "like"}, headers={"X-Zhiyin-Uid": b})
     assert ok.status_code == 200
     assert store.db().execute("select uid from feedback where vid='abc'").fetchone()[0] == b
+
+
+def test_a_refused_lyric_translation_is_not_shown(monkeypatch):
+    import json
+    import threading
+    from zhiyin import llm, lyrics
+    lines = [{"t": i, "x": f"歌詞の行 {i}"} for i in range(10)]
+    lyrics._path("refused0001").write_text(json.dumps({"vid": "refused0001", "found": True, "lang": "ja", "lines": lines}))
+    summary = "I can't translate these lyrics line by line because the song is copyrighted. Here is a summary instead."
+    monkeypatch.setattr(llm, "unavailable", lambda: None)
+    monkeypatch.setattr(llm, "call", lambda *a, **k: {"lines": [{"i": 0, "tr": summary}]})
+    monkeypatch.setattr(threading, "Thread", lambda target, args, daemon: type("T", (), {"start": lambda s: target(*args)})())
+    assert lyrics.translate_later("refused0001", "en")
+    d = json.loads(lyrics._path("refused0001").read_text())
+    assert d["tr_failed_en"] and not any(l.get("tr_en") for l in d["lines"])
+    d["lines"][0]["tr_en"] = summary                     # what a reader already cached before this check got
+    assert not any(l.get("tr") for l in lyrics.for_reader(d, "en")["lines"])
+
+
+def test_lyrics_with_nothing_to_translate_are_not_sent_again(monkeypatch):
+    import json
+    import threading
+    from zhiyin import llm, lyrics
+    lines = [{"t": i, "x": f"line {i}"} for i in range(6)]
+    lyrics._path("same0000001").write_text(json.dumps({"vid": "same0000001", "found": True, "lang": "ja", "lines": lines}))
+    calls = []
+    monkeypatch.setattr(llm, "unavailable", lambda: None)
+    monkeypatch.setattr(llm, "call", lambda *a, **k: calls.append(1) or {"lines": [{"i": i, "tr": f"line {i}"} for i in range(6)]})
+    monkeypatch.setattr(threading, "Thread", lambda target, args, daemon: type("T", (), {"start": lambda s: target(*args)})())
+    assert lyrics.translate_later("same0000001", "en")
+    assert not lyrics.translate_later("same0000001", "en") and calls == [1]

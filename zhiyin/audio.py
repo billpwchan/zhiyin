@@ -17,7 +17,7 @@ import time
 import httpx
 import numpy as np
 
-from . import store
+from . import i18n, store
 from .lyrics import VERSION, _artist_sim, _score, _sim, _t2s
 from .text import display_title
 
@@ -109,9 +109,9 @@ def ensure(tracks: list[dict], log=print, timeout: int = 1800, itunes_budget: in
                         [(t["vid"], json.dumps(t, ensure_ascii=False), time.time()) for t in payload])
         con.executemany("insert or ignore into text_wanted values (?, ?)", [(x, time.time()) for x in texts])
         con.commit()
-        log(f"{len(payload)} 首交给 Mac 试听")
+        log(i18n.tr("{n} 首交给 Mac 试听", n=len(payload)))
         return {"todo": len(payload), "queued": True}
-    log(f"试听 {len(payload)} 首新歌")
+    log(i18n.tr("试听 {n} 首新歌", n=len(payload)))
     payload = {"tracks": payload, "texts": list(texts)}
     env = {**os.environ, **({"ZHIYIN_ITUNES_BUDGET": str(itunes_budget)} if itunes_budget is not None else {})}
     p = subprocess.run([sys.executable, "-m", "zhiyin.audio"], input=json.dumps(payload), capture_output=True,

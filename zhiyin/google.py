@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 import httpx
 from cryptography.fernet import Fernet
 
-from . import accounts, store
+from . import accounts, i18n, store
 
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -211,7 +211,7 @@ def likes(uid: str, log=None, pages: int | None = None) -> list[dict]:
             out.append({"vid": cd["videoId"], "at": sn.get("publishedAt"), "title": sn.get("title") or "",
                         "channel": sn.get("videoOwnerChannelTitle") or ""})
         if log:
-            log(f"已读 {len(out)} / {d.get('pageInfo', {}).get('totalResults', '?')} 个喜欢的视频")
+            log(i18n.tr("已读 {n} / {total} 个喜欢的视频", n=len(out), total=d.get("pageInfo", {}).get("totalResults", "?")))
         page = d.get("nextPageToken")
         if not page:
             break

@@ -1,7 +1,7 @@
 import json
 import time
 
-from . import library, llm, store
+from . import i18n, library, llm, store
 
 UNKNOWN_LISTENER = "Nothing is known about the listener beyond these likes; infer their languages and background from them."
 
@@ -16,7 +16,9 @@ def listener() -> str:
 
 
 def _sys(template: str) -> str:
-    return template.replace("@LISTENER@", listener())
+    w = i18n.WRITE[i18n.of()]
+    return (template.replace("@LISTENER@", listener()).replace("@LANG@", w["lang"]).replace("@NAME@", w["name"])
+            .replace("@HEADLINE@", w["headline"]).replace("@TITLES@", w["titles"]))
 
 
 TAG_SCHEMA = {
@@ -140,7 +142,7 @@ Think like a listener and an editor, not a statistician:
 - 6 to 8 lanes for songs, ordered by how central they are NOW (weight recent likes and repeat-liked songs far more
   than their oldest likes). Do not make a lane for long focus mixes; they are handled separately.
 - Old likes that no longer reflect the person (meme songs, practice or cover clips, one-off party
-  tracks, songs from a phase long past) go to set_aside with the reason, so they never seed recommendations.
+  tracks, songs from a phase long past) go to set_aside with the reason (what and why in plain @LANG@), so they never seed recommendations.
 - seeds: 10-16 ranks per lane that best define it today (prefer recent, repeat-liked, and archetypal songs).
 - core_artists: the artists from their likes that anchor the lane.
 - explore_artists: 12-15 REAL artists NOT in their likes who this person would plausibly love in this lane, with one
@@ -150,13 +152,13 @@ Think like a listener and an editor, not a statistician:
   explore artist must sing in that language; cross-language bridges belong only in cross-language lanes.
 - avoid: concrete things that would feel wrong in this lane (sounds, sub-genres, versions).
 - discovery: target share (0-1) of recommendations from artists NOT already liked, for this lane.
-- key: short ascii slug. name: 2-4 Simplified Chinese characters, evocative but plain (no slogans). english: 2-4 words.
-- blurb: one plain Simplified Chinese sentence on the sound. when: one plain Simplified Chinese phrase on when they reach for it.
+- key: short ascii slug. name: @NAME@, evocative but plain (no slogans). english: 2-4 words.
+- blurb: one plain @LANG@ sentence on the sound. when: one plain @LANG@ phrase on when they reach for it.
 - focus: the long background mixes they save for work (e.g. lofi, jazz or ambient playlists). blurb and when in
-  plain Simplified Chinese; queries = 8-10 YouTube search queries (any language) that would find NEW long mixes in the same
+  plain @LANG@; queries = 8-10 YouTube search queries (any language) that would find NEW long mixes in the same
   spirit; avoid = what would make a focus mix wrong for them.
-- portrait (Simplified Chinese, keeping song titles and artist names exactly as given; warm and specific, no flattery, no clichés, no bullet-y
-  slogans): headline = ONE sentence of at most 30 Chinese characters that names the through-line of their taste; 3-4 short paragraphs that
+- portrait (@LANG@, keeping song titles and artist names exactly as given (@TITLES@); warm and specific, no flattery, no clichés, no bullet-y
+  slogans): headline = ONE sentence of @HEADLINE@ that names the through-line of their taste; 3-4 short paragraphs that
   read their taste with concrete artists/songs as evidence; eras = 4-6 periods by rank range, with years taken from the "liked around" dates (never guessed from
   release years),
   a short label and one sentence each; threads = 3-5 things that stay constant across languages and years."""
@@ -194,6 +196,7 @@ def synthesize(model: str = "opus") -> dict:
     res = llm.call(prompt, _sys(LANE_SYSTEM), LANE_SCHEMA, model=model, timeout=1200)
     res["built"] = time.time()
     res["model"] = model
+    res["lang"] = i18n.of()
     return res
 
 
@@ -236,11 +239,11 @@ def assign(profile: dict, batch: int = 150, workers: int = 4, only: set | None =
 
 def build(model: str = "opus", log=print) -> dict:
     llm.require()
-    log("给每首喜欢的歌标上听感和场景")
+    log(i18n.tr("给每首喜欢的歌标上听感和场景"))
     tag()
-    log("找出你的几种听歌状态")
+    log(i18n.tr("找出你的几种听歌状态"))
     prof = synthesize(model)
-    log("把每首歌放进对应的电台")
+    log(i18n.tr("把每首歌放进对应的电台"))
     prof["assign"] = assign(prof)
     prev = store.read_json(store.PROFILE)
     if prev:
@@ -258,7 +261,7 @@ def absorb_new(log=print) -> int:
     todo = {t["vid"] for t in library.load() if not t["long"] and t["vid"] not in prof.get("assign", {})}
     if not todo:
         return 0
-    log(f"把 {len(todo)} 首新喜欢放进电台")
+    log(i18n.tr("把 {n} 首新喜欢放进电台", n=len(todo)))
     tag()
     got = assign(prof, only=todo)
     prof["assign"].update({v: got.get(v, ["none"]) for v in todo})

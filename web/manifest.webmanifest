@@ -1,15 +1,28 @@
 {
-  "name": "知音",
+  "name": "知音 Zhiyin",
   "short_name": "知音",
-  "description": "按你的耳朵挑歌的播放器",
+  "description": "A personal radio built from your YouTube Music likes, with a reason for every song",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0b0b0c",
   "theme_color": "#0b0b0c",
   "icons": [
-    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/static/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

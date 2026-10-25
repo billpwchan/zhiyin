@@ -1,6 +1,6 @@
 import time
 
-from . import candidates, edition, library, llm, rank, store, ytm
+from . import candidates, edition, i18n, library, llm, rank, store, ytm
 
 
 PLAN_SCHEMA = {
@@ -20,7 +20,7 @@ PLAN_SCHEMA = {
 
 PLAN_SYSTEM = """You turn one listener's music request into a retrieval plan for a recommender built on YouTube Music.
 You see their listening lanes and, per lane, the songs they like most right now (rank|title|artists).
-- intent: restate the request in one short Simplified Chinese phrase (no more than 16 characters), as a title.
+- intent: restate the request in @INTENT@, as a title.
 - lane: the closest lane key, or "none".
 - seeds: up to 6 ranks from THEIR songs that best match the request (these start YouTube radios).
 - artists: up to 6 real artists (new to them preferred) whose catalogue fits; only names you are sure exist.
@@ -51,8 +51,8 @@ def run(question: str, log=print) -> dict:
     prof = store.read_json(store.PROFILE)
     tracks = library.load()
     by_rank = {t["rank"]: t for t in tracks}
-    log("理解需求")
-    plan = llm.call(f"REQUEST: {question}\n\nLANES:\n{_lane_digest(prof, tracks)}", PLAN_SYSTEM, PLAN_SCHEMA,
+    log(i18n.tr("理解需求"))
+    plan = llm.call(f"REQUEST: {question}\n\nLANES:\n{_lane_digest(prof, tracks)}", PLAN_SYSTEM.replace("@INTENT@", i18n.write("intent")), PLAN_SCHEMA,
                     model="sonnet", timeout=300)
     known = candidates.Known(tracks, prof)
     known.recent_shown, known.just_shown = set(), set()
@@ -65,7 +65,7 @@ def run(question: str, log=print) -> dict:
         "core_artists": [], "explore_artists": [{"name": a, "why": "fits the request", "song": ""} for a in plan["artists"]],
     }
     seeds = [{**by_rank[r], "w": 1.0} for r in plan["seeds"] if r in by_rank and not by_rank[r]["long"]][:6]
-    log(f"从 {len(seeds)} 首你的歌和 {len(plan['artists'])} 位歌手出发找歌")
+    log(i18n.tr("从 {s} 首你的歌和 {a} 位歌手出发找歌", s=len(seeds), a=len(plan["artists"])))
     g = candidates.gather(lane, seeds, known, [])
     cands = g["cands"]
 
@@ -85,15 +85,15 @@ def run(question: str, log=print) -> dict:
     # Previews from Deezer only: the iTunes fallback is rate-limited and a request should come back within a minute.
     built, tst = edition.listen([(lane, seeds, g, pre)], (tracks, prof), log, itunes_budget=0, text=question)
     sl = built[0][3][:26]
-    log(f"{len(cands)} 首候选，编辑挑选中")
+    log(i18n.tr("{n} 首候选，编辑挑选中", n=len(cands)))
     picks = rank.pick(lane, sl, seeds, edition.negatives(), model="opus")[:10]
     edition.prefer_record(picks, known)
     edition.localize(picks)
     edition.sound_tags(picks, tst)
     ytm.warm_covers(picks)
-    result = {"q": question, "intent": plan["intent"], "lane": plan["lane"], "created": store.now(),
+    result = {"q": question, "lang": i18n.of(), "intent": plan["intent"], "lane": plan["lane"], "created": store.now(),
               "took": round(time.time() - t0), "picks": [edition._public(p) for p in picks]}
     hist = store.read_json(store.ASKS) or []
     store.write_json(store.ASKS, [result] + hist[:19])
-    log(f"完成，用时 {result['took']} 秒")
+    log(i18n.tr("完成，用时 {s} 秒", s=result["took"]))
     return result

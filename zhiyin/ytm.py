@@ -19,9 +19,10 @@ MIN_GAP = 0.25  # seconds between requests across all threads; YouTube starts re
 DAY = 86400
 
 
-# Titles and artist names are read the way a Traditional Chinese YouTube Music shows them (the interface is Chinese);
-# the region decides what is available. An empty region lets YouTube go by the requesting IP.
-LANGUAGE = os.environ.get("ZHIYIN_YT_LANGUAGE", "zh_TW")
+# Titles and artist names are read the way YouTube Music shows them in this interface language (one per server:
+# zh_TW shows Chinese artists in Chinese); the region decides what is available. An empty region lets YouTube go
+# by the requesting IP.
+LANGUAGE = os.environ.get("ZHIYIN_YT_LANGUAGE", "en")
 REGION = os.environ.get("ZHIYIN_YT_REGION", "")
 
 

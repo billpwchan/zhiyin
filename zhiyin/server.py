@@ -2,6 +2,7 @@ import contextvars
 import datetime as dt
 import hmac
 import os
+import re
 import secrets
 import threading
 import time
@@ -16,7 +17,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import accounts, ask, audio, candidates, ear, edition, google, library, llm, lyrics, profile, settings, store, ytm
+from . import accounts, ask, audio, candidates, ear, edition, google, i18n, library, llm, lyrics, profile, settings, store, ytm
 from .text import display_title, is_version
 
 WEB = store.ROOT / "web"
@@ -29,6 +30,7 @@ LIKE_SYNC_H = 6
 
 @asynccontextmanager
 async def _lifespan(_app):
+    i18n.migrate()
     for fn in (_scheduler, _outbox_loop):
         threading.Thread(target=fn, daemon=True).start()
     yield
@@ -37,7 +39,7 @@ async def _lifespan(_app):
 app = FastAPI(lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
-OPEN = ("/login", "/privacy", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
+OPEN = ("/login", "/privacy", "/lang", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
 # A YouTube video id. It names cache files, so nothing else gets through.
 VID = r"^[A-Za-z0-9_-]{1,64}$"
 Vid = Annotated[str, Field(pattern=VID)]
@@ -57,7 +59,7 @@ async def _who(request: Request, call_next):
         if request.url.path.startswith(OPEN):
             return await call_next(request)
         if request.url.path.startswith("/api/"):
-            return JSONResponse({"detail": "需要重新登录"}, 401)
+            return JSONResponse({"detail": i18n.tr("需要重新登录", i18n.from_request(request))}, 401)
         return RedirectResponse("/login", 303)
     # A page belongs to the account it was opened as. After signing in as someone else in another tab, the old tab
     # must not keep writing likes, plays or "不要" into the new account: its requests are refused and it reloads.
@@ -93,7 +95,7 @@ def _start(kind: str, fn):
     with _job_lock:
         j = _jobs.get((uid, kind))
         if j and j["running"]:
-            raise HTTPException(409, "已经在进行")
+            raise HTTPException(409, "busy")
         j = _jobs[(uid, kind)] = {"kind": kind, "running": True, "error": None, "result": None, "started": time.time(),
                                   "msg": "", "step": 0}
 
@@ -106,7 +108,7 @@ def _start(kind: str, fn):
         try:
             if kind in HEAVY:
                 if _heavy.locked():
-                    log("排队中：另一位听众的电台正在准备")
+                    log(i18n.tr("排队中：另一位听众的电台正在准备"))
                 with _heavy:
                     j["result"] = fn(log)
             else:
@@ -135,8 +137,8 @@ def _quota_reset() -> str:
     """YouTube Data API quotas reset at midnight Pacific time, shown in the server's local time."""
     now = dt.datetime.now(ZoneInfo("America/Los_Angeles"))
     at = (now + dt.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).astimezone()
-    day = "今天" if at.date() == dt.datetime.now().date() else "明天"
-    return f"{day} {at.hour}:{at:%M} "
+    day = "今天 {hm}" if at.date() == dt.datetime.now().date() else "明天 {hm}"
+    return i18n.tr(day, hm=f"{at.hour}:{at:%M}")
 
 
 def _edition_stale(ed: dict | None) -> bool:
@@ -167,7 +169,7 @@ def _sync_likes(log):
         if audio.REMOTE:
             audio.ensure([t for t in library.load() if not t["long"]], log=log)
     accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)
-    log(f"新增 {r['added']} 首" if r["added"] else "没有新的喜欢")
+    log(i18n.tr("新增 {n} 首", n=r["added"]) if r["added"] else i18n.tr("没有新的喜欢"))
     return r
 
 
@@ -211,7 +213,7 @@ def _setup(log):
     uid = store.uid()
     accounts.set_status(uid, "importing")
     try:
-        log("读取你在 YouTube 点过的喜欢", step=1)
+        log(i18n.tr("读取你在 YouTube 点过的喜欢"), step=1)
         r = library.sync_from_google(log=log)
         accounts.set_prefs(uid, synced=time.time(), last_sync=r)
         if r["songs"] < MIN_LIKES:
@@ -220,12 +222,12 @@ def _setup(log):
         if audio.REMOTE:
             audio.ensure([t for t in library.load() if not t["long"]], log=log)
         accounts.set_status(uid, "building")
-        log("了解你的口味", step=2)
+        log(i18n.tr("了解你的口味"), step=2)
         if store.read_json(store.PROFILE):
             profile.absorb_new(log=log)   # a retry: the stations are there, only the edition failed
         else:
             profile.build(log=log)
-        log("挑第一批电台", step=3)
+        log(i18n.tr("挑第一批电台"), step=3)
         edition.build(log=log)
         accounts.set_status(uid, "ready")
         accounts.set_prefs(uid, setup_fails=0)
@@ -312,6 +314,7 @@ def _me() -> dict:
     u = accounts.get() or {"id": store.uid(), "name": "", "status": "ready", "prefs": {}, "email": None}
     ok = google.configured() and google.connected(u["id"])
     return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "mine": store.is_owners(u["id"]), "status": u["status"], "auth": AUTH,
+            "lang": i18n.of(u["id"]),
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
                        "error": u["prefs"].get("google_error")},
             "sync_likes": u["prefs"].get("sync_likes", True), "sync": _sync_view(u["id"]),
@@ -321,9 +324,17 @@ def _me() -> dict:
 
 
 # ---------- sign-in ----------
-def _gate(mode: str, **ctx) -> HTMLResponse:
-    html = (WEB / "gate.html").read_text(encoding="utf-8")
-    html = html.replace("/static/style.css", f"/static/style.css?v={int((WEB / 'style.css').stat().st_mtime)}")
+def _page(name: str, lang: str) -> str:
+    html = (WEB / name).read_text(encoding="utf-8")
+    for f in ("style.css", "i18n.js", "app.js"):
+        html = html.replace(f"/static/{f}", f"/static/{f}?v={int((WEB / f).stat().st_mtime)}")
+    # pages are written in Simplified Chinese; the language decided here is the one the page starts in
+    return html.replace('<html lang="zh-Hans">', f'<html lang="{lang}" data-lang="{lang}">').replace(
+        "<title>知音</title>", f"<title>{i18n.tr('知音', lang)}</title>")
+
+
+def _gate(mode: str, request: Request, **ctx) -> HTMLResponse:
+    html = _page("gate.html", i18n.from_request(request))
     data = {"mode": mode, "google": google.configured(), **ctx}
     import json
     html = html.replace("__GATE__", json.dumps(data, ensure_ascii=False).replace("<", "\\u003c"))
@@ -331,6 +342,8 @@ def _gate(mode: str, **ctx) -> HTMLResponse:
 
 
 def _signed_in(resp: Response, uid: str, request: Request) -> Response:
+    if not accounts.prefs(uid).get("lang"):
+        accounts.set_prefs(uid, lang=i18n.from_request(request))
     tok = accounts.new_session(uid, request.headers.get("user-agent", ""))
     resp.set_cookie(accounts.COOKIE, tok, max_age=accounts.SESSION_DAYS * 86400, httponly=True, samesite="lax",
                     secure=google.public_url().startswith("https"))
@@ -338,30 +351,42 @@ def _signed_in(resp: Response, uid: str, request: Request) -> Response:
 
 
 @app.get("/privacy")
-def privacy():
-    html = (WEB / "privacy.html").read_text(encoding="utf-8")
-    html = html.replace("/static/style.css", f"/static/style.css?v={int((WEB / 'style.css').stat().st_mtime)}")
+def privacy(request: Request):
+    uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
+    lang = i18n.of(uid) if uid else i18n.from_request(request)
+    html = _page("privacy.html", lang)
+    # one block per language: <!--lang:xx--> … <!--/lang-->
+    html = re.sub(r"<!--lang:([\w-]+)-->(.*?)<!--/lang-->", lambda m: m.group(2) if m.group(1) == lang else "", html, flags=re.S)
     return HTMLResponse(html)
+
+
+@app.get("/lang")
+def pick_lang(request: Request, to: str = "", back: str = "/login"):
+    """The language picker on pages shown before signing in."""
+    r = RedirectResponse(back if back.startswith("/") and not back.startswith("//") else "/login", 303)
+    r.set_cookie(i18n.COOKIE, i18n.norm(to) or "en", max_age=365 * 86400, samesite="lax",
+                 secure=google.public_url().startswith("https"))
+    return r
 
 
 @app.get("/login")
 def login(request: Request, e: str = ""):
     if AUTH and accounts.session_uid(request.cookies.get(accounts.COOKIE)):
         return RedirectResponse("/", 303)
-    return _gate("login", error=e)
+    return _gate("login", request, error=e)
 
 
 @app.get("/i/{token}")
 def invite_link(token: str, request: Request, go: int = 0):
     uid = accounts.redeem(token)
     if not uid:
-        return _gate("login", error="expired")
+        return _gate("login", request, error="expired")
     if (accounts.get(uid) or {}).get("google_sub") and google.configured():
         # once a listener is tied to a Google account, a forwarded or leaked link no longer opens it
         return RedirectResponse("/auth/google/start?mode=login", 303)
     cur = accounts.session_uid(request.cookies.get(accounts.COOKIE))
     if cur and cur != uid and not go:
-        return _gate("switch", name=(accounts.get(uid) or {}).get("name") or "朋友",
+        return _gate("switch", request, name=(accounts.get(uid) or {}).get("name") or i18n.tr("朋友", i18n.from_request(request)),
                      me=(accounts.get(cur) or {}).get("name") or "", token=token)
     return _signed_in(RedirectResponse("/", 303), uid, request)
 
@@ -379,7 +404,7 @@ def google_start(request: Request, mode: str = "connect",
                  as_: Annotated[str, Query(alias="as", max_length=254)] = ""):
     """mode=login&as=<email> is a bookmark that goes straight back into that listener's account."""
     if not google.configured():
-        raise HTTPException(503, "Google 登录还没配置")
+        raise HTTPException(503, i18n.tr("Google 登录还没配置", i18n.from_request(request)))
     connect = mode == "connect"
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
     if connect and not uid:
@@ -440,12 +465,12 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
 
 
 @app.get("/")
-def index():
+def index(request: Request):
+    if not accounts.prefs(store.uid()).get("lang"):
+        accounts.set_prefs(store.uid(), lang=i18n.from_request(request))   # a new listener starts in their browser's language
     # YouTube's embed player rejects requests without a Referer (error 153); keep the default
     # strict-origin-when-cross-origin policy and never send no-referrer.
-    html = (WEB / "index.html").read_text(encoding="utf-8")
-    for name in ("style.css", "app.js"):
-        html = html.replace(f"/static/{name}", f"/static/{name}?v={int((WEB / name).stat().st_mtime)}")
+    html = _page("index.html", i18n.of())
     return HTMLResponse(html, headers={"Referrer-Policy": "strict-origin-when-cross-origin", "Cache-Control": "no-store"})
 
 
@@ -478,7 +503,7 @@ def state():
     if accounts.get() is None or accounts.get()["status"] == "ready":
         _auto_refresh(ed)
         _auto_sync()
-    return {
+    out = {
         "portrait": prof.get("portrait"), "lanes": lanes, "focus": prof.get("focus"),
         "set_aside": [{"what": s["what"], "n": len(s["ranks"]), "why": s["why"]} for s in prof.get("set_aside", [])],
         "profile_built": prof.get("built"), "edition": ed,
@@ -486,7 +511,16 @@ def state():
         "library": {"songs": sum(1 for t in tracks if not t["long"]), "mixes": sum(1 for t in tracks if t["long"]),
                     "synced": lib.get("synced"), "source": tracks[0]["source"] if tracks else None},
         "me": _me(), "jobs": jobs(), "owner_name": (accounts.get(store.OWNER) or {}).get("name") or "",
+        "stale_lang": i18n.stale(),
     }
+    rl = i18n.of()
+    if rl != "en":   # Claude's text was written in one Chinese script; show it in the reader's
+        pl = prof.get("lang", "zh-Hans")
+        for k in ("portrait", "lanes", "focus", "set_aside"):
+            out[k] = i18n.convert_tree(out[k], pl, rl)
+        out["edition"] = i18n.convert_tree(ed, (ed or {}).get("lang", "zh-Hans"), rl)
+        out["asks"] = [i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in out["asks"]]
+    return out
 
 
 @app.get("/api/ear")
@@ -496,7 +530,7 @@ def ear_view():
 
 @app.get("/api/jobs")
 def jobs():
-    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup")}
+    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell")}
 
 
 @app.post("/api/refresh")
@@ -597,17 +631,19 @@ class PlaylistReq(BaseModel):
 def playlist(p: PlaylistReq):
     uid = store.uid()
     if not (google.configured() and google.connected(uid)):
-        raise HTTPException(400, "先在「你的耳朵」里连接 YouTube Music")
+        raise HTTPException(400, i18n.tr("先在设置里连接 YouTube Music"))
     vids = list(dict.fromkeys(p.vids))[:25]
-    title = f"知音 · {p.name} · {dt.datetime.now().month}月{dt.datetime.now().day}日"
+    now, lang = dt.datetime.now(), i18n.of()
+    date = now.strftime("%b %-d") if lang == "en" else f"{now.month}月{now.day}日"
+    title = i18n.tr("知音 · {name} · {date}", name=p.name, date=date)
     try:
-        pid = google.create_playlist(uid, title, "知音挑的歌", vids)
+        pid = google.create_playlist(uid, title, i18n.tr("知音挑的歌"), vids)
     except google.QuotaExceeded:
-        raise HTTPException(429, f"今天写入 YouTube 的额度用完了，{_quota_reset()}后再存")
+        raise HTTPException(429, i18n.tr("今天写入 YouTube 的额度用完了，{at} 后再存", at=_quota_reset()))
     except (google.Revoked, google.NotConnected):
-        raise HTTPException(401, "YouTube Music 的连接失效了，在「你的耳朵」里重新连接")
+        raise HTTPException(401, i18n.tr("YouTube Music 的连接失效了，在设置里重新连接"))
     except httpx.HTTPError as e:
-        raise HTTPException(502, f"YouTube 拒绝了请求：{e}")
+        raise HTTPException(502, i18n.tr("YouTube 拒绝了请求：{e}", e=e))
     return {"url": f"https://music.youtube.com/playlist?list={pid}", "title": title}
 
 
@@ -615,7 +651,7 @@ def playlist(p: PlaylistReq):
 def setup():
     u = accounts.get()
     if not u or u["status"] not in ("thin", "error", "new") or not google.connected():
-        raise HTTPException(400, "现在不需要重新准备")
+        raise HTTPException(400, i18n.tr("现在不需要重新准备"))
     _start("setup", _setup)
     return jobs()
 
@@ -623,7 +659,7 @@ def setup():
 @app.post("/api/sync")
 def sync():
     if not (google.configured() and google.connected()):
-        raise HTTPException(400, "还没连接 YouTube Music")
+        raise HTTPException(400, i18n.tr("还没连接 YouTube Music"))
     _start("sync", _sync_likes)
     return jobs()
 
@@ -654,12 +690,41 @@ def warmup():
                 seen.add(t["vid"])
                 out.append(edition._public({**t, "familiar": known.artist_familiarity(t["artists"]), "fit": 0,
                                             "sources": ["radio"], "via": []}))
-    return {"name": "先听着", "sub": "从你最近的喜欢出发", "tracks": out[:30],
+    return {"name": i18n.tr("先听着"), "sub": i18n.tr("从你最近的喜欢出发"), "tracks": out[:30],
             "seeds": [display_title(t["title"], t["artists"]) for t in tracks]}
 
 
 class Toggle(BaseModel):
     on: bool
+
+
+class LangReq(BaseModel):
+    lang: str
+
+
+@app.post("/api/account/lang")
+def account_lang(b: LangReq):
+    lang = i18n.norm(b.lang)
+    if not lang:
+        raise HTTPException(400, "lang")
+    accounts.set_prefs(store.uid(), lang=lang)
+    if i18n.stale() and not llm.unavailable():
+        try:
+            _start("retell", i18n.retell)
+        except HTTPException:
+            pass
+    r = JSONResponse({"me": _me(), "jobs": jobs()})
+    r.set_cookie(i18n.COOKIE, lang, max_age=365 * 86400, samesite="lax", secure=google.public_url().startswith("https"))
+    return r
+
+
+@app.post("/api/account/retell")
+def account_retell():
+    if not i18n.stale():
+        return jobs()
+    llm.require()
+    _start("retell", i18n.retell)
+    return jobs()
 
 
 @app.post("/api/account/sync-likes")
@@ -672,7 +737,7 @@ def account_sync_likes(t: Toggle):
 def account_device():
     """A sign-in link for another device of the same listener, until they sign in with Google."""
     if (accounts.get() or {}).get("google_sub"):
-        raise HTTPException(409, "用同一个 Google 账号登录就行")
+        raise HTTPException(409, i18n.tr("用同一个 Google 账号登录就行"))
     tok = accounts.invite((accounts.get() or {}).get("name") or "", uid=store.uid())
     return {"url": f"{google.public_url()}/i/{tok}", "days": accounts.INVITE_DAYS}
 
@@ -687,7 +752,7 @@ def account_disconnect():
 def account_delete(request: Request):
     uid = store.uid()
     if uid == store.OWNER:
-        raise HTTPException(400, "主人的数据不能在这里删")
+        raise HTTPException(400, i18n.tr("主人的数据不能在这里删"))
     google.disconnect(uid)
     accounts.delete(uid)
     r = JSONResponse({"ok": True})
@@ -702,20 +767,20 @@ class InviteReq(BaseModel):
 
 def _owner_only():
     if store.uid() != store.OWNER:
-        raise HTTPException(403, "只有主人可以邀请")
+        raise HTTPException(403, i18n.tr("只有主人可以邀请"))
 
 
 @app.post("/api/invite")
 def invite(body: InviteReq):
     _owner_only()
     if body.mine:   # it runs on your Claude like your main account, so it needs no API key
-        tok = accounts.invite(body.name.strip()[:20] or "我的另一个账号", mine=True)
+        tok = accounts.invite(body.name.strip()[:20] or i18n.tr("我的另一个账号"), mine=True)
         return {"url": f"{google.public_url()}/i/{tok}", "days": accounts.INVITE_DAYS}
     if not llm.API_KEY:
-        raise HTTPException(409, "先在服务器上配置 Claude API key：你的 Claude 订阅只能你自己用")
+        raise HTTPException(409, i18n.tr("先在服务器上配置 Claude API key：你的 Claude 订阅只能你自己用"))
     name = body.name.strip()[:20]
     if not name:
-        raise HTTPException(400, "写个名字")
+        raise HTTPException(400, i18n.tr("写个名字"))
     tok = accounts.invite(name)
     return {"url": f"{google.public_url()}/i/{tok}", "days": accounts.INVITE_DAYS}
 
@@ -810,7 +875,7 @@ def queue_link(q: QueueReq):
                   follow_redirects=False, timeout=15)
     lst = parse_qs(urlparse(r.headers.get("location", "")).query).get("list", [None])[0]
     if not lst:
-        raise HTTPException(502, "YouTube 没有返回临时播放列表")
+        raise HTTPException(502, i18n.tr("YouTube 没有返回临时播放列表"))
     return {"url": f"https://music.youtube.com/watch?v={vids[0]}&list={lst}"}
 
 
@@ -848,7 +913,7 @@ def more(vid: Annotated[str, Query(pattern=VID)], exclude: str = ""):
             continue
         fam = known.artist_familiarity(t["artists"])
         out.append(edition._public({**t, "familiar": fam, "fit": 0, "sources": ["radio"], "via": [],
-                                    "reason": f"沿着〈{via}〉的电台继续" if via else ""}))
+                                    "reason": i18n.tr("沿着〈{s}〉的电台继续", s=via) if via else ""}))
         if len(out) >= 15:
             break
     return {"tracks": out}
@@ -860,4 +925,7 @@ def lyrics_(vid: Annotated[str, Query(pattern=VID)], t: str = "", a: str = "", a
         tr = ytm.track(vid) or {}
         t, a, al, d = tr.get("title", ""), "|".join(x["name"] for x in tr.get("artists", [])), (tr.get("album") or {}).get("name", ""), tr.get("dur") or 0
     res = lyrics.get(vid, display_title(t, []), [x for x in a.split("|") if x], al, d)
-    return {**res, "translating": lyrics.translate_later(vid) or vid in lyrics._tr_running}
+    lang = i18n.of()
+    to = "en" if lang == "en" else "zh"
+    return {**lyrics.for_reader(res, lang), "source": i18n.tr(res["source"], lang) if res.get("source") else None,
+            "translating": lyrics.translate_later(vid, to) or f"{vid}:{to}" in lyrics._tr_running}
