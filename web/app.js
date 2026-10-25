@@ -1078,7 +1078,7 @@ function accountHTML() {
     rows.push(`<li><span>YouTube Music<small>还没连接。连接之后，你在这里点的喜欢会同步到账号，你在 YouTube Music 里新点的喜欢也会自动进来。</small></span><a class="tb" href="/auth/google/start">连接</a></li>`);
   } else {
     const busy = S.jobs?.sync?.running;
-    rows.push(`<li><span>YouTube Music<small>${esc(g.email || '已连接')}${me.synced ? ` · ${ago(me.synced)}读过一次${ls?.added ? `，新增 ${ls.added} 首` : ''}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? '读取中…' : '现在读取'}</button></li>`);
+    rows.push(`<li><span>YouTube Music<small>${esc(g.email || '已连接')}${me.synced ? ` · ${ago(me.synced)} 读过一次${ls?.added ? `，新增 ${ls.added} 首` : ''}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? '读取中…' : '现在读取'}</button></li>`);
     const state = sy.pending ? `${sy.pending} 首等待同步${sy.error === 'quota' ? `：今天的额度用完了，${quotaReset()}后继续` : sy.error === 'reconnect' ? '：需要重新连接' : ''}` : sy.done ? `已同步 ${sy.done} 首` : '在这里点 ♥，YouTube Music 里也会是喜欢';
     rows.push(`<li><span>把这里的喜欢同步到 YouTube Music<small>${esc(state)}。「不要」只记在知音，不会变成 YouTube 上的踩。</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="同步喜欢"></button></li>`);
   }
