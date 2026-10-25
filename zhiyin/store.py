@@ -23,7 +23,8 @@ for d in (DATA, CACHE, USERS):
 # job thread, CLI) and read everywhere below, so the engine code stays single-listener.
 _uid: contextvars.ContextVar[str | None] = contextvars.ContextVar("zhiyin_uid", default=None)
 _PER_USER = {"LIBRARY": "library.json", "TAGS": "tags.json", "PROFILE": "profile.json", "PROFILES": "profiles",
-             "EDITION": "edition.json", "ASKS": "asks.json", "SETTINGS": "settings.json", "AUTH": "browser.json"}
+             "EDITION": "edition.json", "ASKS": "asks.json", "SETTINGS": "settings.json", "AUTH": "browser.json",
+             "GLIMPSE": "glimpse.json", "IDENT": "ident.json"}
 
 
 def uid() -> str:
@@ -136,6 +137,9 @@ def _migrate(con: sqlite3.Connection) -> None:
     if "ev" not in cols:
         con.execute("alter table plays add column ev text")
         con.execute("alter table plays add column pos real")
+    if "title" not in cols:   # a song heard under one video never comes back under another
+        con.execute("alter table plays add column title text")
+        con.execute("alter table plays add column artist text")
     if "next_try" not in {r[1] for r in con.execute("pragma table_info(outbox)")}:
         con.execute("alter table outbox add column next_try real")
     if "mine" not in {r[1] for r in con.execute("pragma table_info(users)")}:

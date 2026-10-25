@@ -29,7 +29,7 @@ says so.
 |---|---|---|
 | YouTube Music (unauthenticated) | song and artist ids | radio, related songs, artist pages, playlists, cover art |
 | YouTube Data API, with your Google token | your likes; the songs you like in Zhiyin, once you turn on writing likes back | read likes, like songs back |
-| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them) and the candidates, station descriptions, songs you refused and why, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, lyric translations and rewritten text |
+| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them) and the candidates, station descriptions, songs you refused and why, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
 | The YouTube embedded player, in your browser | the video being played | playback, under YouTube's own terms |

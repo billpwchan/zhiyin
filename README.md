@@ -52,7 +52,9 @@ A skip pushes similar-sounding songs down the queue and a like pulls them up, wh
 ### Your ear
 
 A page that draws your whole library as a disc, one ring per year and one sector per kind of music,
-and can replay how your taste grew. Claude writes the portrait next to it.
+and can replay how your taste grew. Claude gives your taste a short name and writes the portrait next to it.
+The first time you sign in, the disc is drawn within seconds, while your stations are still being made, and one
+tap turns it into a card to share: the name, the disc, and the year by which half your songs had come out.
 
 <p align="center">
   <img alt="Your ear: every liked song is a mark on a disc, by year and by station, next to a written portrait of the listener's taste" src="docs/images/ear.webp" width="900">
@@ -90,9 +92,9 @@ better than a coin flip. [How it works](docs/how-it-works.md) has every step and
 |  | A streaming app's radio | Zhiyin |
 |---|---|---|
 | Starts from | what other listeners play next to your song | the songs you liked, recent ones weighted most |
-| Why this song | "because you listened to X" | a line from an editor that has read your library |
+| Why this song | "because you listened to X" | a line about the song, next to the like of yours it is closest to, which you can play to compare |
 | When it has nothing good | keeps the queue full | plays fewer songs |
-| Songs you already know | come back often | filtered out, along with their live, remix and cover versions |
+| Songs you already know | come back often | filtered out, along with their live, remix and cover versions; a song you've heard never comes back |
 
 ## Run it
 

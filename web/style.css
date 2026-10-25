@@ -216,7 +216,7 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .room-in { height: 100%; display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); }
 .now {
   /* --mh: the most the words and controls under the cover take at this height (2-line title and reason) */
-  --mh: 312px;
+  --mh: 334px;
   --s: clamp(208px, min(100cqh - var(--mh), 50cqw - 88px), 680px);
   grid-area: 2 / 1; justify-self: center; width: max(var(--s), 340px); min-width: 0;
 }
@@ -240,6 +240,14 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .t-fine:has(span:empty + span:empty) { display: none; }
 .t-why { margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: var(--fg-2); text-wrap: pretty; min-height: 1.6em;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* what the page says about the listener beside a pick: one like of theirs to hear it against, and the artist's place in their library */
+.t-bc { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-bc:empty { display: none; }
+.t-bc .sep { margin: 0 7px; }
+.bc-song { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 0; color: var(--fg-2); vertical-align: bottom; transition: color var(--fast) var(--ease); }
+.bc-song span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bc-song svg { flex: none; width: 12px; height: 12px; fill: currentColor; stroke: none; }
+.bc-song:hover { color: var(--fg); }
 .prog { margin-top: 20px; display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 12px; color: var(--fg-3); }
 .prog .num:last-child { text-align: right; }
 .bar { position: relative; height: 16px; cursor: pointer; display: flex; align-items: center; }
@@ -253,8 +261,8 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
   .ctl .tb .lbl { display: none; }
 }
 /* short rooms: the secondary lines go before the cover shrinks or anything is cut off */
-@container (max-height: 680px) { .t-fine { display: none; } .now { --mh: 288px; } }
-@container (max-height: 560px) { .t-why { display: none; } .prog { margin-top: 14px; } .now { --mh: 216px; } }
+@container (max-height: 680px) { .t-fine { display: none; } .now { --mh: 310px; } }
+@container (max-height: 560px) { .t-why, .t-bc { display: none; } .prog { margin-top: 14px; } .now { --mh: 216px; } }
 @container (max-height: 460px) { .t-title { -webkit-line-clamp: 1; } .meta { padding-top: 16px; } .now { --mh: 174px; } }
 
 /* the panel beside the song: its words, or the rest of the station */
@@ -324,6 +332,8 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .s-head .tb:hover, .s-head .tb.on { color: var(--fg); }
 .s-note { flex-basis: 100%; min-width: 0; font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .s-note:empty { display: none; }
+.q-promise { margin: 0 0 8px; font-size: 12px; line-height: 1.5; color: var(--fg-3); }
+.q-promise:empty { display: none; }
 .s-list {
   list-style: none; margin: 0 0 0 -10px; padding: 2px 0 24px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
   -webkit-mask-image: linear-gradient(#000 calc(100% - 32px), transparent); mask-image: linear-gradient(#000 calc(100% - 32px), transparent);
@@ -409,15 +419,33 @@ img.lb { transform: scale(1.34); }
 /* ---------- your ears ---------- */
 .ear-wrap { container-type: inline-size; height: 100%; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .12) transparent; }
 .ear { max-width: 1240px; margin: 0 auto; padding: 44px 48px 96px; }
-.ear-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); gap: 56px; align-items: start; }
+/* the record sits beside the words on a wide page; on a narrow one it comes straight after the name, before the facts */
+.ear-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); grid-template-rows: auto 1fr; gap: 0 56px; align-items: start; }
+.ear-hero .rec-l { grid-column: 2; grid-row: 1 / span 2; }
+.ear-hero .facts { grid-column: 1; grid-row: 2; min-width: 0; }
 /* the disc gives way first, so the portrait always keeps a column it can be read in */
-@container (max-width: 1100px) { .ear-hero { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); gap: 40px; } }
-@container (max-width: 800px) { .ear-hero { grid-template-columns: minmax(0, 1fr); gap: 28px; } .ear-hero .disc { max-width: 520px; } }
+@container (max-width: 1100px) { .ear-hero { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); column-gap: 40px; } }
+@container (max-width: 800px) {
+  .ear-hero { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; gap: 28px; }
+  .ear-hero .rec-l { grid-column: 1; grid-row: 2; }
+  .ear-hero .facts { grid-row: 3; margin-top: 0; }
+  .ear-hero .disc { max-width: 520px; }
+}
 /* Chinese breaks between any two characters (punctuation never starts a line); keep-all would make each clause one unbreakable word */
 .ear h1 { margin: 0; font-size: 32px; line-height: 1.34; font-weight: 600; letter-spacing: -.015em; line-break: strict; overflow-wrap: break-word; text-wrap: balance; }
 :lang(en) .ear h1 { font-size: 28px; line-height: 1.28; }
 .ear .lede { margin: 18px 0 0; font-size: 16px; line-height: 1.75; color: var(--fg-2); line-break: strict; overflow-wrap: break-word; text-wrap: pretty; }
-.ear .meta-line { margin: 14px 0 0; font-size: 13px; color: var(--fg-3); }
+.ear .meta-line { margin: 0; font-size: 13px; color: var(--fg-3); }
+.ear .meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 14px; }
+.ear .meta-row .share { margin-left: -2px; height: 30px; padding: 0 10px 0 8px; color: var(--fg); background: rgba(255, 255, 255, .08); }
+.ear .meta-row .share:hover { background: rgba(255, 255, 255, .13); }
+.ear h1 .nw { white-space: nowrap; }
+.ear h1 .relabel { display: inline-grid; width: 30px; height: 30px; margin: -4px 0 -4px 6px; vertical-align: -5px; opacity: 0; transition: opacity var(--fast) var(--ease), color var(--fast) var(--ease); }
+.ear h1:hover .relabel, .ear h1 .relabel:focus-visible { opacity: 1; }
+@media (hover: none) { .ear h1 .relabel { opacity: 1; } }
+.ear h1 .relabel svg { width: 16px; height: 16px; }
+.ear h1.sk { width: fit-content; color: transparent; border-radius: 8px;
+  background: linear-gradient(100deg, rgba(255, 255, 255, .04) 30%, rgba(255, 255, 255, .085) 50%, rgba(255, 255, 255, .04) 70%) 0 0 / 300% 100%; animation: sheen 1.6s linear infinite; }
 .ear h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.005em; }
 .ear h2 small { display: block; margin-top: 4px; font-weight: 400; font-size: 13px; line-height: 1.6; color: var(--fg-3); }
 
@@ -443,6 +471,10 @@ img.lb { transform: scale(1.34); }
 .disc-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; stroke: none; fill: none; }
 .disc-svg text { stroke: none; }
 .disc-svg .groove { fill: none; stroke: rgba(255, 255, 255, .055); stroke-width: 1; }
+.disc-svg .tick { stroke: rgba(255, 255, 255, .18); stroke-width: 1; }
+.disc-svg .mon { font: 500 11px var(--font); fill: var(--fg-3); text-anchor: middle; dominant-baseline: central; }
+.disc-svg.arrive .lab { animation: fade 600ms 900ms var(--ease) both; }
+.disc-key { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-3); text-wrap: pretty; }
 .disc-svg .yr { font: 500 10px var(--font); fill: var(--fg-3); text-anchor: middle; dominant-baseline: central; font-variant-numeric: tabular-nums; }
 .disc-svg .band { fill: rgba(255, 255, 255, .045); fill-rule: evenodd; }
 .disc-svg .front { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: 1; }
@@ -526,6 +558,7 @@ details.fold { border-top: 1px solid var(--line); }
 .folds details.fold:last-child { border-bottom: 1px solid var(--line); }
 details.fold summary { list-style: none; display: flex; align-items: baseline; gap: 12px; padding: 16px 0; cursor: pointer; }
 details.fold summary::-webkit-details-marker { display: none; }
+.fold-note { margin: -4px 0 12px; font-size: 13px; line-height: 1.6; color: var(--fg-3); text-wrap: pretty; }
 details.fold summary b { font-size: 15px; font-weight: 600; }
 details.fold summary span { flex: 1; font-size: 13px; color: var(--fg-3); }
 details.fold summary svg { width: 16px; height: 16px; color: var(--fg-3); transition: transform var(--base) var(--ease); }
@@ -647,6 +680,17 @@ a.m-acct:hover { background: var(--hover); }
 .invite { display: flex; gap: 8px; align-items: center; grid-column: 1 / -1; }
 .plain li:has(.invite) { display: block; }
 .invite input:focus, .link input:focus { outline: none; background: rgba(255, 255, 255, .09); }
+/* the share card, as it will be posted */
+.share-d { width: fit-content; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); padding: 0; border-radius: 20px; background: var(--pop);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 40px 120px rgba(0, 0, 0, .6); overflow: hidden; }
+.share-d[open] { animation: lift 340ms var(--drawer); }
+.share-d[open]::backdrop { animation: fade 240ms ease-out; }
+.sc-in { position: relative; display: grid; gap: 14px; padding: 14px; }
+.sc-img { display: block; width: min(calc(100vw - 60px), calc(72dvh * .75), 570px); height: auto; aspect-ratio: 3 / 4; border-radius: 10px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .06); }
+.sc-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.sc-acts .btn, .sc-acts .tb { gap: 8px; height: 40px; }
+.sc-acts svg { width: 18px; height: 18px; }
+.sc-acts .sc-x { margin-left: auto; width: 40px; height: 40px; }
 .keys-d { width: min(420px, calc(100vw - 32px)); margin: 18vh auto auto; padding: 18px 22px 20px; border-radius: 16px; background: var(--pop); box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 30px 80px rgba(0, 0, 0, .6); }
 .keys-d[open] { animation: pop 200ms var(--ease); }
 .keys-d h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
@@ -796,7 +840,7 @@ a.m-acct:hover { background: var(--hover); }
   .imm .t-artist { text-align: center; }
   .imm .room.no-lyr .t-title, .imm .room.no-lyr .t-artist { text-align: left; }
   .imm .room.no-lyr .t-title { margin-top: 24px; font-size: 26px; }
-  .imm .t-fine, .imm .t-why { display: none; }
+  .imm .t-fine, .imm .t-why, .imm .t-bc { display: none; }
   .imm .ctl .tb .lbl { display: none; }   /* .meta is no container here, so its width rule can't drop the label */
   .imm .room.lyr-on .lyr { flex: 1; min-height: 0; height: auto; margin-top: 10px; }
   .imm .ll { font-size: 24px; }

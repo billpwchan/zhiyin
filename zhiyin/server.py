@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import accounts, ask, audio, candidates, ear, edition, google, i18n, library, llm, lyrics, profile, settings, store, ytm
-from .text import display_title, is_version
+from .text import display_title, fold, is_version
 
 WEB = store.ROOT / "web"
 # On the server every request needs a session; on the Mac everything is the owner's, as before accounts.
@@ -60,7 +60,7 @@ def _install_sample() -> bool:
     for uid, src in ((store.SAMPLE, SAMPLE_DIR), (store.SAMPLE_ZH, SAMPLE_DIR / "zh-Hans")):
         d = store.USERS / uid
         d.mkdir(parents=True, exist_ok=True)
-        for f in ("library.json", "tags.json", "profile.json", "edition.json"):
+        for f in ("library.json", "tags.json", "profile.json", "edition.json", "ident.json"):
             p = src / f if (src / f).exists() else SAMPLE_DIR / f
             (d / f).write_bytes(p.read_bytes())
     return True
@@ -281,13 +281,37 @@ def _scheduler():
         time.sleep(1800)
 
 
+LABEL_ROLLS = 5   # a listener may ask for another name for their taste this many times a day
+
+
+def _label(log):
+    name = profile.label()
+    if not name:
+        raise RuntimeError("no likes to name yet")
+    store.write_json(store.IDENT, {"label": name, "lang": i18n.of(), "built": store.now()})
+
+
+def _want_label():
+    """Start naming the listener's taste if it has no name in their language yet. Never in the way of anything."""
+    if store.is_sample() or ear.label() or llm.unavailable():
+        return
+    j = _jobs.get((store.uid(), "label"))
+    if j and (j["running"] or (j["error"] and time.time() - j.get("ended", 0) < 1800)):
+        return
+    try:
+        _start("label", _label)
+    except HTTPException:
+        pass
+
+
 def _setup(log):
-    """First run for a listener who just connected Google: read likes, learn the lanes, pick the first stations."""
+    """First run for a listener who just connected Google: read likes, learn the lanes, pick the first stations.
+    Their record is drawn from the liked videos as soon as those are read, and named a few seconds later."""
     uid = store.uid()
     accounts.set_status(uid, "importing")
     try:
         log(i18n.tr("读取你在 YouTube 点过的喜欢"), step=1)
-        r = library.sync_from_google(log=log)
+        r = library.sync_from_google(log=log, glimpsed=_want_label)
         accounts.set_prefs(uid, synced=time.time(), last_sync=r)
         if r["songs"] < MIN_LIKES:
             accounts.set_status(uid, "thin")
@@ -623,6 +647,9 @@ def state():
         timeline.append([t["rank"], (t.get("liked_est") or "")[:7], lane, t["title"],
                          t["artists"][0]["name"] if t["artists"] else ""])
     ed = store.read_json(store.EDITION)
+    asks = store.read_json(store.ASKS) or []
+    edition.ground([p for l in (ed or {}).get("lanes", []) for p in l["picks"] + l.get("reserve", [])]
+                   + [p for a in asks for p in a["picks"]])
     if not store.is_sample() and (accounts.get() is None or accounts.get()["status"] == "ready"):
         _auto_refresh(ed)
         _auto_sync()
@@ -630,7 +657,7 @@ def state():
         "portrait": prof.get("portrait"), "lanes": lanes, "focus": prof.get("focus"),
         "set_aside": [{"what": s["what"], "n": len(s["ranks"]), "why": s["why"]} for s in prof.get("set_aside", [])],
         "profile_built": prof.get("built"), "edition": ed,
-        "asks": store.read_json(store.ASKS) or [], "feedback": fb, "timeline": timeline,
+        "asks": asks, "feedback": fb, "timeline": timeline, "not_me": _not_me_view(tracks),
         "library": {"songs": sum(1 for t in tracks if not t["long"]), "mixes": sum(1 for t in tracks if t["long"]),
                     "synced": lib.get("synced"), "source": tracks[0]["source"] if tracks else None},
         "me": _me(), "jobs": jobs(), "owner_name": "" if store.is_sample() else (accounts.get(store.OWNER) or {}).get("name") or "",
@@ -646,14 +673,58 @@ def state():
     return out
 
 
+def _not_me_view(tracks: list[dict]) -> dict:
+    songs, artists = settings.not_me()
+    named = {}
+    for t in tracks:
+        if t["artists"]:
+            named.setdefault(fold(t["artists"][0]["name"]), t["artists"][0]["name"])
+    return {"songs": [{"vid": t["vid"] if t["vid"] in songs else t["ll"], "title": t["title"],
+                       "artist": t["artists"][0]["name"] if t["artists"] else ""}
+                      for t in tracks if t["vid"] in songs or t.get("ll") in songs],
+            "artists": [{"key": a, "name": named.get(a, a)} for a in artists]}
+
+
+class NotMe(BaseModel):
+    vid: Vid | None = None
+    artist: str | None = Field(None, max_length=200)
+    key: str | None = Field(None, max_length=200)   # an artist as stored (folded), to put back
+    on: bool = True
+
+
+@app.post("/api/notme")
+def not_me(b: NotMe):
+    """A like that isn't the listener's taste: it stays liked, but stops seeding stations and speaking for them."""
+    settings.set_not_me(vid=b.vid, artist=fold(b.artist) if b.artist else b.key, on=b.on)
+    return {"ok": True, "not_me": _not_me_view([t for t in library.load() if not t["long"]])}
+
+
 @app.get("/api/ear")
 def ear_view():
-    return ear.build()
+    out = ear.build()
+    if out["songs"]:
+        _want_label()
+    return out
+
+
+@app.post("/api/ear/label")
+def ear_relabel():
+    """Another name for the listener's taste, when the one they got doesn't sound like them."""
+    if why := llm.unavailable():
+        raise HTTPException(409, why)
+    p = accounts.prefs()
+    today = time.strftime("%Y-%m-%d")
+    n = p.get("label_rolls", {}).get(today, 0)
+    if n >= LABEL_ROLLS:
+        raise HTTPException(429, i18n.tr("今天换了好几次了，明天再换"))
+    _start("label", _label)
+    accounts.set_prefs(store.uid(), label_rolls={today: n + 1})
+    return jobs()
 
 
 @app.get("/api/jobs")
 def jobs():
-    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell")}
+    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell", "label")}
 
 
 @app.post("/api/refresh")
@@ -714,15 +785,17 @@ def feedback(f: Feedback):
 class Play(BaseModel):
     vid: Vid
     lane: str | None = None
-    ev: str = "start"  # start | skip | done
+    ev: str = "start"  # start | skip (left early) | left (after the first half minute) | done
     pos: float = 0
+    title: str | None = Field(None, max_length=300)
+    artist: str | None = Field(None, max_length=200)
 
 
 @app.post("/api/play")
 def play(p: Play):
     con = store.db()
-    con.execute("insert into plays (vid, lane, ts, ev, pos, uid) values (?,?,?,?,?,?)",
-                (p.vid, p.lane, store.now(), p.ev, p.pos, store.uid()))
+    con.execute("insert into plays (vid, lane, ts, ev, pos, uid, title, artist) values (?,?,?,?,?,?,?,?)",
+                (p.vid, p.lane, store.now(), p.ev, p.pos, store.uid(), p.title, p.artist))
     con.commit()
     return {"ok": True}
 
@@ -790,7 +863,8 @@ def sync():
 @app.get("/api/warmup")
 def warmup():
     """Something to listen to in the first minutes, before the stations exist: radios from the newest likes."""
-    tracks = [t for t in library.load() if not t["long"] and t["type"] in ("ATV", "OMV")][:3]
+    nm = settings.not_me()
+    tracks = [t for t in library.load() if not t["long"] and t["type"] in ("ATV", "OMV") and not settings.is_not_me(t, nm)][:3]
     mine = set()
     if not tracks and google.configured() and google.connected():
         # Still importing: the first page of likes is enough to start.

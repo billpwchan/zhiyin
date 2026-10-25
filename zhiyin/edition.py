@@ -15,7 +15,8 @@ RESERVE = 12
 
 
 def _public(c: dict) -> dict:
-    keep = ("vid", "title", "artists", "album", "year", "thumb", "dur", "type", "reason", "fit", "familiar", "sources")
+    keep = ("vid", "title", "artists", "album", "year", "thumb", "dur", "type", "reason", "fit", "familiar", "sources",
+            "because")
     out = {k: c.get(k) for k in keep}
     out.update({k: c[k] for k in ("v", "en", "mv") if c.get(k) is not None})
     out["title"] = display_title(c.get("title") or "", c.get("artists") or [])
@@ -77,6 +78,43 @@ def prefer_record(picks: list[dict], known) -> None:
         p["mv"] = p["vid"]
         p.update(vid=h["vid"], type="ATV", dur=h["dur"] or p.get("dur"), thumb=h.get("thumb") or p.get("thumb"),
                  album=h.get("album") or p.get("album"), year=p.get("year") or h.get("year"))
+
+
+def _label(t: dict) -> str:
+    """How a like is named in a candidate's provenance (candidates.gather)."""
+    return f"{t['title']} - {t['artists'][0]['name']}" if t.get("artists") else t["title"]
+
+
+def because(p: dict, theirs: list[dict], index: tuple[dict, dict] | None = None) -> dict | None:
+    """The one song of the listener's own that a pick is shown next to: the one the editor found closest ("near"),
+    else the like whose radio turned it up ("from"). Always a real like, so the listener can play it and judge.
+    `index` (from `_index`) saves rebuilding the lookups for every pick."""
+    by_vid, by_label = index or _index(theirs)
+    t, how = by_vid.get(p.get("like_vid")), "near"
+    if not t:
+        t, how = next((by_label[v] for v in p.get("via", []) if v in by_label), None), "from"
+    if not t:
+        return None
+    return {"vid": t["vid"], "title": t["title"], "artist": t["artists"][0]["name"] if t.get("artists") else "",
+            "at": (t.get("liked_est") or "")[:7] or None, "how": how}
+
+
+def _index(theirs: list[dict]) -> tuple[dict, dict]:
+    return {t["vid"]: t for t in theirs}, {_label(t): t for t in theirs}
+
+
+def ground(picks: list[dict]) -> None:
+    """Picks made before they carried `because`: find it from their provenance against the library, and take out
+    of their reasons the sentences that talk about the listener's own songs, as new picks have."""
+    todo = [p for p in picks if "because" not in p]
+    if not todo:
+        return
+    theirs = [t for t in library.load() if not t["long"]]
+    index, keys = _index(theirs), {song_key(t["title"]) for t in theirs}
+    for p in todo:
+        p["because"] = because(p, theirs, index)
+        if p.get("reason"):
+            p["reason"] = rank.clean_reason(p["reason"], p, keys)
 
 
 def one_each(lanes: list[list[dict]]) -> None:
@@ -230,6 +268,8 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
         reserve = [p for p in picks if p["vid"] not in ids]
         ids |= {p["vid"] for p in reserve}
         reserve += [{**c, "fit": 0, "reason": ""} for c in sl if c["vid"] not in ids]
+        for p in chosen + reserve:
+            p["because"] = because(p, seeds)
         return lane, seeds, g, chosen, reserve[:RESERVE]
 
     with store.Pool(4) as ex:

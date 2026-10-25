@@ -27,3 +27,37 @@ def test_taken_in_another_lane_is_rejected():
     k = known()
     k.taken.add("dup")
     assert k.reject(track("dup", "Song", "Someone")) == "taken"
+
+
+def test_a_song_heard_once_never_comes_back_under_any_video():
+    from zhiyin import store
+    with store.as_user("heard1"):
+        con = store.db()
+        con.execute("insert into plays (vid, lane, ts, ev, pos, uid, title, artist) values (?,?,?,?,?,?,?,?)",
+                    ("heard000001", "x", 1, "left", 95, "heard1", "Sukiyaki (Live)", "Kyu Sakamoto"))
+        con.execute("insert into plays (vid, lane, ts, ev, pos, uid, title, artist) values (?,?,?,?,?,?,?,?)",
+                    ("started0001", "x", 1, "start", 0, "heard1", "Started Only", "Someone"))
+        con.commit()
+        k = candidates.Known([], {})
+        assert k.reject(track("heard000001", "Sukiyaki", "Kyu Sakamoto")) == "heard"
+        assert k.reject(track("othervideo1", "Sukiyaki", "Kyu Sakamoto")) == "heard"
+        assert k.reject(track("othervideo2", "Sukiyaki", "A Cover Band")) is None
+        assert k.reject(track("started0001", "Started Only", "Someone")) is None   # pressing play isn't hearing
+
+
+def test_a_like_that_is_not_their_taste_neither_seeds_nor_brings_its_artist():
+    import random
+    from zhiyin import settings, store
+    from zhiyin.text import fold
+    with store.as_user("notme1"):
+        settings.set_not_me(vid="mine0000001")
+        s = settings.load()
+        s["not_me"]["artists"] = [fold("Kids Band")]
+        settings.save(s)
+        tracks = [dict(track(f"mine{i:07d}", f"Song {i}", "Kids Band" if i % 2 else "Real Artist"), rank=i, liked_est=None, type="ATV")
+                  for i in range(1, 9)]
+        lane = {"key": "a", "seeds": [], "core_artists": []}
+        profile = {"assign": {t["vid"]: ["a"] for t in tracks}}
+        seeds = candidates.lane_seeds(lane, tracks, profile, random.Random(1))
+        assert seeds and all(t["artists"][0]["name"] == "Real Artist" and t["vid"] != "mine0000001" for t in seeds)
+        assert candidates.Known(tracks, {}).reject(track("new0000001", "New Song", "Kids Band")) == "blocked artist"

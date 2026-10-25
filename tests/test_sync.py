@@ -238,3 +238,88 @@ def test_no_one_can_join_a_server_without_an_api_key(monkeypatch):
     assert server._join_state() == "invite"
     r = TestClient(server.app).get("/auth/google/start?mode=join", follow_redirects=False)
     assert "youtube" not in r.headers["location"]      # quietly a plain sign-in
+
+
+def test_a_like_can_stop_speaking_for_your_taste_and_come_back(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, settings
+    from zhiyin.text import fold
+    monkeypatch.setattr(server, "AUTH", True)
+    uid = accounts.redeem(accounts.invite("N"))
+    with store.as_user(uid):
+        store.write_json(store.LIBRARY, {"source": "google", "synced": 1, "tracks": [
+            {"rank": 0, "vid": "notme000001", "title": "Baby Shark", "artists": [{"name": "Pinkfong"}], "long": False, "source": "google"},
+            {"rank": 1, "vid": "notme000002", "title": "Real Love", "artists": [{"name": "Someone"}], "long": False, "source": "google"}]})
+    c = TestClient(server.app)
+    c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+    h = {"X-Zhiyin-Uid": uid}
+    v = c.post("/api/notme", json={"vid": "notme000001", "on": True}, headers=h).json()["not_me"]
+    assert v["songs"] == [{"vid": "notme000001", "title": "Baby Shark", "artist": "Pinkfong"}]
+    v = c.post("/api/notme", json={"artist": "Pinkfong", "on": True}, headers=h).json()["not_me"]
+    assert v["artists"] == [{"key": fold("Pinkfong"), "name": "Pinkfong"}]
+    assert c.get("/api/state", headers=h).json()["not_me"] == v
+    c.post("/api/notme", json={"key": fold("Pinkfong"), "on": False}, headers=h)
+    c.post("/api/notme", json={"vid": "notme000001", "on": False}, headers=h)
+    with store.as_user(uid):
+        assert settings.not_me() == (set(), set())
+
+
+def test_a_taste_gets_a_new_name_a_few_times_a_day(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "unavailable", lambda *a: None)
+    started = []
+    monkeypatch.setattr(server, "_start", lambda kind, fn: started.append(kind))
+    uid = accounts.redeem(accounts.invite("R"))
+    c = TestClient(server.app)
+    c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+    codes = [c.post("/api/ear/label", json={}, headers={"X-Zhiyin-Uid": uid}).status_code for _ in range(server.LABEL_ROLLS + 1)]
+    assert codes == [200] * server.LABEL_ROLLS + [429] and started == ["label"] * server.LABEL_ROLLS
+
+
+def test_one_listeners_choices_never_reach_another(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, settings
+    monkeypatch.setattr(server, "AUTH", True)
+    a1, a2, b = (accounts.redeem(accounts.invite(n)) for n in ("A1", "A2", "B1"))
+    c = TestClient(server.app)
+    # each the very first thing a listener does, so there is no settings file yet
+    c.cookies.set(accounts.COOKIE, accounts.new_session(a1))
+    assert c.post("/api/settings/lane", json={"key": "k", "enabled": False}, headers={"X-Zhiyin-Uid": a1}).status_code == 200
+    c.cookies.set(accounts.COOKIE, accounts.new_session(a2))
+    assert c.post("/api/notme", json={"artist": "Pinkfong", "on": True}, headers={"X-Zhiyin-Uid": a2}).status_code == 200
+    assert settings.DEFAULT == {"lanes": {}, "never": [], "picks_per_lane": 8, "not_me": {"songs": [], "artists": []}}
+    with store.as_user(b):
+        assert settings.not_me() == (set(), set()) and settings.load()["lanes"] == {}
+
+
+def test_a_new_listeners_record_has_its_full_shape_before_any_like_is_read(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(server, "_want_label", lambda: None)
+    uid = accounts.redeem(accounts.invite("E1"))
+    c = TestClient(server.app)
+    c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+    d = c.get("/api/ear", headers={"X-Zhiyin-Uid": uid}).json()
+    assert d["songs"] == [] and d["facts"] == [] and d["eras"] == [] and d["sectors"] == [] and d["stage"] == "glimpse"
+
+
+def test_a_rename_already_under_way_is_not_counted(monkeypatch):
+    from fastapi import HTTPException
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "unavailable", lambda *a: None)
+
+    def busy(kind, fn):
+        raise HTTPException(409, "running")
+    monkeypatch.setattr(server, "_start", busy)
+    uid = accounts.redeem(accounts.invite("R2"))
+    c = TestClient(server.app)
+    c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+    assert c.post("/api/ear/label", json={}, headers={"X-Zhiyin-Uid": uid}).status_code == 409
+    assert not accounts.prefs(uid).get("label_rolls")
+    with store.as_user(uid), pytest.raises(RuntimeError):
+        server._label(print)   # no likes yet: no name, and the job counts as failed rather than done

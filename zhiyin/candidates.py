@@ -11,7 +11,6 @@ _CREDIT_SPLIT = re.compile(r"\s+(?:x|×|and|feat\.?|ft\.?)\s+|\s*[&,、/]\s*", r
 
 SCRIPT = {"ko": re.compile(r"[가-힯]"), "ja": re.compile(r"[぀-ヿ]"), "th": re.compile(r"[฀-๿]")}
 HALF_LIFE_YEARS = 0.6
-HEARD_DAYS = 90        # played through or skipped: they have made up their mind about it
 FRESH_EDITIONS = 2     # the last editions stay out, so asking for a new edition brings new songs
 SHOWN_DAYS = 21        # shown earlier but never played: may come back, behind fresher candidates of the same strength
 
@@ -29,11 +28,17 @@ class Known:
     def __init__(self, tracks: list[dict], profile: dict):
         con = store.db()
         fb = con.execute("select vid, action, scope, artist_id, artist, title from feedback where uid=?", (store.uid(),)).fetchall()
-        # Only what they actually heard is used up. Excluding everything ever shown let each rebuild burn the best
-        # candidates, so later editions were picked from leftovers (2026-10-25).
-        heard_since, shown_since = store.now() - HEARD_DAYS * 86400, store.now() - SHOWN_DAYS * 86400
-        self.heard = {r["vid"] for r in con.execute("select vid from plays where uid=? and ev in ('done', 'skip') and ts > ?",
-                                                    (store.uid(), heard_since))}
+        # Only what they actually heard is used up, and for good: a song they played or skipped never comes back,
+        # under any of its videos. Excluding everything ever shown let each rebuild burn the best candidates, so later
+        # editions were picked from leftovers (2026-10-25).
+        shown_since = store.now() - SHOWN_DAYS * 86400
+        heard = con.execute("select vid, title, artist from plays where uid=? and ev in ('done', 'skip', 'left')",
+                            (store.uid(),)).fetchall()
+        self.heard = {r["vid"] for r in heard}
+        self.heard_songs = defaultdict(set)
+        for r in heard:
+            if r["title"]:
+                self.heard_songs[song_key(r["title"])].add(fold(r["artist"] or ""))
         self.recent_shown = {r["vid"] for r in con.execute("select vid from shown where uid=? and ts > ?",
                                                            (store.uid(), shown_since))} - self.heard
         self.just_shown = {r["vid"] for r in con.execute(
@@ -56,6 +61,7 @@ class Known:
                 self.artist_names[k] = a["name"]
         self.disliked = {r["vid"] for r in fb if r["action"] in ("dislike", "known", "like")}
         self.blocked_artists = {r["artist_id"] or fold(r["artist"] or "") for r in fb if r["scope"] == "artist"}
+        self.blocked_artists |= settings.not_me()[1]   # an artist they said isn't them isn't recommended either
         for r in fb:
             if r["action"] == "like":
                 self.songs[song_key(r["title"] or "")].add(fold(r["artist"] or ""))
@@ -85,6 +91,8 @@ class Known:
             names |= {fold(x) for x in _CREDIT_SPLIT.split(left) if fold(x)}
         if any(k and k in self.songs and (self.songs[k] & names or not names) for k in keys):
             return "same song"
+        if any(k and k in self.heard_songs and self.heard_songs[k] & names for k in keys):
+            return "heard"
         if any((a.get("id") or fold(a["name"])) in self.blocked_artists or fold(a["name"]) in self.blocked_artists
                for a in t["artists"]):
             return "blocked artist"
@@ -97,10 +105,11 @@ def lane_seeds(lane: dict, tracks: list[dict], profile: dict, rng: random.Random
     assign = profile.get("assign", {})
     picked_by_editor = set(lane["seeds"])
     aside = {r for s in profile.get("set_aside", []) for r in s["ranks"]}
+    nm = settings.not_me()
     reps = Counter(song_key(t["title"]) for t in tracks)
     pool = []
     for t in tracks:
-        if t["long"] or t["rank"] in aside or t["type"] not in ("ATV", "OMV"):
+        if t["long"] or t["rank"] in aside or t["type"] not in ("ATV", "OMV") or settings.is_not_me(t, nm):
             continue
         lanes = assign.get(t["vid"], [])
         if lane["key"] not in lanes and t["rank"] not in picked_by_editor:
@@ -266,9 +275,10 @@ def core_artists(lane: dict, tracks: list[dict], profile: dict) -> list[dict]:
     """The lane's anchor artists as YouTube channel ids, taken from the likes themselves (recency-weighted),
     with the editor's named core artists first."""
     assign = profile.get("assign", {})
+    nm = settings.not_me()
     weight, names = Counter(), {}
     for t in tracks:
-        if t["long"] or lane["key"] not in assign.get(t["vid"], []):
+        if t["long"] or lane["key"] not in assign.get(t["vid"], []) or settings.is_not_me(t, nm):
             continue
         w = 0.5 ** (_years_ago(t.get("liked_est")) / HALF_LIFE_YEARS)
         for a in t["artists"][:2]:
@@ -276,7 +286,7 @@ def core_artists(lane: dict, tracks: list[dict], profile: dict) -> list[dict]:
                 weight[a["id"]] += w
                 names[a["id"]] = a["name"]
     by_name = {fold(n): i for i, n in names.items()}
-    editor = [by_name[fold(n)] for n in lane.get("core_artists", []) if fold(n) in by_name]
+    editor = [by_name[fold(n)] for n in lane.get("core_artists", []) if fold(n) in by_name and fold(n) not in nm[1]]
     order = list(dict.fromkeys(editor[:6] + [i for i, _ in weight.most_common(12)]))
     return [{"id": i, "name": names[i]} for i in order]
 

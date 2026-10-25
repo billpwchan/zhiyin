@@ -22,6 +22,10 @@ song with its language, energy and the moments it suits. Then it groups the libr
 the kinds of music you actually listen to. For one listener that might be Cantonese R&B, Japanese city-pop groove,
 vocal jazz and K-pop girl groups.
 
+Likes you mark as not your taste (a song a child asked for, a phase, a joke) stay liked but are left out of all
+of this: they don't seed stations, define them, or speak for you in the portrait. You can leave out a whole artist
+the same way.
+
 A station is more than a mood. It has a scene, languages and lineage, plus seed songs, core artists, artists worth
 exploring, an energy range, things to avoid, and a share of new artists. A soft Mandopop ballad doesn't belong in a
 jazz station just because it's quiet.
@@ -39,11 +43,13 @@ For each station, Zhiyin collects about 600 candidates:
 
 ## 3. What you already know is filtered out
 
-- songs you've liked, refused, or played or skipped in the last 90 days;
+- songs you've liked or refused;
+- songs you've heard, for good: anything you played to the end, skipped, or left after the first half minute,
+  under any of its videos. Pressing play alone doesn't count;
 - songs from the last two editions, so "another edition" really brings new songs;
 - the same song in another form: live, remix, cover, sped-up or lyric uploads, a music video when you liked the
   audio, and uploads that put the artist in the title ("J Tajor & sunkis - Like I Do");
-- artists you've blocked, the wrong language for the station, and long mixes.
+- artists you've blocked or left out of your taste, the wrong language for the station, and long mixes.
 
 Songs that were shown earlier but never played are not used up. They can come back later, behind fresher
 candidates of the same strength.
@@ -73,7 +79,12 @@ sound choose pulled soft ballads into the jazz station.
 
 Claude (Opus) sees the station, the songs that define it right now, what you recently refused, and a shortlist of 32
 with mixed new and familiar artists and, where the pool allows, at most two songs per artist. It returns up to 12 songs with a confidence
-score and one line each. The instructions put quality and texture first: real songwriting, a voice and production
+score, one line each, and which of the station's songs each pick is closest to.
+
+The line is about the song only. What the page says about you comes from your data, not from the model: the like a
+pick is shown next to (the one the editor named, or the one whose radio turned it up), which you can play and then
+hear the pick again, and how many songs by its artist you have. A sentence in the line that still names one of your
+songs is dropped when another sentence remains. The instructions put quality and texture first: real songwriting, a voice and production
 worth hearing, the original studio recording. Classics are welcome when they fit and you don't have them yet.
 Being obscure is never a reason on its own.
 

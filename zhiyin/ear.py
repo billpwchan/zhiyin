@@ -1,6 +1,10 @@
 """What the 「你的耳朵」 page draws: every liked song placed on a record, ring by year (centre = the first like,
 edge = now) and wedge by station (wedges that sound alike sit side by side; inside a wedge, quieter songs come
-first, clockwise). Plus a few facts read straight off the likes, each pointing at the songs it is about."""
+first, clockwise). Plus a few facts read straight off the likes, each pointing at the songs it is about.
+
+A new listener's record is drawn before their stations exist, from the liked videos alone: then the angle is the
+time of year of the like (stage "glimpse", and "library" once the songs are matched), and the songs move into their
+wedges when the stations arrive (stage "full")."""
 import itertools
 import time
 from collections import Counter, defaultdict
@@ -8,7 +12,7 @@ from datetime import date
 
 import numpy as np
 
-from . import audio, i18n, store
+from . import audio, i18n, settings, store
 from .text import fold, song_key
 
 TOP_GAP = 16.0          # degrees left open at 12 o'clock for the year ruler
@@ -69,16 +73,60 @@ def _lane_order(keys: list[str], cents: dict[str, np.ndarray]) -> list[str]:
     return [have[i] for i in best] + rest
 
 
+def _glimpse_tracks() -> list[dict]:
+    g = store.read_json(store.GLIMPSE) or {}
+    return [{"rank": i, "vid": x["vid"], "ll": x["vid"], "title": x["title"], "artists": [{"name": x["artist"]}],
+             "album": None, "dur": x["dur"], "liked_est": x["at"] or None, "source": "google", "long": False}
+            for i, x in enumerate(g.get("songs", []))]
+
+
+def _calendar(tracks, ts, nm, out_songs) -> None:
+    """Before there are stations: the angle is the time of year of the like, January just past twelve o'clock."""
+    usable = 360 - TOP_GAP
+    for t in tracks:
+        x = ts[t["rank"]]
+        out_songs.append(_song(t, x, "none", TOP_GAP / 2 + usable * (x - int(x)), nm))
+
+
+def _song(t, x, lane, ang, nm) -> list:
+    return [t["vid"], t["title"], [a["name"] for a in t["artists"][:2]], (t.get("album") or {}).get("name") or "",
+            t.get("dur") or 0, round(x, 3), lane, round(ang, 2), t.get("ll"), int(settings.is_not_me(t, nm))]
+
+
+def label() -> str | None:
+    """The short name Claude gave this listener's taste, in the reader's script; None if it was written in the
+    other language."""
+    d = store.read_json(store.IDENT) or {}
+    if not d.get("label") or i18n.family(d.get("lang")) != i18n.family(i18n.of()):
+        return None
+    return i18n.convert(d["label"], d.get("lang", "zh-Hans"), i18n.of())
+
+
 def build() -> dict:
     prof = store.read_json(store.PROFILE) or {}
     tags = store.read_json(store.TAGS) or {}
     lib = store.read_json(store.LIBRARY) or {}
     tracks = sorted((t for t in lib.get("tracks", []) if not t["long"]), key=lambda t: t["rank"])
+    stage = "full" if tracks and prof.get("lanes") else "library" if tracks else "glimpse"
     if not tracks:
-        return {"songs": []}
+        tracks = _glimpse_tracks()
+    if not tracks:   # the liked videos aren't read yet: an empty record of the same shape
+        return {"songs": [], "sectors": [], "span": [0, 0], "eras": [], "facts": [], "real_dates": False, "stage": stage,
+                "center": None, "label": None, "built": time.time()}
+    nm = settings.not_me()
     real = any(t.get("source") == "google" for t in tracks)
+    rl = i18n.of()
+    if stage != "full":
+        ts = dict(zip((t["rank"] for t in tracks), _times(tracks)))
+        songs = []
+        _calendar(tracks, ts, nm, songs)
+        mine = [t for t in tracks if not settings.is_not_me(t, nm)] or tracks
+        return {"songs": songs, "sectors": [], "span": [round(min(ts.values()), 3), round(max(ts.values()), 3)], "eras": [],
+                "facts": facts(mine, ts, {t["vid"]: "none" for t in tracks}, {}, tags, real, rl,
+                               names=stage == "library"),
+                "real_dates": real, "stage": stage, "center": center(mine, tags), "label": label(), "built": time.time()}
     assign = prof.get("assign", {})
-    rl, pl = i18n.of(), prof.get("lang", "zh-Hans")
+    pl = prof.get("lang", "zh-Hans")
     lanes = {ln["key"]: i18n.convert(ln["name"], pl, rl) for ln in prof.get("lanes", [])}
     lane_of = {t["vid"]: (assign.get(t["vid"]) or ["none"])[0] for t in tracks}
     lane_of = {v: (k if k in lanes else "none") for v, k in lane_of.items()}
@@ -117,9 +165,7 @@ def build() -> dict:
         sectors.append({"key": k, "name": lanes.get(k) or i18n.tr("其他", rl), "a0": round(a, 2), "a1": round(a + span, 2), "n": n,
                         "covers": [t["vid"] for t in sorted(members, key=lambda t: t["rank"])[:4]]})
         for j, t in enumerate(members):
-            ang = a + span * (j + 0.5) / n
-            songs.append([t["vid"], t["title"], [x["name"] for x in t["artists"][:2]], (t.get("album") or {}).get("name") or "",
-                          t.get("dur") or 0, round(ts[t["rank"]], 3), k, round(ang, 2)])
+            songs.append(_song(t, ts[t["rank"]], k, a + span * (j + 0.5) / n, nm))
         a += span + SECTOR_GAP
 
     t_all = list(ts.values())
@@ -131,23 +177,32 @@ def build() -> dict:
         if inside:
             eras.append({"years": er["years"], "label": i18n.convert(er["label"], pl, rl), "text": i18n.convert(er["text"], pl, rl),
                          "t0": round(min(inside), 3), "t1": round(max(inside), 3)})
+    mine = [t for t in tracks if not settings.is_not_me(t, nm)] or tracks
     return {"songs": songs, "sectors": sectors, "span": [round(t0, 3), round(t1, 3)], "eras": eras,
-            "facts": facts(tracks, ts, lane_of, lanes, tags, real, rl), "real_dates": real,
-            "built": time.time()}
+            "facts": facts(mine, ts, lane_of, lanes, tags, real, rl), "real_dates": real, "stage": stage,
+            "center": center(mine, tags), "label": label(), "built": time.time()}
 
 
-def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans") -> list[dict]:
+def center(tracks, tags) -> int | None:
+    """The year by which half of the liked songs had come out (the lower median of release years)."""
+    years = sorted(y for t in tracks if (y := (tags.get(t["vid"]) or {}).get("year") or 0) > 1950)
+    return years[(len(years) - 1) // 2] if len(years) >= 30 else None
+
+
+def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans", names=True) -> list[dict]:
+    """`names` False: the artists are still YouTube channel names (a label's channel would pass for the artist), so
+    nothing is said about who."""
     def tr(text, **kw):
         return i18n.tr(text, lang, **kw)
     out = []
     first = min(tracks, key=lambda t: (ts[t["rank"]], -t["rank"]))
     who = first["artists"][0]["name"] if first["artists"] else ""
-    out.append({"key": "first", "lead": f"{int(ts[first['rank']])}", "text": tr("最早的一首是《{title}》，{who}。", title=first["title"], who=who),
-                "vids": [first["vid"]]})
+    text = tr("最早的一首是《{title}》，{who}。", title=first["title"], who=who) if names and who else tr("最早的一首是《{title}》。", title=first["title"])
+    out.append({"key": "first", "lead": f"{int(ts[first['rank']])}", "text": text, "vids": [first["vid"]]})
 
     span = defaultdict(list)
     for t in tracks:
-        if t["artists"]:
+        if t["artists"] and names:
             span[t["artists"][0]["name"]].append(t)
     long_ = [(max(ts[t["rank"]] for t in v) - min(ts[t["rank"]] for t in v), len(v), k, v) for k, v in span.items() if len(v) >= 3]
     if long_:
@@ -171,10 +226,15 @@ def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans") -> list[dict]:
         out.append({"key": "langs", "lead": tr("{n} 种语言", n=len(langs)), "text": "", "groups": groups,
                     "vids": groups[0]["vids"]})
 
+    y = center(tracks, tags)
+    if y:
+        out.append({"key": "center", "lead": f"{y}", "text": tr("你喜欢的歌，有一半发行在 {y} 年或更早。", y=y),
+                    "vids": [t["vid"] for t in tracks if 1950 < ((tags.get(t["vid"]) or {}).get("year") or 0) <= y]})
+
     now = max(ts.values())
     recent = [t for t in tracks if ts[t["rank"]] > now - 1]
     older = [t for t in tracks if ts[t["rank"]] <= now - 1]
-    if len(recent) >= 15 and len(older) >= 30:
+    if lanes and len(recent) >= 15 and len(older) >= 30:
         def share(group, k):
             return sum(lane_of[t["vid"]] == k for t in group) / len(group)
         grow = max(lanes, key=lambda k: share(recent, k) - share(older, k))

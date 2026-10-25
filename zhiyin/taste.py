@@ -4,7 +4,7 @@ from collections import Counter
 
 import numpy as np
 
-from . import audio, store
+from . import audio, settings, store
 from .candidates import _years_ago, score as graph_score
 from .text import fold
 
@@ -24,7 +24,8 @@ class Taste:
         assign = prof.get("assign", {})
         aside = {r for s in prof.get("set_aside", []) for r in s["ranks"]}
         con = store.db()
-        likes = [t for t in tracks if not t["long"] and t["rank"] not in aside]
+        nm = settings.not_me()
+        likes = [t for t in tracks if not t["long"] and t["rank"] not in aside and not settings.is_not_me(t, nm)]
         u = store.uid()
         app_likes = [dict(r) for r in con.execute("select vid, lane, title from feedback where uid=? and action='like'", (u,))]
         negs = {r["vid"] for r in con.execute("select vid from feedback where uid=? and action='dislike'", (u,))}

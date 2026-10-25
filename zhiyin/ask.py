@@ -1,6 +1,6 @@
 import time
 
-from . import candidates, edition, i18n, library, llm, rank, store, ytm
+from . import candidates, edition, i18n, library, llm, rank, settings, store, ytm
 
 
 PLAN_SCHEMA = {
@@ -64,7 +64,9 @@ def run(question: str, log=print) -> dict:
         "discovery": lane_base.get("discovery", 0.5) if lane_base else 0.5,
         "core_artists": [], "explore_artists": [{"name": a, "why": "fits the request", "song": ""} for a in plan["artists"]],
     }
-    seeds = [{**by_rank[r], "w": 1.0} for r in plan["seeds"] if r in by_rank and not by_rank[r]["long"]][:6]
+    nm = settings.not_me()
+    seeds = [{**by_rank[r], "w": 1.0} for r in plan["seeds"]
+             if r in by_rank and not by_rank[r]["long"] and not settings.is_not_me(by_rank[r], nm)][:6]
     log(i18n.tr("从 {s} 首你的歌和 {a} 位歌手出发找歌", s=len(seeds), a=len(plan["artists"])))
     g = candidates.gather(lane, seeds, known, [])
     cands = g["cands"]
@@ -87,6 +89,8 @@ def run(question: str, log=print) -> dict:
     sl = built[0][3][:26]
     log(i18n.tr("{n} 首候选，编辑挑选中", n=len(cands)))
     picks = rank.pick(lane, sl, seeds, edition.negatives(), model="opus")[:10]
+    for p in picks:
+        p["because"] = edition.because(p, seeds)
     edition.prefer_record(picks, known)
     edition.localize(picks)
     edition.sound_tags(picks, tst)

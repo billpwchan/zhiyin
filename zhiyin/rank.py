@@ -1,7 +1,8 @@
 import random
+import re
 
 from . import i18n, llm
-from .text import fold
+from .text import fold, song_key
 
 PICK_SCHEMA = {
     "type": "object",
@@ -9,7 +10,8 @@ PICK_SCHEMA = {
         "id": {"type": "integer"},
         "fit": {"type": "number"},
         "reason": {"type": "string"},
-    }, "required": ["id", "fit", "reason"]}}},
+        "like": {"type": "integer"},
+    }, "required": ["id", "fit", "reason", "like"]}}},
     "required": ["picks"],
 }
 
@@ -32,12 +34,13 @@ Rules:
   a flaw, and being new or obscure is never a reason on its own. Prefer songs surfaced by several of their likes;
   include fresh releases and new artists when they are as good as the rest.
 - Do not pick two songs by the same artist.
-- reason: one natural sentence a friend with great taste would say. Lead with what the song does (its sound, mood,
-  or why it suits this lane right now), then at most a short nod to what led here ("和你常听的〈玻璃〉一路"). Do not
-  list several seed titles, do not count their likes, and never call anyone "新歌手"; an artist not in their likes
-  is simply "你还没收藏过的". Describe the sound only for artists or songs you actually know; otherwise rely on the
-  facts given. Never state facts you are unsure of (dates, awards, collaborations, charts). Vary the phrasing
-  across picks.
+- reason: one natural sentence on what the song itself does: its sound, its mood, why it suits this lane right now.
+  Say nothing about the listener: no titles of their songs, no counts, nothing about whether an artist is in their
+  likes. The page shows those facts itself, from their data, next to your sentence. Describe the sound only for
+  artists or songs you actually know; otherwise rely on the facts given. Never state facts you are unsure of
+  (dates, awards, collaborations, charts, influences). Vary the phrasing across picks.
+- like: the number of the one song in THEIR SONGS this pick is closest to, if one is genuinely close in sound and
+  spirit; -1 otherwise. The page offers it to the listener to hear side by side, so pick it honestly.
 - fit: 0-1, your honest confidence this listener will want this in this lane right now. Be strict: 0.9 only for
   songs you are sure of, 0.7 for good bets; below 0.6 means do not return it.
 Return at most 12 picks ordered best first; return fewer rather than pad the list."""
@@ -73,7 +76,7 @@ def pick(lane: dict, shortlist: list[dict], seeds: list[dict], negatives: list[s
     order = list(range(len(shortlist)))
     random.shuffle(order)  # LLM rankers favour early items; shuffle so code-score order doesn't leak in
     lines = [_fmt(i, shortlist[i]) for i in order]
-    seed_lines = [f"{s['title']} — {', '.join(a['name'] for a in s['artists'])}" for s in seeds[:10]]
+    seed_lines = [f"{i}. {s['title']} — {', '.join(a['name'] for a in s['artists'])}" for i, s in enumerate(seeds[:10])]
     prompt = (
         f"LANE: {lane['name']} ({lane['english']})\nSound: {lane['sound']}\nWhen: {lane['when']}\n"
         f"Languages: {', '.join(lane['langs'])} | energy {lane['energy']}\nAvoid: {'; '.join(lane['avoid'])}\n"
@@ -84,6 +87,7 @@ def pick(lane: dict, shortlist: list[dict], seeds: list[dict], negatives: list[s
     )
     res = llm.call(prompt, system(), PICK_SCHEMA, model=model, timeout=600)
     out, seen_artists = [], set()
+    their_keys = {song_key(s["title"]) for s in seeds}
     for p in res["picks"]:
         if not (0 <= p["id"] < len(shortlist)):
             continue
@@ -92,8 +96,24 @@ def pick(lane: dict, shortlist: list[dict], seeds: list[dict], negatives: list[s
         if a in seen_artists:
             continue
         seen_artists.add(a)
-        out.append({**c, "fit": p["fit"], "reason": p["reason"]})
+        like = seeds[p["like"]] if 0 <= p.get("like", -1) < min(10, len(seeds)) else None
+        out.append({**c, "fit": p["fit"], "reason": clean_reason(p["reason"], c, their_keys),
+                    "like_vid": like["vid"] if like else None})
     return out
+
+
+_QUOTED = re.compile(r"[《〈“\"]([^》〉”\"]{1,80})[》〉”\"]")
+_SENTENCE = re.compile(r"[^。！？.!?]+[。！？.!?]?\s*")
+
+
+def clean_reason(reason: str, pick: dict, their_keys: set[str]) -> str:
+    """The editor is told to leave the listener out of its sentence. When it still names one of their songs
+    (`their_keys`: song_key of each of their titles), that sentence goes, if another is left; what the page says
+    about them comes from their data, never from the model. Whole sentences only: cutting a clause out of one
+    ("a gentle, unhurried ballad as “X”") leaves a broken one."""
+    mine = their_keys - {song_key(pick["title"])}
+    keep = [x for x in _SENTENCE.findall(reason) if not any(song_key(m) in mine for m in _QUOTED.findall(x))]
+    return "".join(keep).strip() or reason
 
 
 def enforce_quota(picks: list[dict], n: int, discovery: float) -> list[dict]:

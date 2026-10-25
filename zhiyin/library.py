@@ -89,9 +89,12 @@ def _from_like(item: dict, info: dict) -> dict | None:
     return {**_record(0, item["vid"], "UGC", title, [{"name": artist, "id": None}], None, dur, "google"), "ll": item["vid"]}
 
 
-def sync_from_google(log=print) -> dict:
+def sync_from_google(log=print, glimpsed=None) -> dict:
     """Merge the listener's liked videos into the library. Ranks never move: rank orders likes (lower is newer) and
-    is also how the taste profile names them, so new likes get ranks below the current newest."""
+    is also how the taste profile names them, so new likes get ranks below the current newest.
+
+    On the first import, the liked videos as YouTube lists them are written out at once (store.GLIMPSE), before the
+    minutes it takes to match each one to its song, so the record can be drawn while that runs; then `glimpsed()`."""
     from . import google
     uid = store.uid()
     lib = store.read_json(store.LIBRARY) or {}
@@ -115,6 +118,18 @@ def sync_from_google(log=print) -> dict:
     info = google.videos(uid, [it["vid"] for it in new])
     music = [it for it in new if info.get(it["vid"], {}).get("cat") == google.MUSIC_CATEGORY
              and not info[it["vid"]].get("live")]
+    if first:
+        songs = []
+        for it in music:
+            v = info[it["vid"]]
+            if v["dur"] > LONG_MIX_S:
+                continue
+            artist = _channel_artist(v["channel"] or it["channel"])
+            songs.append({"vid": it["vid"], "title": display_title(v["title"] or it["title"], [{"name": artist}]),
+                          "artist": artist, "at": (it["at"] or "")[:10], "dur": v["dur"]})
+        store.write_json(store.GLIMPSE, {"at": store.now(), "songs": songs})
+        if glimpsed:
+            glimpsed()
     done = [0]
 
     def resolve(it):

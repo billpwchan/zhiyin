@@ -177,9 +177,11 @@ def _summary_lines(tracks, tags):
 
 
 def synthesize(model: str = "opus") -> dict:
+    from . import settings
+    nm = settings.not_me()
     tracks = library.load()
     tags = store.read_json(store.TAGS) or {}
-    songs = [t for t in tracks if not t["long"]]
+    songs = [t for t in tracks if not t["long"] and not settings.is_not_me(t, nm)]
     mixes = [t for t in tracks if t["long"]]
     repeats = {}
     from .text import song_key
@@ -251,6 +253,54 @@ def build(model: str = "opus", log=print) -> dict:
         store.write_json(store.PROFILES / f"{stamp}.json", prev)
     store.write_json(store.PROFILE, prof)
     return prof
+
+
+LABEL_SCHEMA = {"type": "object", "properties": {"label": {"type": "string"}}, "required": ["label"]}
+LABEL_SYSTEM = """You name one person's taste in music, from the songs they liked on YouTube (newest first, with the
+month of each like).
+Write one label of @LABEL@ in @LANG@: a name for their taste or for the kind of listener they are, the way a sharp
+friend would put it. It is the first line on their own page and on the card they may post, so they should read it
+and think "that's me", and their friends should want to argue with it.
+- Name what is most them: a sound, a scene, a city, an era, a language, one artist they keep coming back to.
+- A name, not a summary: not a list of genres and not a "from X to Y" story.
+- Plain words; a little wry is good. No flattery and no big words (soul, universe, journey, collector, connoisseur,
+  eclectic, vibes, 灵魂, 宇宙, 收藏家, 品味, 氛围感). No emoji, hashtags or final punctuation.
+- Only what the list shows. Never guess when, where or with whom they listen: no times of day or seasons (night,
+  midnight, morning, 深夜, 夜晚, 清晨), no moods they might be in.
+- Keep artist names exactly as given.
+Shapes other listeners got (theirs, not yours; don't reuse the wording): "Mostly Fujii Kaze, and everyone near him",
+"A jazz piano person who won't admit it", "老派港乐，新派韩流", "粤语慢歌，偶尔被 K-R&B 拐走"."""
+LABEL_LINES = 600
+
+
+def label() -> str:
+    """A short name for the listener's taste, from the likes alone (the matched library, or the liked videos as
+    YouTube lists them while that runs). Quick: it is the first thing a new listener reads."""
+    tracks = [t for t in library.load() if not t["long"]]
+    if tracks:
+        rows = [((t.get("liked_est") or "")[:7], t["title"], ", ".join(a["name"] for a in t["artists"][:2])) for t in tracks]
+    else:
+        rows = [(x["at"][:7], x["title"], x["artist"]) for x in (store.read_json(store.GLIMPSE) or {}).get("songs", [])]
+    from . import settings
+    nm = settings.not_me()
+    rows = [r for r, t in zip(rows, tracks or [None] * len(rows)) if not (t and settings.is_not_me(t, nm))]
+    if not rows:
+        return ""
+    if len(rows) > LABEL_LINES:   # the newest in full, then an even sample of the years before
+        old = rows[400:]
+        rows = rows[:400] + old[::max(1, len(old) // (LABEL_LINES - 400))][:LABEL_LINES - 400]
+    w = i18n.WRITE[i18n.of()]
+    system = LABEL_SYSTEM.replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"])
+    prompt = "\n".join(" | ".join(r) for r in rows)
+    for _ in range(2):
+        out = llm.call(prompt, system, LABEL_SCHEMA, model="sonnet", timeout=180, retries=1)["label"].strip().rstrip("。.!！")
+        if len(out.split()) <= 7 if i18n.of() == "en" else len(out) <= 18:
+            break
+        prompt += f"\n\n(\"{out}\" is too long: {w['label']}.)"
+    if i18n.of() == "en":
+        return out
+    # the script of the likes can leak into the label (粵語 for a Simplified reader)
+    return i18n.zh_punct(i18n.convert(out, "zh-Hant" if i18n.of() == "zh-Hans" else "zh-Hans", i18n.of()))
 
 
 def absorb_new(log=print) -> int:
