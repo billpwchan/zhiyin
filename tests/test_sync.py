@@ -101,6 +101,9 @@ def test_a_tab_left_open_as_another_account_cannot_write(monkeypatch):
     stale = c.post("/api/feedback", json={"vid": "abc", "action": "like"}, headers={"X-Zhiyin-Uid": a})
     assert stale.status_code == 409 and stale.json()["detail"] == "account-changed"
     assert store.db().execute("select count(*) from feedback where vid='abc'").fetchone()[0] == 0
+    unmarked = c.post("/api/feedback", json={"vid": "abc", "action": "like"})
+    assert unmarked.status_code == 409
+    assert c.get("/api/jobs").status_code == 200
     ok = c.post("/api/feedback", json={"vid": "abc", "action": "like"}, headers={"X-Zhiyin-Uid": b})
     assert ok.status_code == 200
     assert store.db().execute("select uid from feedback where vid='abc'").fetchone()[0] == b

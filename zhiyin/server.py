@@ -62,7 +62,8 @@ async def _who(request: Request, call_next):
     # A page belongs to the account it was opened as. After signing in as someone else in another tab, the old tab
     # must not keep writing likes, plays or "不要" into the new account: its requests are refused and it reloads.
     page = request.headers.get("x-zhiyin-uid")
-    if page and page != uid and request.url.path.startswith("/api/"):
+    if request.url.path.startswith("/api/") and (page != uid if page else request.method != "GET"):
+        # a write without the header comes from a page loaded before this rule existed, which can't tell either
         return JSONResponse({"detail": "account-changed"}, 409)
     token = store._uid.set(uid)
     try:
