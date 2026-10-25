@@ -395,6 +395,7 @@ const FADE = 2.5;   // seconds a song fades out over at a natural ending
 
 const Player = {
   yt: null, ready: false, vid: null, want: null, cued: false, playing: false, shown: false, used: false, logged: null, timer: null, ramp: 0, ending: false,
+  rest: true,   // paused by the listener, or nothing started yet (not the moment between two songs)
   clock: { raw: -1, at: 0 },
   init() {
     window.onYouTubeIframeAPIReady = () => {
@@ -436,6 +437,7 @@ const Player = {
   // the rail's YouTube window opens with the first song played, and is in place before that song starts
   use() { if (!this.used) { this.used = true; placeCard(); placeHost(); } },
   load(p, play) {
+    this.settle(!play);
     if (play) this.use();
     if (!this.ready) { this.want = { p, play }; return; }
     // a skip lets the old song drop away for a moment instead of cutting it mid-note
@@ -458,6 +460,9 @@ const Player = {
     // the song's own cover instead of YouTube's thumbnail, title bar and play button
     if (s === 1) { this.shown = true; this.cued = false; this.use(); }   // a seek also starts a cued song, so any start opens the window
     else if (s !== 3) this.shown = false;
+    if (s === 1) this.settle(false);
+    // a pause from the headphones or the lock screen; YouTube also reports one for a moment when it changes songs
+    if (s === 2) setTimeout(() => { if (this.yt.getPlayerState?.() === 2) this.settle(true); }, 400);
     placeHost();
     document.body.classList.toggle('playing', this.playing);
     Pip.w?.document.body.classList.toggle('playing', this.playing);
@@ -478,10 +483,12 @@ const Player = {
     if (!cur()) return;
     MS.arm();
     if (!this.playing) this.use();
+    this.settle(this.playing);   // at the tap, so the card is open by the time the song sounds
     if (!this.ready) { this.want = { p: cur(), play: true }; return; }
     this.steady();
     this.playing ? this.yt.pauseVideo() : this.yt.playVideo();
   },
+  settle(rest) { if (this.rest !== rest) { this.rest = rest; restCard(); } },
   play() { if (!this.playing) this.toggle(); },
   pause() { if (this.ready && this.playing) { this.steady(); this.yt.pauseVideo(); } },
   seekTo(sec) { if (!this.ready) return; this.steady(); this.yt.seekTo(Math.max(0, sec), true); this.clock.raw = -1; },
@@ -914,6 +921,7 @@ function keepCurrentRowVisible() {
 const onHero = () => view === 'listen' && (prefs.imm || (PHONE.matches && !frameAway));
 let hostAt = null;
 function placeHost() {
+  if (cardMoving) return;
   const host = $('#ytHost');
   const docked = !onHero();
   const target = docked ? $('#pcFrame') : $('#frame');
@@ -1208,6 +1216,35 @@ function placeCard() {
   const bare = view === 'listen' && !PHONE.matches;   // the room already shows the song and its controls
   c.hidden = !cur() || onHero() || (bare && !Player.used);
   c.classList.toggle('bare', bare);
+  c.classList.toggle('rest', PHONE.matches && Player.rest);
+}
+
+// Paused, or before anything has played, a phone's card is a one-line bar: YouTube's player isn't showing, so there is
+// no 208px window to keep open over the page. Play, and the cover grows back into the window the player then takes.
+let cardMoving = null;
+function restCard() {
+  const c = $('#pcard');
+  const rest = PHONE.matches && Player.rest;
+  if (c.classList.contains('rest') === rest) return;
+  if (c.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) { c.classList.toggle('rest', rest); return placeHost(); }
+  cardMoving?.cancel();
+  const parts = [c, $('#pcFrame'), c.querySelector('.pc-txt'), c.querySelector('.pc-ctl')];
+  const was = parts.map((e) => e.getBoundingClientRect());
+  c.classList.toggle('rest', rest);
+  const now = parts.map((e) => e.getBoundingClientRect());
+  const o = { duration: 300, easing: 'cubic-bezier(.32, .72, 0, 1)' };
+  // the card grows from its foot; each part starts where it sat in the card before
+  const from = (i) => `translate(${was[i].left - was[0].left - (now[i].left - now[0].left)}px, ${was[i].top - was[0].top - (now[i].top - now[0].top)}px)`;
+  const anims = [
+    c.animate([{ height: `${was[0].height}px` }, { height: `${now[0].height}px` }], o),
+    parts[1].animate([{ transformOrigin: '0 0', transform: `${from(1)} scale(${was[1].width / now[1].width}, ${was[1].height / now[1].height})` }, { transformOrigin: '0 0', transform: 'none' }], o),
+    parts[2].animate([{ transform: from(2) }, { transform: 'none' }], o),
+    parts[3].animate([{ transform: from(3) }, { transform: 'none' }], o),
+  ];
+  const mine = cardMoving = anims[0];
+  // YouTube's window opens once the cover has grown into it (a resume can start sounding a moment before)
+  mine.finished.then(() => { if (cardMoving === mine) { cardMoving = null; placeHost(); } }, () => {});
+  mine.oncancel = () => anims.forEach((a) => a.cancel());
 }
 
 /* ---------- account ---------- */
@@ -1827,7 +1864,7 @@ function renderEar() {
 
   const first = songs ? yearOf(EAR.span[0]) : (S.timeline.map((p) => p[1]).filter(Boolean).sort()[0] || '').slice(0, 4);
   const meta = [SAMPLE() ? t('示例听众') : '', n ? t('{n} 首喜欢', { n }) : '', first ? t('{y} 年至今', { y: first }) : '',
-    full ? t('{n} 种口味', { n: S.lanes.length }) : ''].filter(Boolean).join(' · ');
+    full ? t('{n} 种口味', { n: S.lanes.length }) : ''].filter(Boolean).map((x) => `<span class="nw">${esc(x)}</span>`).join(' · ');
   const canShare = songs && name;
   const fbRows = S.feedback.filter((f) => f.action !== 'known').slice(0, 30);
   const label = (f) => (f.action === 'like' ? t('喜欢') : f.scope === 'artist' ? t('不要这位歌手') : t('不要这首'));

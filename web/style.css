@@ -439,7 +439,7 @@ img.lb { transform: scale(1.34); }
 .ear .meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 14px; }
 .ear .meta-row .share { margin-left: -2px; height: 30px; padding: 0 10px 0 8px; color: var(--fg); background: rgba(255, 255, 255, .08); }
 .ear .meta-row .share:hover { background: rgba(255, 255, 255, .13); }
-.ear h1 .nw { white-space: nowrap; }
+.ear h1 .nw, .meta-line .nw { white-space: nowrap; }
 .ear h1 .relabel { display: inline-grid; width: 30px; height: 30px; margin: -4px 0 -4px 6px; vertical-align: -5px; opacity: 0; transition: opacity var(--fast) var(--ease), color var(--fast) var(--ease); }
 .ear h1:hover .relabel, .ear h1 .relabel:focus-visible { opacity: 1; }
 @media (hover: none) { .ear h1 .relabel { opacity: 1; } }
@@ -734,6 +734,12 @@ a.m-acct:hover { background: var(--hover); }
     background: #1b1b1e; box-shadow: 0 0 0 1px var(--line), 0 16px 40px rgba(0, 0, 0, .5);
   }
   .pc-frame { width: 208px; height: 208px; min-width: 0; }
+  .pcard { align-content: start; overflow: hidden; }
+  .pcard.rest { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; border-radius: 16px; }
+  .pcard.rest .pc-frame { width: 48px; height: 48px; padding: 0; border-radius: 8px; overflow: hidden; }
+  .pcard.rest .pc-meta { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; padding: 0; }
+  .pcard.rest .pc-txt { padding: 0; }
+  .pcard.rest .pc-ctl .push { display: none; }
   .yt-host.docked { z-index: 31; }
   .pcard [data-k="prev"] { display: none; }
   .pc-meta { padding: 2px 0 0; align-content: space-between; }
@@ -772,6 +778,8 @@ a.m-acct:hover { background: var(--hover); }
   .ear-hero { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .ear h1 { font-size: 24px; }
   .ear .lede { font-size: 15px; }
+  /* the button keeps to the right of the line instead of taking a row of its own, so the record stays on the first screen */
+  .ear .meta-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
   .facts { margin-top: 24px; }
   .fact .lead { font-size: 22px; }
   .sec { margin-top: 48px; }
@@ -795,6 +803,7 @@ a.m-acct:hover { background: var(--hover); }
   .tabs [aria-current] { color: var(--fg); }
   .toast { left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); }
   body:has(.pcard:not([hidden])) .toast { bottom: calc(296px + env(safe-area-inset-bottom)); }   /* above the player card: nothing may sit on YouTube's player */
+  body:has(.pcard.rest:not([hidden])) .toast { bottom: calc(140px + env(safe-area-inset-bottom)); }
   .composer { margin: auto auto 0; width: 100vw; max-width: none; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); }
   .composer[open] { animation: up 420ms var(--drawer); }
   @keyframes up { from { transform: translateY(100%); } }
