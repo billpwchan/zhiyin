@@ -114,9 +114,10 @@ Each listener signs in with Google, and Zhiyin reads their liked songs through t
 in Zhiyin likes it on YouTube Music too; "not for me" stays in Zhiyin.
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable **YouTube Data API v3**.
-2. Under **OAuth consent screen**, choose *External*, add your domain under authorized domains, and publish the app.
-   You don't need verification for a handful of people: Google shows them an "unverified app" notice first, and
-   allows up to 100 users.
+2. Under **OAuth consent screen**, choose *External*. On **Branding**, set the home page to your site and the privacy
+   policy to `https://<your site>/privacy` (Zhiyin serves it; Google won't publish an app without both), and add
+   your domain under authorized domains. Then publish the app on **Audience**. You don't need verification for a
+   handful of people: Google shows them an "unverified app" notice first, and allows up to 100 users.
 3. Under **Credentials**, create an **OAuth client ID** of type *Web application*. Add
    `https://<your site>/auth/google/callback` as an authorized redirect URI, and download the JSON.
 4. Run `deploy/google-client.sh ~/Downloads/client_secret_….json`. It checks the client and installs it as

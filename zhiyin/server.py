@@ -36,7 +36,7 @@ async def _lifespan(_app):
 app = FastAPI(lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
-OPEN = ("/login", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
+OPEN = ("/login", "/privacy", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
 
 
 @app.middleware("http")
@@ -320,6 +320,13 @@ def _signed_in(resp: Response, uid: str, request: Request) -> Response:
     resp.set_cookie(accounts.COOKIE, tok, max_age=accounts.SESSION_DAYS * 86400, httponly=True, samesite="lax",
                     secure=google.public_url().startswith("https"))
     return resp
+
+
+@app.get("/privacy")
+def privacy():
+    html = (WEB / "privacy.html").read_text(encoding="utf-8")
+    html = html.replace("/static/style.css", f"/static/style.css?v={int((WEB / 'style.css').stat().st_mtime)}")
+    return HTMLResponse(html)
 
 
 @app.get("/login")

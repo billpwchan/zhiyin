@@ -605,6 +605,16 @@ body.pip {
 .gate .gate-err { color: var(--fg); }
 .gate-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 28px; }
 .gate .gate-note { font-size: 13px; color: var(--fg-3); }
+.gate a:not(.btn):not(.tb):not(.mark) { color: inherit; text-decoration: underline; text-decoration-color: var(--fg-3); text-underline-offset: 3px; }
+.gate-body:has(.doc) { place-items: start center; padding: 72px 16px 96px; }
+.gate.doc { max-width: 600px; }
+.gate a.mark { display: inline-block; color: var(--fg); }
+.doc h1 { margin-bottom: 4px; }
+.doc h2 { margin: 40px 0 0; font-size: 16px; font-weight: 600; }
+.doc ul { margin: 12px 0 0; padding-left: 1.2em; font-size: 15px; line-height: 1.65; color: var(--fg-2); }
+.doc li + li { margin-top: 6px; }
+.doc b { font-weight: 500; color: var(--fg); }
+.doc .gate-note { margin-top: 40px; }
 
 @media (max-width: 760px) {
   .welcome { padding: 32px 16px 120px; }

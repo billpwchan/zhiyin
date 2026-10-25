@@ -32,7 +32,8 @@ if (G.mode === 'switch') {
     <p>它从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌。需要邀请才能进来。</p>
     ${G.error ? `<p class="gate-err">${esc(errors[G.error] || G.error)}</p>` : ''}
     ${G.google ? `<div class="gate-acts"><a class="btn" href="/auth/google/start?mode=login">用 Google 登录</a></div>
-    <p class="gate-note">已经连接过 YouTube Music 的话，用同一个 Google 账号登录。</p>` : ''}`;
+    <p class="gate-note">已经连接过 YouTube Music 的话，用同一个 Google 账号登录。</p>` : ''}
+    <p class="gate-note"><a href="/privacy">知音怎么用你的数据</a></p>`;
 }
 </script>
 </body>

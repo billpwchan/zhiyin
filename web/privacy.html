@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<title>隐私 · 知音</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="gate-body">
+<main class="gate doc">
+  <a class="mark" href="/" aria-label="知音"><svg class="wm" viewBox="20 -930 2060 1050" aria-hidden="true"><g transform="scale(1 -1)" fill="currentColor" stroke="currentColor" stroke-width="44" stroke-linejoin="round"><path d="M554 747V-46H601V37H853V-37H901V747Z M601 84V701H853V84Z M173 836C147 709 104 586 41 507C53 499 74 486 82 478C115 525 145 584 169 650H268V468L267 426H49V379H265C253 238 206 82 40 -36C51 -43 67 -62 74 -72C199 17 262 131 292 245C346 186 441 76 474 30L508 71C476 107 346 252 303 295C308 323 311 351 314 379H519V426H316L317 467V650H487V696H185C199 738 211 781 221 826Z"/><path transform="translate(1040 0)" d="M258 668C290 617 318 548 326 501L375 516C366 561 337 629 303 680Z M115 737V692H892V737Z M703 683C682 629 646 550 615 499H57V454H944V499H666C696 548 727 614 753 668Z M251 139H757V8H251Z M251 182V308H757V182Z M203 351V-76H251V-35H757V-72H806V351Z"/><circle cx="1543" cy="862" r="82" fill="#E9A55B" stroke="none"/></g></svg></a>
+  <h1>知音怎么用你的数据</h1>
+  <p>知音是一个私人的推荐电台，由邀请你的人运营在自己的服务器上，只给他认识的几个人用。项目作者收不到任何数据，网站也没有任何统计或广告。</p>
+
+  <h2>从 Google 读什么</h2>
+  <p>你用 Google 登录时，知音拿到你的账号 id、邮箱和名字。你连接 YouTube Music 时，它读取你点过的喜欢，并在你在知音里点喜欢时，替你在 YouTube Music 上点同一个喜欢。「不要这首」只留在知音，不会写到 YouTube。</p>
+  <p>这些数据只用来给你推荐歌和同步喜欢：不出售，不用于广告，也不拿去做别的事。</p>
+
+  <h2>存了什么</h2>
+  <ul>
+    <li>你喜欢的歌，以及由它们生成的口味画像、电台和每天的推荐；</li>
+    <li>你在知音里的操作：播放、跳过、喜欢、不要、点歌时输入的话；</li>
+    <li>你的 Google 账号 id、邮箱和访问凭证，凭证在服务器上加密保存；</li>
+    <li>每天为你调用了多少次 Claude、大约花了多少钱。</li>
+  </ul>
+  <p>这些都存在运营者的服务器上，运营者能看到。歌曲的声音特征是所有人共用的，试听音频只在内存里解码，不保存。</p>
+
+  <h2>发给了谁</h2>
+  <ul>
+    <li><b>Anthropic（Claude）</b>：你喜欢的歌名和歌手、候选歌、你拒绝的歌和原因、点歌时输入的话、需要翻译的歌词，用来生成电台和挑歌；</li>
+    <li><b>YouTube</b>：读取你的喜欢、写回你的喜欢，以及网页里的播放器；</li>
+    <li><b>Deezer、Apple iTunes</b>：歌名和歌手，用来找 30 秒试听；</li>
+    <li><b>网易云音乐、LRCLIB、YouTube Music</b>：歌名、歌手和时长，用来找歌词。</li>
+  </ul>
+  <p>你的 Google 凭证只用于你自己的账号，除了 Google 不会发给任何地方。知音使用 YouTube API 服务，适用 <a href="https://www.youtube.com/t/terms">YouTube 服务条款</a>和 <a href="https://policies.google.com/privacy">Google 隐私权政策</a>。</p>
+
+  <h2>删除</h2>
+  <p>想删掉自己的数据，告诉运营者，他会把你的文件夹和记录一起删掉。你也可以随时在 <a href="https://myaccount.google.com/permissions">Google 账号的第三方访问</a>里撤销知音的权限。</p>
+
+  <p class="gate-note">技术细节见 <a href="https://github.com/billpwchan/zhiyin/blob/main/docs/privacy.md">docs/privacy.md</a>。</p>
+</main>
+</body>
+</html>
