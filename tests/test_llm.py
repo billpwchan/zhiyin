@@ -92,4 +92,6 @@ def test_an_invited_listener_stops_at_the_daily_cap(hosted, monkeypatch):
     with store.as_user("u2"), pytest.raises(llm.NoClaude):
         llm.call("p", "s", {})
     llm._record(store.OWNER, "key", 5)
-    assert llm.unavailable(store.OWNER) is None   # the cap is for the people you invite, not for you
+    assert llm.unavailable(store.OWNER) is None   # the owner has a ceiling of their own, far higher
+    llm._record(store.OWNER, "key", llm.OWNER_DAILY_USD)
+    assert "额度" in llm.unavailable(store.OWNER)

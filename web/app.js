@@ -1087,7 +1087,8 @@ function accountHTML() {
     rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) : '还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。'}</small></span><span>${c.source === 'worker' ? (c.online ? '在线' : '离线') : ''}</span></li>`);
   }
   if (me.auth) {
-    rows.push(`<li><span>在另一台设备上登录<small>${g.connected ? '用同一个 Google 账号登录就行；也可以' : ''}生成一个 14 天内有效的登录链接，发给自己。</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">生成链接</button></li>`);
+    if (g.email) rows.push(`<li><span>在另一台设备上登录<small>打开这个网站，用 ${esc(g.email)} 登录。</small></span><span></span></li>`);
+    else rows.push(`<li><span>在另一台设备上登录<small>生成一个 14 天内有效的登录链接，发给自己。</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">生成链接</button></li>`);
     rows.push(`<li><span>退出登录<small>只退出这台设备。</small></span><button class="tb" data-k="logout">退出</button></li>`);
     if (!me.owner) rows.push(`<li><span>断开并删除我的数据<small>撤销 Google 授权，删掉你的喜欢、电台和反馈。</small></span><button class="tb danger" data-k="delete">删除</button></li>`);
   }
@@ -1201,8 +1202,8 @@ function renderEar() {
       return `<div class="lset ${l.enabled ? '' : 'off'}">
         <span class="stack">${covers}</span>
         <div><div class="n">${esc(l.name)}<span class="num">${l.size} 首</span></div><div class="w">${esc(l.when)}</div></div>
-        <button class="sw" role="switch" aria-checked="${l.enabled}" data-lane="${l.key}" aria-label="把${esc(l.name)}放进推荐"></button>
-        <label class="rng"><span>没收藏过的歌手 <b class="num" data-v="${l.key}">${d}%</b></span><input type="range" min="0" max="100" step="10" value="${d}" data-lane="${l.key}"></label>
+        <button class="sw" role="switch" aria-checked="${l.enabled}" data-lane="${esc(l.key)}" aria-label="把${esc(l.name)}放进推荐"></button>
+        <label class="rng"><span>没收藏过的歌手 <b class="num" data-v="${esc(l.key)}">${d}%</b></span><input type="range" min="0" max="100" step="10" value="${d}" data-lane="${esc(l.key)}"></label>
       </div>`;
     }).join('')}</div></section>
     ${S.set_aside.length ? `<section class="sec"><h2>不算进口味的<small>它们留在你的喜欢里，但不拿来推歌。</small></h2>

@@ -20,6 +20,8 @@ OAUTH = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
 API_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
 WORKER = bool(os.environ.get("ZHIYIN_WORKER_TOKEN"))
 DAILY_USD = float(os.environ.get("ZHIYIN_LISTENER_DAILY_USD", 3))   # per invited listener on the operator's key
+# The owner's own ceiling, far above a normal day (~$1-2), so a runaway loop or a stolen session can't drain the plan.
+OWNER_DAILY_USD = float(os.environ.get("ZHIYIN_OWNER_DAILY_USD", 10))
 WORKER_GONE_S = 120   # the worker long-polls every 25 s, so this much silence means the Mac is asleep or off
 PICKUP_S = 60
 
@@ -56,8 +58,9 @@ def unavailable(uid: str | None = None) -> str | None:
         return "主人还没有为其他听众配置 Claude API key" if uid != store.OWNER else "服务器上还没有配置 Claude"
     if src == "worker" and not worker_online():
         return "Mac 不在线（睡着或关机了）"
-    if src == "key" and uid != store.OWNER and spent(uid, days=1) >= DAILY_USD:
-        return f"今天的 Claude 额度（${DAILY_USD:g}）用完了，明天再来"
+    cap = OWNER_DAILY_USD if uid == store.OWNER else DAILY_USD
+    if HOSTED and spent(uid, days=1) >= cap:
+        return f"今天的 Claude 额度（${cap:g}）用完了，明天再来"
     return None
 
 

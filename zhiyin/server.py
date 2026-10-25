@@ -7,13 +7,14 @@ import threading
 import time
 import traceback
 from contextlib import asynccontextmanager
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import accounts, ask, audio, candidates, ear, edition, google, library, llm, lyrics, profile, settings, store, ytm
 from .text import display_title, is_version
@@ -37,10 +38,18 @@ app = FastAPI(lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
 OPEN = ("/login", "/privacy", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
+# A YouTube video id. It names cache files, so nothing else gets through.
+VID = r"^[A-Za-z0-9_-]{1,64}$"
+Vid = Annotated[str, Field(pattern=VID)]
 
 
 @app.middleware("http")
 async def _who(request: Request, call_next):
+    if request.url.path.startswith("/api/worker/") and not _worker_ok(request):
+        return JSONResponse({"detail": "worker token"}, 403)   # before FastAPI reads a body
+    if request.method != "GET" and request.headers.get("sec-fetch-site", "same-origin") not in ("same-origin", "none"):
+        # SameSite=Lax still sends the cookie from sibling subdomains of the same site
+        return JSONResponse({"detail": "cross-site"}, 403)
     if not AUTH:
         return await call_next(request)
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE))
@@ -341,6 +350,9 @@ def invite_link(token: str, request: Request, go: int = 0):
     uid = accounts.redeem(token)
     if not uid:
         return _gate("login", error="expired")
+    if (accounts.get(uid) or {}).get("google_sub") and google.configured():
+        # once a listener is tied to a Google account, a forwarded or leaked link no longer opens it
+        return RedirectResponse("/auth/google/start?mode=login", 303)
     cur = accounts.session_uid(request.cookies.get(accounts.COOKIE))
     if cur and cur != uid and not go:
         return _gate("switch", name=(accounts.get(uid) or {}).get("name") or "朋友",
@@ -366,6 +378,7 @@ def google_start(request: Request, mode: str = "connect"):
         return RedirectResponse("/login", 303)
     state = secrets.token_urlsafe(24)
     verifier, challenge = google.pkce()
+    store.db().execute("delete from kv where k like 'oauth:%' and json_extract(v, '$.t') < ?", (time.time() - 900,))
     store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "uid": uid, "t": time.time()})
     hint = (accounts.get(uid) or {}).get("email") if uid else None
     r = RedirectResponse(google.auth_url(state, challenge, connect, hint), 303)
@@ -501,7 +514,7 @@ def ask_(body: Ask):
 
 
 class Feedback(BaseModel):
-    vid: str
+    vid: Vid
     action: str  # like | dislike | known | undo
     scope: str = "song"  # song | artist
     lane: str | None = None
@@ -531,7 +544,7 @@ def feedback(f: Feedback):
 
 
 class Play(BaseModel):
-    vid: str
+    vid: Vid
     lane: str | None = None
     ev: str = "start"  # start | skip | done
     pos: float = 0
@@ -566,7 +579,7 @@ def lane_setting(s: LaneSetting):
 
 class PlaylistReq(BaseModel):
     name: str
-    vids: list[str]
+    vids: list[Vid]
 
 
 @app.post("/api/playlist")
@@ -646,7 +659,9 @@ def account_sync_likes(t: Toggle):
 
 @app.post("/api/account/device")
 def account_device():
-    """A sign-in link for another device of the same listener."""
+    """A sign-in link for another device of the same listener, until they sign in with Google."""
+    if (accounts.get() or {}).get("google_sub"):
+        raise HTTPException(409, "用同一个 Google 账号登录就行")
     tok = accounts.invite((accounts.get() or {}).get("name") or "", uid=store.uid())
     return {"url": f"{google.public_url()}/i/{tok}", "days": accounts.INVITE_DAYS}
 
@@ -704,9 +719,12 @@ def users():
     return {"users": out}
 
 
+def _worker_ok(request: Request) -> bool:
+    return bool(WORKER_TOKEN) and hmac.compare_digest(request.headers.get("x-worker-token", ""), WORKER_TOKEN)
+
+
 def _worker(request: Request):
-    tok = request.headers.get("x-worker-token", "")
-    if not WORKER_TOKEN or not hmac.compare_digest(tok, WORKER_TOKEN):
+    if not _worker_ok(request):
         raise HTTPException(403, "worker token")
 
 
@@ -725,7 +743,7 @@ def worker_llm(request: Request, wait: float = 25, have: str | None = None):
 
 class WorkerAnswer(BaseModel):
     data: dict | None = None
-    usd: float = 0
+    usd: float = Field(0, ge=0, le=50, allow_inf_nan=False)
     error: str | None = None
 
 
@@ -762,7 +780,7 @@ def worker_result(request: Request, body: WorkerResult):
 
 
 class QueueReq(BaseModel):
-    vids: list[str]
+    vids: list[Vid]
 
 
 @app.post("/api/queue-link")
@@ -798,7 +816,7 @@ def img(u: str):
 
 
 @app.get("/api/more")
-def more(vid: str, exclude: str = ""):
+def more(vid: Annotated[str, Query(pattern=VID)], exclude: str = ""):
     """Keep going from one song: its YouTube Music radio, minus what the listener has or has refused."""
     prof = store.read_json(store.PROFILE) or {}
     known = candidates.Known(library.load(), prof)
@@ -821,7 +839,7 @@ def more(vid: str, exclude: str = ""):
 
 
 @app.get("/api/lyrics")
-def lyrics_(vid: str, t: str = "", a: str = "", al: str = "", d: float = 0):
+def lyrics_(vid: Annotated[str, Query(pattern=VID)], t: str = "", a: str = "", al: str = "", d: float = 0):
     if not t:
         tr = ytm.track(vid) or {}
         t, a, al, d = tr.get("title", ""), "|".join(x["name"] for x in tr.get("artists", [])), (tr.get("album") or {}).get("name", ""), tr.get("dur") or 0

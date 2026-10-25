@@ -222,6 +222,7 @@ def track(vid: str) -> dict | None:
 
 
 COVER_HOSTS = ("i.ytimg.com", "lh3.googleusercontent.com", "yt3.googleusercontent.com", "yt3.ggpht.com")
+COVER_MAX = 2 << 20
 
 
 def cover_url(t: dict, size: int = 120) -> str:
@@ -240,9 +241,14 @@ def cover_file(u: str):
     d.mkdir(parents=True, exist_ok=True)
     f = d / hashlib.sha1(u.encode()).hexdigest()
     if not f.exists():
-        r = httpx.get(u, timeout=15, follow_redirects=True)
-        r.raise_for_status()
-        f.write_bytes(r.content)
+        data = b""
+        with httpx.stream("GET", u, timeout=15, follow_redirects=True) as r:
+            r.raise_for_status()
+            for chunk in r.iter_bytes():
+                data += chunk
+                if len(data) > COVER_MAX:
+                    raise ValueError("size")
+        f.write_bytes(data)
     return f
 
 

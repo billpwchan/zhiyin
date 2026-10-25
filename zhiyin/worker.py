@@ -23,7 +23,7 @@ def run_once(log=print) -> int:
     c = conf()
     h = {"X-Worker-Token": c["token"]}
     w = httpx.get(f"{c['url']}/api/worker/wanted", headers=h, timeout=30).raise_for_status().json()
-    tracks, texts = w["tracks"], w["texts"]
+    tracks, texts = w["tracks"][:500], w["texts"][:2000]   # a batch, whatever the server asks for
     if not tracks and not texts:
         return 0
     log(f"server wants {len(tracks)} songs, {len(texts)} texts")

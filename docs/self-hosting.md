@@ -91,6 +91,7 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 | `CLAUDE_CODE_OAUTH_TOKEN` | optional: your subscription on the server, for your own calls (`deploy/claude-token.sh`) |
 | `ANTHROPIC_API_KEY` | optional: an API key for invited listeners (`deploy/claude-token.sh --api-key`) |
 | `ZHIYIN_LISTENER_DAILY_USD` | what each invited listener may spend on your API key per day (default 3) |
+| `ZHIYIN_OWNER_DAILY_USD` | a ceiling on your own calls per day, priced as on an API key (default 10); a normal day is $1–2 |
 | `ZHIYIN_WORKER_TOKEN` | shared with the worker; `deploy/worker-setup.sh` creates both ends |
 | `ZHIYIN_LLM_CONCURRENCY` | parallel `claude -p` calls (the image sets 2) |
 | `TZ` | the time zone the morning edition (05:00) follows, e.g. `Asia/Taipei`; the image defaults to UTC |
@@ -135,7 +136,8 @@ docker exec zhiyin zhiyin users
 ```
 
 A friend opens the link and connects Google. Their first edition takes about ten minutes; the page says when it's
-ready. Invites need an API key on the server (step 2).
+ready. Invites need an API key on the server (step 2). Once a listener has connected Google, links no longer sign
+them in: on another device they sign in with the same Google account, so a forwarded link opens nothing.
 
 ### 5. Start the audio worker
 

@@ -11,6 +11,7 @@ import re
 import threading
 import time
 import unicodedata
+from pathlib import Path
 
 import httpx
 import opencc
@@ -322,8 +323,14 @@ def resolve(vid: str, title: str, artists: list[str], album: str, dur: float) ->
             "ts": time.time()}
 
 
+def _path(vid: str) -> Path:
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", vid):
+        raise ValueError(f"not a video id: {vid!r}")
+    return CACHE / f"{vid}.json"
+
+
 def get(vid: str, title: str, artists: list[str], album: str = "", dur: float = 0) -> dict:
-    path = CACHE / f"{vid}.json"
+    path = _path(vid)
     if path.exists():
         d = json.loads(path.read_text())
         if d.get("found") or time.time() - d.get("ts", 0) < MISS_TTL:
@@ -358,7 +365,7 @@ _tr_running: set[str] = set()
 
 def translate_later(vid: str) -> bool:
     """Start a background translation for a Japanese/Korean/English lyric without one. Returns True if started."""
-    path = CACHE / f"{vid}.json"
+    path = _path(vid)
     if not path.exists() or vid in _tr_running:
         return False
     d = json.loads(path.read_text())
