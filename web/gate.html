@@ -18,12 +18,15 @@ const G = __GATE__;
 applyLang();
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const errors = {
-  unknown: t('这个 Google 账号还没有加入知音。第一次来，请先打开收到的邀请链接。'),
+  unknown: G.join === 'invite' ? t('这个 Google 账号还没有加入知音。第一次来，请先打开收到的邀请链接。') : t('这个 Google 账号还没有加入知音。'),
   expired: t('这个邀请链接已经失效了。找邀请你的人要一个新的。'),
   cancelled: t('没有登录。随时可以再试。'),
+  full: t('名额暂时满了，已经帮你登记。空出位置后，用同一个 Google 账号再来就能直接进。'),
+  noscope: t('知音要读取你在 YouTube 上点过的喜欢，才能为你挑歌。再试一次时，在 Google 的页面上勾选 YouTube 那一项。'),
 };
 const el = document.getElementById('gate');
 const MARK = `<div class="mark" role="img" aria-label="${t('知音')}"><svg class="lg" viewBox="8 26 84 52" aria-hidden="true"><path d="M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33"/><circle cx="69" cy="52" r="7"/></svg><span class="wm-t">${t('知音')}</span></div>`;
+const G_LOGO = '<svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.2z"/><path fill="#FBBC05" d="M10.5 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.8-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>';
 const back = encodeURIComponent(location.pathname + location.search);
 const langs = `<nav class="gate-langs" aria-label="${t('语言')}">${Object.entries(LANGS).map(([k, v]) => k === LANG ? `<span aria-current="true" lang="${k}">${v}</span>` : `<a href="/lang?to=${k}&back=${back}" lang="${k}">${v}</a>`).join('')}</nav>`;
 if (G.mode === 'switch') {
@@ -32,12 +35,24 @@ if (G.mode === 'switch') {
     <p>${t('这个浏览器现在登录的是{me}。换成{name}之后，这里会显示{name}的电台。', { me: esc(G.me || t('另一位听众')), name: esc(G.name) })}</p>
     <div class="gate-acts"><a class="btn" href="/i/${encodeURIComponent(G.token)}?go=1">${t('以{name}的身份进入', { name: esc(G.name) })}</a><a class="tb" href="/">${t('保持现在的账号')}</a></div>${langs}`;
 } else {
+  // open: anyone may join with Google; a Google account that isn't in yet gets the join button in place of sign-in
+  const open = G.join === 'open';
+  const retry = G.error === 'unknown' || G.error === 'noscope';
+  const main = open && retry
+    ? `<a class="btn" href="/auth/google/start?mode=join">${G_LOGO}${t('用 Google 继续')}</a>`
+    : `<a class="btn" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`;
+  const pitch = t('它从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')
+    + (G.join === 'invite' ? t('需要邀请才能进来。') : '');
+  const note = open && retry ? ''
+    : open ? `${t('第一次来？')}<a href="/auth/google/start?mode=join">${t('用 Google 加入')}</a>`
+    : t('已经连接过 YouTube Music 的话，用同一个 Google 账号登录。');
+  const sample = G.sample ? `<a class="tb" href="/">${t('先听听示例')}</a>` : '';
   el.innerHTML = `${MARK}
     <h1>${t('一个私人的推荐电台')}</h1>
-    <p>${t('它从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。需要邀请才能进来。')}</p>
+    <p>${pitch}</p>
     ${G.error ? `<p class="gate-err">${esc(errors[G.error] || G.error)}</p>` : ''}
-    ${G.google ? `<div class="gate-acts"><a class="btn" href="/auth/google/start?mode=login">${t('用 Google 登录')}</a></div>
-    <p class="gate-note">${t('已经连接过 YouTube Music 的话，用同一个 Google 账号登录。')}</p>` : ''}
+    ${G.google ? `<div class="gate-acts">${main}${sample}</div>${note ? `<p class="gate-note">${note}</p>` : ''}`
+      : sample ? `<div class="gate-acts">${sample}</div>` : ''}
     <p class="gate-note"><a href="/privacy">${t('知音怎么用你的数据')}</a></p>${langs}`;
 }
 </script>

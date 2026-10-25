@@ -25,7 +25,8 @@
     </nav>
     <div class="stations" id="stations" aria-label="电台" data-i18n-label="电台"></div>
     <div class="pcard" id="pcard" hidden>
-      <div class="pc-frame" id="pcFrame"></div>
+      <div class="pc-frame" id="pcFrame" data-k="toggle"><img class="art" id="dArt" alt=""></div>
+      <div class="pc-src" data-i18n="在 YouTube 播放">在 YouTube 播放</div>
       <div class="pc-meta">
         <a class="pc-txt" href="#" title="回到电台" data-i18n-title="回到电台"><span class="tt" id="dTitle"></span><span class="ar" id="dArtist"></span></a>
         <div class="pc-ctl"></div>
@@ -40,13 +41,7 @@
   <button data-k="ask"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><span data-i18n="点歌">点歌</span></button>
   <a href="#ear" data-tab="ear"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span data-i18n="你的耳朵">你的耳朵</span></a>
 </nav>
-<div class="yt-host" id="ytHost" hidden>
-  <div class="yt-crop on"><div id="ytA"></div></div>
-  <div class="yt-crop"><div id="ytB"></div></div>
-  <img class="yt-cover" id="ytCover" alt="">
-  <button class="yt-play" id="ytPlay" aria-label="播放" data-i18n-label="播放"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></button>
-</div>
-<div class="mini" id="mini" hidden></div>
+<div class="yt-host" id="ytHost" hidden><div id="ytA"></div></div>
 <dialog class="composer" id="composer" aria-label="点歌" data-i18n-label="点歌">
   <form class="ask" id="ask" autocomplete="off" method="dialog">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
@@ -57,6 +52,7 @@
 </dialog>
 <div class="menu" id="menu" popover role="menu"></div>
 <dialog class="sheet" id="sheet" aria-label="设置" data-i18n-label="设置"></dialog>
+<dialog class="join" id="join" aria-label="加入知音" data-i18n-label="加入知音"></dialog>
 <dialog class="keys-d" id="keysD" aria-label="快捷键" data-i18n-label="快捷键"></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/static/i18n.js"></script>

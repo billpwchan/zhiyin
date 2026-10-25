@@ -25,6 +25,9 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 API = "https://www.googleapis.com/youtube/v3"
 YT_SCOPE = "https://www.googleapis.com/auth/youtube"
+# Joining asks only to read; writing likes back is asked for when the listener turns it on, so the first consent
+# screen says "view your YouTube account" instead of "see, edit, and permanently delete".
+YT_READ = "https://www.googleapis.com/auth/youtube.readonly"
 BASE_SCOPES = "openid email profile"
 # One project shares 10,000 units a day (reset at midnight Pacific). Reading likes costs 1 per 50; a like or a
 # playlist entry costs 50. Writes stop before the last 1,000 so reading new likes always works.
@@ -81,13 +84,14 @@ def pkce() -> tuple[str, str]:
     return verifier, challenge
 
 
-def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None, pick: bool = True) -> str:
+def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None, pick: bool = True,
+             write: bool = True) -> str:
     c = client()
     q = {"client_id": c["id"], "redirect_uri": redirect_uri(), "response_type": "code", "state": state,
          "code_challenge": challenge, "code_challenge_method": "S256", "include_granted_scopes": "true"}
     if connect:
         # prompt=consent guarantees a refresh token even if the listener granted access before.
-        q |= {"scope": f"{BASE_SCOPES} {YT_SCOPE}", "access_type": "offline", "prompt": "consent"}
+        q |= {"scope": f"{BASE_SCOPES} {YT_SCOPE if write else YT_READ}", "access_type": "offline", "prompt": "consent"}
     else:
         # without the account picker, signing in as a named account already in the browser takes one click
         q |= {"scope": BASE_SCOPES} | ({"prompt": "select_account"} if pick else {})
@@ -115,7 +119,13 @@ def claims(id_token: str) -> dict:
 
 def has_youtube(tok: dict) -> bool:
     # Google's consent screen lets people untick individual permissions.
-    return YT_SCOPE in (tok.get("scope") or "").split()
+    return bool({YT_SCOPE, YT_READ} & set((tok.get("scope") or "").split()))
+
+
+def writes_back(uid: str | None = None) -> bool:
+    """Allowed to put likes into the listener's YouTube Music, not only to read them."""
+    t = _load(uid or store.uid())
+    return bool(t and YT_SCOPE in (t.get("scope") or "").split())
 
 
 def save_tokens(uid: str, tok: dict) -> None:

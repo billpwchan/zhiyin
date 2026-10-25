@@ -1,6 +1,7 @@
 """The listener's language: what the server says to them, what Claude writes for them, and turning text that was
 already written in one Chinese script into the other. Messages are written in Simplified Chinese where they are used
 and looked up here, the same way web/i18n.js does it for the page."""
+import contextvars
 import json
 import os
 import re
@@ -66,8 +67,14 @@ def system() -> str:
     return "en"
 
 
+# A visitor trying the sample listener has no account to keep a language in: their browser's choice for this request.
+reader: contextvars.ContextVar[str | None] = contextvars.ContextVar("zhiyin_reader", default=None)
+
+
 def of(uid: str | None = None) -> str:
     """The listener's language: their choice, set from their browser the first time they open the app."""
+    if store.is_sample(uid):
+        return reader.get() or "en"
     return (accounts.prefs(uid or store.uid()) or {}).get("lang") or system()
 
 

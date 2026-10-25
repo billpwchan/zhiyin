@@ -24,8 +24,29 @@ def test_a_subscription_only_serves_its_owner(hosted):
     assert llm.source(store.OWNER) == "worker"
     assert llm.source("u1") is None
     hosted(worker=True, key=True)
-    assert llm.source(store.OWNER) == "worker"
     assert llm.source("u1") == "key"
+
+
+def test_the_owner_borrows_the_key_while_the_mac_sleeps_but_their_morning_edition_waits(hosted, monkeypatch):
+    hosted(worker=True, key=True)
+    monkeypatch.setattr(llm, "worker_online", lambda: True)
+    assert llm.source(store.OWNER) == "worker"
+    monkeypatch.setattr(llm, "worker_online", lambda: False)
+    assert llm.source(store.OWNER) == "key"
+    with llm.background():
+        assert llm.source(store.OWNER) == "worker"
+
+
+def test_the_shared_key_keeps_to_its_pool_and_its_pace(hosted, monkeypatch):
+    hosted(key=True)
+    monkeypatch.setattr(llm, "POOL_USD", 30.0)
+    llm._record("u3", "key", 0.3)
+    llm._record("u4", "key", 1.8)
+    assert llm.unavailable("u5") is None
+    with llm.background():
+        assert "明天" in llm.unavailable("u5")   # $2.1 today is past twice the even pace of $1 a day
+    llm._record("u4", "key", 28)
+    assert "这个月" in llm.unavailable("u5")
 
 
 def test_another_account_of_the_owners_runs_on_the_owners_claude(hosted):
@@ -105,3 +126,19 @@ def test_an_invited_listener_stops_at_the_daily_cap(hosted, monkeypatch):
     assert llm.unavailable(store.OWNER) is None   # the owner has a ceiling of their own, far higher
     llm._record(store.OWNER, "key", llm.OWNER_DAILY_USD)
     assert "额度" in llm.unavailable(store.OWNER)
+
+
+def test_listeners_on_the_key_get_sonnet_where_the_owner_keeps_opus(hosted, monkeypatch):
+    from zhiyin import accounts
+    hosted(key=True)
+    con = store.db()
+    con.execute("delete from usage")
+    con.commit()
+    used = []
+    monkeypatch.setattr(llm, "run_api", lambda prompt, system, schema, model, *a: used.append(model) or {"data": {}, "usd": 0})
+    friend = accounts.redeem(accounts.invite("Ming"))
+    mine = accounts.redeem(accounts.invite("", mine=True))
+    for u in (friend, mine, store.OWNER):
+        with store.as_user(u):
+            llm.call("p", "s", {}, model="opus")
+    assert used == ["sonnet", "opus", "opus"]

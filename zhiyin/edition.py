@@ -1,5 +1,7 @@
 import datetime as dt
+import os
 import random
+import threading
 import time
 
 import numpy as np
@@ -164,7 +166,22 @@ def build_focus(prof, known, rng, log, n=4):
     return {"blurb": focus["blurb"], "when": focus["when"], "picks": [_public(c) for c in picks]}
 
 
-def build(log=print, model: str = "opus") -> dict:
+# Gathering candidates leans on YouTube Music from one address, so only a few listeners gather at once. The editor
+# step runs outside it: on the shared key a scheduled edition waits there on a batch for up to hours.
+GATHER = threading.BoundedSemaphore(int(os.environ.get("ZHIYIN_GATHER", 2)))
+
+
+def played_since(ed: dict | None) -> set[str]:
+    """Stations the listener actually played from since this edition came out."""
+    if not ed:
+        return set()
+    rows = store.db().execute("select distinct lane from plays where uid=? and ts>? and lane is not null",
+                              (store.uid(), ed["created"])).fetchall()
+    return {r["lane"] for r in rows}
+
+
+def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
+    """A new edition. With `only`, just those stations get new songs; the rest keep the ones not yet heard."""
     llm.require()   # before an hour of gathering that the editor then couldn't use
     t0 = time.time()
     prof = store.read_json(store.PROFILE)
@@ -178,15 +195,25 @@ def build(log=print, model: str = "opus") -> dict:
     rng = random.Random(edition_id)
     lanes = [settings.lane_view(l) for l in prof["lanes"]]
     active = [l for l in lanes if l["enabled"]]
+    prev = store.read_json(store.EDITION) if only is not None else None
+    kept = {l["key"]: l for l in (prev or {}).get("lanes", []) if l["key"] not in only} if prev else {}
+    for l in kept.values():
+        known.taken.update(p["vid"] for p in l["picks"] + l.get("reserve", []))
 
-    built = []
-    for lane in active:
-        built.append(build_lane(lane, tracks, prof, known, rng, n, log))
-        # A track surfaced in one lane shouldn't reappear in the next.
-        for c in built[-1][3]:
-            known.taken.add(c["vid"])
-    focus = build_focus(prof, known, rng, log)
-    built, tst = listen(built, (tracks, prof), log)
+    if not GATHER.acquire(blocking=False):
+        log(i18n.tr("排队中：另一位听众的电台正在准备"))
+        GATHER.acquire()
+    try:
+        built = []
+        for lane in [l for l in active if l["key"] not in kept]:
+            built.append(build_lane(lane, tracks, prof, known, rng, n, log))
+            # A track surfaced in one lane shouldn't reappear in the next.
+            for c in built[-1][3]:
+                known.taken.add(c["vid"])
+        focus = prev["focus"] if prev and prev.get("focus") and "focus" not in only else build_focus(prof, known, rng, log)
+        built, tst = listen(built, (tracks, prof), log)
+    finally:
+        GATHER.release()
 
     negs = negatives()
     log(i18n.tr("编辑精选中（{n} 条线并行）", n=len(built)))
@@ -230,7 +257,14 @@ def build(log=print, model: str = "opus") -> dict:
         })
         con.executemany("insert into shown (vid, edition, lane, ts, uid) values (?,?,?,?,?)",
                         [(v, edition_id, lane["key"], store.now(), store.uid()) for p in picks for v in (p["vid"], p.get("mv")) if v])
-    if focus:
+    fresh = {l["key"] for l in out_lanes}
+    order = [l["key"] for l in active]
+    out_lanes = sorted([*out_lanes, *({**l, "fresh": False} for k, l in kept.items() if k in order)],
+                       key=lambda l: order.index(l["key"]))
+    for l in out_lanes:
+        if l["key"] in fresh:
+            l["fresh"] = edition_id
+    if focus and not (prev and focus is prev.get("focus")):
         con.executemany("insert into shown (vid, edition, lane, ts, uid) values (?,?,?,?,?)",
                         [(p["vid"], edition_id, "focus", store.now(), store.uid()) for p in focus["picks"]])
     con.commit()

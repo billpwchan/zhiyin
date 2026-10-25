@@ -329,11 +329,21 @@ def _path(vid: str) -> Path:
     return CACHE / f"{vid}.json"
 
 
+def _fresh(d: dict) -> bool:
+    return bool(d.get("found")) or time.time() - d.get("ts", 0) < MISS_TTL
+
+
+def cached(vid: str) -> bool:
+    """get() would answer from disk without asking anyone."""
+    path = _path(vid)
+    return path.exists() and _fresh(json.loads(path.read_text()))
+
+
 def get(vid: str, title: str, artists: list[str], album: str = "", dur: float = 0) -> dict:
     path = _path(vid)
     if path.exists():
         d = json.loads(path.read_text())
-        if d.get("found") or time.time() - d.get("ts", 0) < MISS_TTL:
+        if _fresh(d):
             return d
     with _lock:
         ev = _inflight.get(vid)

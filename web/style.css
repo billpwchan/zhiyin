@@ -108,6 +108,7 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .st .txt { display: grid; min-width: 0; }
 .st .nm { font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, .74); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st[aria-current] .nm { color: var(--fg); }
+.st .nm .new { display: inline-block; width: 6px; height: 6px; margin: 0 0 2px 7px; border-radius: 50%; background: var(--fg); vertical-align: middle; }
 .st .sb { font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st .eqs { display: none; align-items: flex-end; gap: 2px; height: 12px; margin-right: 2px; }
 .playing .st[aria-current] .eqs { display: flex; }
@@ -131,9 +132,15 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 /* the player card: where the playing song lives while you are on another page (YouTube needs 200px) */
 .pcard { flex: none; padding: 10px 0 8px; border-top: 1px solid var(--line); animation: rise 260ms var(--ease); }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
-.pc-frame { width: 100%; aspect-ratio: 1; max-width: 236px; border-radius: 12px; background: var(--raise); }
-@media (max-height: 900px) and (min-width: 900px) { .pc-frame { width: 200px; margin: 0 auto; } }
+.pc-frame { width: 100%; aspect-ratio: 1; min-width: 208px; max-width: 236px; padding: 2px; border-radius: 6px; background: #000; }
+@media (max-height: 900px) and (min-width: 900px) { .pc-frame { width: 208px; margin: 0 auto; } }
 .pc-meta { display: grid; gap: 6px; padding: 10px 2px 0; }
+.pc-src { display: none; }
+/* beside the room the card is only YouTube's window: the smallest player YouTube allows, named for what it is */
+.pcard.bare { padding: 12px 0 10px; }
+.pcard.bare .pc-frame { width: 208px; margin: 0 auto; }
+.pcard.bare .pc-meta { display: none; }
+.pcard.bare .pc-src { display: block; width: 208px; margin: 7px auto 0; font-size: 11px; color: var(--fg-3); }
 .pc-txt { display: grid; min-width: 0; padding: 0 6px; }
 .pc-txt .tt { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pc-txt .ar { font-size: 12px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -190,89 +197,87 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 18px; border-radius: 10px;
   background: var(--fg); color: #0b0b0c; font-size: 14px; font-weight: 500; transition: transform var(--fast) var(--ease), background-color var(--fast) var(--ease); }
 .btn:hover { background: #fff; }
+.btn .g { flex: none; width: 18px; height: 18px; margin-right: 10px; }
 .btn:active { transform: scale(.97); }
 
 /* ---------- listen ---------- */
-.listen { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+.listen { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; }
 .l-head { display: flex; align-items: flex-start; gap: 24px; padding: 18px 28px 0 36px; }
 .l-head .ttl { flex: 1; min-width: 0; padding-top: 4px; }
 .l-head h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .l-head p { margin: 2px 0 0; font-size: 13px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .views { display: flex; gap: 2px; transition: opacity var(--base) var(--ease); }
+.views [data-k="lyrics"] { display: none; }   /* the panel's own tabs switch it on a wide screen */
 .more { position: relative; }
 
-/* the stage gets its size from the page, so the cover is sized from the room the stage really has, never from a guess at the window */
-.stage { position: relative; container-type: size; display: flex; align-items: center; justify-content: center; padding: 8px 40px 12px; min-width: 0; min-height: 0; overflow: hidden; }
-.stage-in {
-  --s: max(96px, min(440px, 42cqw, 100cqw - 390px, 100cqh - 8px));   /* leaves the 48px gap and the 340px the controls need */
-  display: grid; grid-template-columns: var(--s) minmax(0, 440px); grid-template-areas: "frame meta"; gap: 48px; align-items: center; width: 100%; justify-content: center;
+/* The room: the song on the left half, its words or the station's programme on the right, both as tall as the song's
+   column. The cover is sized from the room's real height, so the composition fills any window without guesses. */
+.room { position: relative; container-type: size; min-height: 0; overflow: hidden; padding: 4px 32px 28px; }
+.room-in { height: 100%; display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); }
+.now {
+  /* --mh: the most the words and controls under the cover take at this height (2-line title and reason) */
+  --mh: 312px;
+  --s: clamp(208px, min(100cqh - var(--mh), 50cqw - 88px), 680px);
+  grid-area: 2 / 1; justify-self: center; width: max(var(--s), 340px); min-width: 0;
 }
-.frame { grid-area: frame; width: var(--s); aspect-ratio: 1; border-radius: 12px; background: var(--raise); }
-.meta { grid-area: meta; min-width: 0; container-type: inline-size; }
-.t-title { margin: 0; font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; text-wrap: balance;
+/* The cover is the song's own artwork while it isn't playing; while it plays, YouTube's player sits exactly here and a
+   song's video is that same square art. A 2px black rim carries the rounded corners in both, so the player is never cut. */
+.frame {
+  position: relative; width: var(--s); aspect-ratio: 1; padding: 2px; border-radius: 6px; background: #000; cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .07), 0 40px 100px -36px color-mix(in srgb, var(--amb) 80%, transparent), 0 26px 50px -26px rgba(0, 0, 0, .8);
+  transition: box-shadow 700ms ease-out;
+}
+.art { display: block; width: 100%; height: 100%; object-fit: cover; background: #000; }
+.art.mv { object-fit: contain; }
+.art:not([src]) { visibility: hidden; }
+.meta { min-width: 0; padding-top: 24px; container-type: inline-size; }
+.t-title { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 600; letter-spacing: -.012em; text-wrap: balance;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.t-artist { margin-top: 8px; font-size: 18px; color: rgba(255, 255, 255, .74); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.t-album { margin-top: 4px; font-size: 13px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.t-cred { margin-top: 2px; font-size: 13px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.t-cred:empty, .t-album:empty { display: none; }
-.t-why { margin: 18px 0 0; font-size: 15px; line-height: 1.6; color: var(--fg-2); text-wrap: pretty; min-height: 1.6em;
+.t-artist { margin-top: 6px; font-size: 18px; color: rgba(255, 255, 255, .72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-fine { margin-top: 4px; font-size: 13px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-fine span:empty { display: none; }
+.t-fine span:not(:empty) ~ span:not(:empty)::before { content: " · "; }
+.t-fine:has(span:empty + span:empty) { display: none; }
+.t-why { margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: var(--fg-2); text-wrap: pretty; min-height: 1.6em;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.prog { margin-top: 24px; display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 12px; color: var(--fg-3); }
+.prog { margin-top: 20px; display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 12px; color: var(--fg-3); }
 .prog .num:last-child { text-align: right; }
 .bar { position: relative; height: 16px; cursor: pointer; display: flex; align-items: center; }
 .bar::before { content: ""; position: absolute; left: 0; right: 0; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .14); transition: height var(--fast) var(--ease); }
 .bar i { position: absolute; left: 0; right: 0; height: 4px; border-radius: 2px; background: var(--fg); transform-origin: left; transform: scaleX(var(--p, 0)); transition: height var(--fast) var(--ease); }
 .bar:hover::before, .bar:hover i { height: 6px; border-radius: 3px; }
-.ctl { margin-top: 16px; display: flex; align-items: center; gap: 6px; }
-.ctl .gap { width: 14px; }
+.ctl { margin-top: 12px; display: flex; align-items: center; gap: 6px; margin-left: -6px; }
+.ctl .gap { width: 10px; }
 .ctl .push { flex: 1; }
 @container (max-width: 439px) {   /* .meta: with its label the control row needs about 420px */
   .ctl .tb .lbl { display: none; }
 }
-/* a narrow stage stacks the words under the cover only when it is tall enough for both */
-@container (max-width: 760px) and (min-height: 600px) {
-  .stage-in { --s: min(380px, 100cqw, 100cqh - 360px); grid-template-columns: minmax(0, max(var(--s), min(100cqw, 340px))); grid-template-areas: "frame" "meta"; gap: 22px; }
-}
-/* short: the secondary lines go before anything is cut off */
-@container (max-height: 340px) {
-  .stage:not(.lyr-on) :is(.t-album, .t-cred, .t-why) { display: none; }
-}
+/* short rooms: the secondary lines go before the cover shrinks or anything is cut off */
+@container (max-height: 680px) { .t-fine { display: none; } .now { --mh: 288px; } }
+@container (max-height: 560px) { .t-why { display: none; } .prog { margin-top: 14px; } .now { --mh: 216px; } }
+@container (max-height: 460px) { .t-title { -webkit-line-clamp: 1; } .meta { padding-top: 16px; } .now { --mh: 174px; } }
 
-/* lyrics beside the cover */
-.lyr { grid-area: lyr; display: none; position: relative; min-height: 0; min-width: 0; }
-.stage.lyr-on { align-items: stretch; padding-top: 0; padding-bottom: 4px; }
-.stage.lyr-on .stage-in {
-  /* --mh: the most the words under the cover can take; the controls need 312px across even when the cover is smaller */
-  --mh: 310px;
-  --s: max(96px, min(380px, 34cqw, 100cqh - var(--mh)));
-  grid-template-columns: max(var(--s), 312px) minmax(0, 680px);
-  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
-  grid-template-areas: ". lyr" "frame lyr" "meta lyr" ". lyr";
-  column-gap: clamp(40px, 6cqw, 104px); row-gap: 0; height: 100%; align-items: start;
+/* the panel beside the song: its words, or the rest of the station */
+.side {
+  grid-area: 2 / 2; contain: size; min-width: 0; min-height: 0; width: 100%; max-width: 760px; justify-self: start;
+  display: grid; grid-template-rows: auto minmax(0, 1fr); padding-left: clamp(24px, 4cqw, 80px);
 }
-.stage.lyr-on .frame { justify-self: start; }
-.stage.lyr-on .meta { padding-top: 20px; }
-.stage.lyr-on .t-title { font-size: 22px; }
-.stage.lyr-on .t-artist { font-size: 16px; margin-top: 6px; }
-.stage.lyr-on .t-why { font-size: 14px; margin-top: 12px; }
-.stage.lyr-on .prog { margin-top: 16px; }
-.stage.lyr-on .ctl { margin-top: 10px; gap: 2px; }
-.stage.lyr-on .ctl .gap { width: 6px; }
-.stage.lyr-on .ctl .tb { padding: 0 8px; }
-.stage.lyr-on .ctl .tb .lbl { display: none; }
-.stage.lyr-on .lyr { display: block; align-self: stretch; }
-@container (max-height: 500px) {
-  .stage.lyr-on :is(.t-album, .t-cred) { display: none; }
-  .stage.lyr-on .stage-in { --mh: 270px; }
-}
-@container (max-height: 420px) {
-  .stage.lyr-on .t-why { display: none; }
-  .stage.lyr-on .stage-in { --mh: 214px; }
-}
-@container (max-width: 559px) {
-  .stage.lyr-on .stage-in { --s: min(380px, 100cqw, var(--fit, 100cqw)); grid-template-columns: minmax(0, 100cqw); grid-template-rows: auto; grid-template-areas: "frame" "meta" "lyr"; height: auto; }
-  .stage.lyr-on .meta { width: auto; }
-  .stage.lyr-on .lyr { height: 52vh; margin-top: 12px; }
+.side-tabs { display: flex; gap: 4px; margin: 0 0 10px -2px; }
+.side-tabs button { height: 32px; padding: 0 14px; border-radius: 16px; font-size: 14px; font-weight: 500; color: var(--fg-3);
+  transition: color var(--fast) var(--ease), background-color var(--fast) var(--ease); }
+.side-tabs button:hover { color: var(--fg-2); }
+.side-tabs button[aria-selected="true"] { color: var(--fg); background: var(--sel); }
+.side-tabs button[aria-disabled] { opacity: .45; cursor: default; }
+.lyr { position: relative; min-height: 0; min-width: 0; display: none; }
+.side-tabs { grid-row: 1; }
+.lyr, .queue { grid-row: 2; }
+.room.lyr-on .lyr { display: block; }
+.room.lyr-on .queue { display: none; }
+/* tall and narrow: the panel goes under the song instead of beside it */
+@container (max-width: 700px) and (min-height: 760px) {
+  .room-in { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); row-gap: 28px; }
+  .now { --s: clamp(208px, min(100cqh - var(--mh) - 280px, 100cqw, 460px), 460px); grid-area: 1 / 1; }
+  .side { grid-area: 2 / 1; padding-left: 0; justify-self: stretch; max-width: none; }
 }
 
 .ly-scroll {
@@ -281,16 +286,17 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
   mask-image: linear-gradient(transparent 0, #000 14%, #000 76%, transparent 100%);
 }
 .ly-scroll::-webkit-scrollbar { display: none; }
-.ly-in { padding: 32vh 0 48vh; }
+/* the words start near the top, as on a lyric sheet; once the song reaches a third of the way down, the sheet scrolls */
+.ly-in { padding: 13vh 0 48vh; }
 .ll {
   margin: 0 0 0 -14px; padding: 9px 14px; border-radius: 12px;
-  font-size: 26px; line-height: 1.34; font-weight: 600; letter-spacing: -.005em; text-wrap: pretty;
+  font-size: clamp(22px, 2.3cqw, 36px); line-height: 1.32; font-weight: 600; letter-spacing: -.008em; text-wrap: pretty;
   color: #fff; opacity: .26; cursor: pointer;
   transition: opacity 380ms var(--ease);
 }
 .ll:hover { opacity: .58; }
 .ll.on { opacity: 1; }
-.ll .lt, .ll .lr { display: none; margin-top: 3px; font-size: .6em; font-weight: 500; line-height: 1.45; color: rgba(255, 255, 255, .68); }
+.ll .lt, .ll .lr { display: none; margin-top: 3px; font-size: .58em; font-weight: 500; line-height: 1.45; color: rgba(255, 255, 255, .68); }
 .tr-on .ll .lt, .ro-on .ll .lr { display: block; }
 .ll.w.on .wd {
   background: linear-gradient(90deg, #fff calc(var(--f, 0) * 108% - 8%), rgba(255, 255, 255, .34) calc(var(--f, 0) * 108%));
@@ -309,79 +315,66 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .lk:hover { color: var(--fg); }
 .lk.on { color: var(--fg); background: var(--sel); box-shadow: none; }
 
-/* the day's programme: every song of this station in a row, the playing one lit */
-.strip { min-width: 0; padding: 0 0 18px; }
-.s-head { display: flex; align-items: center; gap: 4px; padding: 0 28px 8px 36px; min-height: 40px; }
-.s-head h3 { margin: 0 10px 0 0; font-size: 13px; font-weight: 600; color: var(--fg-2); }
+/* the day's programme: every song of this station in order, the playing one lit */
+.queue { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.s-head { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 0 0 6px; }
+.s-head h3 { display: none; margin: 0 10px 0 0; font-size: 13px; font-weight: 600; color: var(--fg-2); }
 .s-head .tb { height: 28px; font-size: 12px; color: var(--fg-3); }
+.s-head .tb:first-of-type { margin-left: -10px; }
 .s-head .tb:hover, .s-head .tb.on { color: var(--fg); }
-.s-note { flex: 1; min-width: 0; margin-left: 8px; font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-note { flex-basis: 100%; min-width: 0; font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-note:empty { display: none; }
 .s-list {
-  list-style: none; margin: 0; padding: 2px 36px 4px; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding: 0 36px;
-  scrollbar-width: none; overscroll-behavior-x: contain;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 48px), transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 48px), transparent);
+  list-style: none; margin: 0 0 0 -10px; padding: 2px 0 24px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 32px), transparent); mask-image: linear-gradient(#000 calc(100% - 32px), transparent);
 }
 .s-list::-webkit-scrollbar { display: none; }
-.tr, .tile { --c: 116px; position: relative; flex: none; width: var(--c); scroll-snap-align: start; }
-.tr { cursor: pointer; transition: opacity var(--base) var(--ease); }
-.tr .cv { position: relative; width: var(--c); height: var(--c); border-radius: 9px; overflow: hidden; background: var(--raise); transition: transform var(--fast) var(--ease); }
+.tr, .tile { --c: 48px; position: relative; display: grid; grid-template-columns: var(--c) minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 7px 10px; border-radius: 10px; }
+.tr { cursor: pointer; transition: opacity var(--base) var(--ease), background-color var(--fast) var(--ease); }
+.tr:hover { background: var(--hover); }
+.tr.cur { background: var(--sel); }
+.tr .cv { position: relative; width: var(--c); height: var(--c); border-radius: 6px; overflow: hidden; background: var(--raise); transition: transform var(--fast) var(--ease); }
 .tr .cv::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); pointer-events: none; }
 .tr .cv img { width: 100%; height: 100%; object-fit: cover; }
-.tr:active .cv { transform: scale(.97); }
-.tr .tt { margin-top: 8px; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255, 255, 255, .84); }
-.tr .ar { font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr:active .cv { transform: scale(.96); }
 .tr .mid { min-width: 0; }
-.tr.cur .cv { box-shadow: 0 0 0 2px var(--fg); }
+.tr .tt { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255, 255, 255, .86); }
+.tr .ar { margin-top: 1px; font-size: 13px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tr.cur .tt { color: var(--fg); }
 .tr.done { opacity: .42; }
 .tr.done:hover { opacity: .8; }
-.tr .acts { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; opacity: 0; transition: opacity var(--fast) var(--ease); }
-.tr .acts .ib { width: 28px; height: 28px; background: rgba(12, 12, 14, .66); color: #fff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-.tr .acts .ib:hover { background: rgba(12, 12, 14, .86); }
-.tr .acts .ib svg { width: 15px; height: 15px; }
+.tr .end { display: flex; align-items: center; justify-content: flex-end; min-width: 76px; }
+.tr .d { font-size: 12px; color: var(--fg-3); }
+.tr .acts { display: none; gap: 0; }
+.tr .acts .ib { width: 36px; height: 36px; color: rgba(255, 255, 255, .7); }
+.tr .acts .ib svg { width: 17px; height: 17px; }
 .tr .acts .ib.like.on { color: var(--heart); }
-.tr:has(.like.on) .acts { opacity: 1; }
-.tr:has(.like.on) .acts .ib:not(.like) { display: none; }
-@media (hover: hover) { .tr:hover .acts { opacity: 1; } .tr:hover .acts .ib:not(.like) { display: grid; } }
-.tr .d { display: none; }
-.eq { position: absolute; inset: 0; display: none; align-items: flex-end; justify-content: center; gap: 2px; padding-bottom: 14px; background: rgba(0, 0, 0, .4); }
+.tr:has(.like.on) .acts { display: flex; }
+.tr:has(.like.on) .acts .ib:not(.like), .tr:has(.like.on) .d { display: none; }
+@media (hover: hover) { .tr:hover .acts, .tr:hover .acts .ib:not(.like) { display: flex; } .tr:hover .d { display: none; } }
+.eq { position: absolute; inset: 0; display: none; align-items: flex-end; justify-content: center; gap: 2px; padding-bottom: 12px; background: rgba(0, 0, 0, .45); }
 .tr.cur .eq { display: flex; }
 .eq i { width: 3px; height: 14px; border-radius: 1px; background: #fff; transform-origin: bottom; transform: scaleY(.3); }
 .playing .tr.cur .eq i { animation: eq 900ms ease-in-out infinite alternate; }
 .eq i:nth-child(2) { animation-delay: -300ms !important; }
 .eq i:nth-child(3) { animation-delay: -600ms !important; }
 @keyframes eq { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
-.tile.more .cv { width: var(--c); height: var(--c); border-radius: 9px; display: grid; place-items: center; background: rgba(255, 255, 255, .04); color: var(--fg-2);
-  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
-.tile.more .cv:hover { background: rgba(255, 255, 255, .08); color: var(--fg); }
-.tile.more .cv:active { transform: scale(.97); }
-.tile.more .cv[disabled] svg { animation: spin 1.1s linear infinite; }
-.tile.more .cv svg { width: 26px; height: 26px; }
-.tile.more .tt { margin-top: 8px; font-size: 13px; color: var(--fg-3); }
-@media (max-height: 860px) { .tr, .tile { --c: 92px; } }
-@media (max-height: 640px) { .tr, .tile { --c: 76px; } }
+.tile.more { padding: 0; }
+.tile.more button { grid-column: 1 / -1; display: grid; grid-template-columns: var(--c) minmax(0, 1fr); gap: 14px; align-items: center; padding: 7px 10px; border-radius: 10px; text-align: left; color: var(--fg-3);
+  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.tile.more button:hover { background: var(--hover); color: var(--fg); }
+.tile.more .cv { width: var(--c); height: var(--c); border-radius: 6px; display: grid; place-items: center; background: rgba(255, 255, 255, .05); }
+.tile.more svg { width: 20px; height: 20px; }
+.tile.more button[disabled] svg { animation: spin 1.1s linear infinite; }
+.tile.more .tt { font-size: 14px; }
 
-/* youtube host: sits exactly over the active frame */
-.yt-host { position: absolute; z-index: 5; border-radius: 12px; overflow: hidden; background: var(--raise);
-  box-shadow: 0 30px 90px -20px color-mix(in srgb, var(--amb) 70%, transparent), 0 20px 40px -20px rgba(0, 0, 0, .7); transition: box-shadow 700ms ease-out, border-radius var(--base) var(--ease); }
-.yt-host.docked { position: fixed; z-index: 7; border-radius: 12px; box-shadow: 0 12px 32px -12px rgba(0, 0, 0, .6); }
-.yt-crop { position: absolute; inset: 0; overflow: hidden; opacity: 0; }
-.yt-crop.on { opacity: 1; }
-.yt-crop iframe { position: absolute; top: 0; height: 100%; width: 177.78%; left: -38.89%; border: 0; pointer-events: none; }
-.yt-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity var(--base) var(--ease); }
-.yt-host.live .yt-cover { opacity: 0; }
-.yt-play {
-  position: absolute; inset: 0; display: grid; place-items: center; cursor: pointer;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, .28), transparent);
-  transition: opacity var(--base) var(--ease);
-}
-.yt-play svg { width: 64px; height: 64px; fill: #fff; stroke: none; filter: drop-shadow(0 4px 16px rgba(0, 0, 0, .4)); transition: transform var(--fast) var(--ease); }
-.yt-play:hover svg { transform: scale(1.04); }
-.yt-play:active svg { transform: scale(.96); }
-.yt-host.live .yt-play, .yt-host.docked .yt-play, .playing .yt-play { opacity: 0; pointer-events: none; }
-.yt-host.live { cursor: pointer; }
-img.lb, .yt-cover.lb { transform: scale(1.34); }
+/* youtube host: sits exactly over the playing song's frame. YouTube's rules: one player, at least 200×200, nothing
+   drawn over it or cropping it, visible whenever it plays. While nothing plays it steps aside for the song's own art. */
+.yt-host { position: absolute; z-index: 5; padding: 2px; border-radius: 6px; background: #000; }
+.yt-host.off { visibility: hidden; pointer-events: none; }
+.yt-host.docked { position: fixed; z-index: 7; }
+.yt-host iframe { display: block; width: 100%; height: 100%; border: 0; }
+img.lb { transform: scale(1.34); }
 
 /* toast */
 .toast {
@@ -547,7 +540,8 @@ details.fold .plain { padding-bottom: 12px; }
 
 /* ---------- ask: a composer over the page ---------- */
 dialog { color: var(--fg); padding: 0; border: 0; }
-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+dialog::backdrop { background: rgba(0, 0, 0, .5); clip-path: var(--hole, none); }
+html:has(dialog[open]) { overflow: hidden; }   /* the page holds still under a dialog, so its window stays on the player */
 .composer {
   width: min(640px, calc(100vw - 32px)); margin: 16vh auto auto; border-radius: 16px; background: var(--pop);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 30px 80px rgba(0, 0, 0, .6); overflow: hidden;
@@ -590,6 +584,41 @@ a.m-acct:hover { background: var(--hover); }
 .m-item svg { width: 16px; height: 16px; }
 .m-item kbd { margin-left: auto; }
 
+/* ---------- the sample listener: joining ---------- */
+.me.cta { grid-template-columns: minmax(0, 1fr) 18px; height: auto; margin: 8px; padding: 12px 12px 12px 14px; border-radius: 12px; background: var(--fg); color: #0b0b0c; }
+.me.cta:hover { background: #fff; }
+.me.cta .who { gap: 2px; }
+.me.cta .who b { font-size: 14px; font-weight: 600; line-height: 1.35; white-space: normal; text-wrap: balance; }
+.me.cta .who span { color: rgba(11, 11, 12, .6); line-height: 1.35; white-space: normal; }
+.me.cta > svg { width: 18px; height: 18px; color: #0b0b0c; }
+.join {
+  width: min(400px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; border-radius: 20px; background: var(--pop);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 40px 120px rgba(0, 0, 0, .6); overflow-y: auto;
+}
+.join[open] { animation: lift 340ms var(--drawer); }
+.join::backdrop { background: rgba(0, 0, 0, .5); }
+.join[open]::backdrop { animation: fade 240ms ease-out; }
+@keyframes lift { from { transform: translateY(12px) scale(.98); opacity: 0; } }
+.j-in { position: relative; padding: 30px 28px 20px; }
+.j-in:focus { outline: none; }
+.s-bar { display: none; }
+.j-x { position: absolute; top: 12px; right: 12px; }
+.j-mark { width: 44px; height: 28px; fill: none; stroke: var(--fg); stroke-width: 7; stroke-linecap: round; }
+.j-mark circle { fill: #e9a55b; stroke: none; }
+.join h2 { margin: 18px 0 14px; font-size: 22px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; text-wrap: balance; }
+.join ol { margin: 0 0 24px; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: s; }
+.join li { font-size: 14px; line-height: 1.6; color: var(--fg-2); text-wrap: pretty; }
+.join .steps li { position: relative; padding-left: 24px; counter-increment: s; }
+.join .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; font-variant-numeric: tabular-nums; color: var(--fg-3); }
+.j-go { width: 100%; height: 46px; font-size: 15px; }
+.j-fine { margin: 14px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-3); text-wrap: pretty; }
+.j-alt { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 13px; }
+.j-alt a { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
+.j-alt a:hover { color: var(--fg); }
+.j-lang { display: flex; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; }
+.j-lang button { color: var(--fg-3); }
+.j-lang button:hover, .j-lang [aria-current] { color: var(--fg); }
+
 /* ---------- settings drawer ---------- */
 .sheet {
   position: fixed; inset: 0 0 0 auto; width: min(460px, 100vw); height: 100dvh; max-height: none; margin: 0; background: var(--pop);
@@ -627,27 +656,27 @@ a.m-acct:hover { background: var(--hover); }
 
 /* ---------- phone ---------- */
 .tabs { display: none; }
-.mini {
-  position: fixed; left: 8px; right: 8px; bottom: calc(66px + env(safe-area-inset-bottom)); z-index: 30;
-  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
-  padding: 8px; border-radius: 14px; background: #1b1b1e; border: 1px solid var(--line); box-shadow: 0 12px 30px rgba(0, 0, 0, .5);
-}
-.mini img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
-.mini .tt { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mini .ar { font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mini .ib { width: 44px; height: 44px; }
-.mini .ib.play { width: 44px; height: 44px; background: none; color: var(--fg); }
 
 @media (max-width: 899px) {
   :root { --rail: 0px; }
   .app { display: block; height: auto; }
   .rail { position: sticky; top: 0; z-index: 20; display: block; padding: env(safe-area-inset-top) 0 0; background: none; box-shadow: 0 1px 0 var(--line); }
+  /* a phone on its side has no height for a pinned strip and a 208px cover between it and the tabs */
+  @media (max-height: 500px) { .rail { position: relative; } }
   /* the blur sits on a layer of its own: on the rail itself it would make the rail the frame the fixed player card is placed in */
   .rail::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(11, 11, 12, .92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
   .rail-top { height: 48px; padding: 0 12px 0 16px; }
   .me-mini { display: block; width: 32px; height: 32px; border-radius: 50%; }
   .me-mini .av { width: 30px; height: 30px; }
   .rail-nav, .me { display: none; }
+  .s-bar { display: flex; align-items: center; gap: 8px; width: calc(100% - 24px); margin: 12px 12px 0; padding: 10px 12px 10px 14px; border-radius: 12px;
+    background: var(--sel); font-size: 13px; text-align: left; }
+  .s-bar span { color: var(--fg-3); white-space: nowrap; }
+  .s-bar b { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .s-bar svg { flex: none; width: 16px; height: 16px; }
+  .me-mini.cta { width: auto; height: 32px; padding: 0 14px; border-radius: 16px; background: var(--fg); color: #0b0b0c; font-size: 13px; font-weight: 600; }
+  .join { width: 100vw; max-width: none; margin: auto 0 0; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .join[open] { animation: up 420ms var(--drawer); }
   .stations { display: flex; gap: 2px; overflow-x: auto; padding: 0 10px 8px; scroll-snap-type: x proximity; -webkit-mask-image: none; mask-image: none; }
   .st-h { display: none; }
   .st { width: 76px; flex: none; grid-template-columns: 1fr; justify-items: center; gap: 5px; padding: 6px 2px; text-align: center; scroll-snap-align: start; }
@@ -657,39 +686,45 @@ a.m-acct:hover { background: var(--hover); }
   .prep { flex: none; width: 240px; margin: 0 4px 0 6px; padding: 10px 12px; }
   .pcard {
     position: fixed; left: 8px; right: 8px; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 30;
-    display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; padding: 10px; border: 0; border-radius: 16px;
+    display: grid; grid-template-columns: 208px minmax(0, 1fr); gap: 10px; padding: 8px; border: 0; border-radius: 20px;
     background: #1b1b1e; box-shadow: 0 0 0 1px var(--line), 0 16px 40px rgba(0, 0, 0, .5);
   }
-  .pc-frame { width: 112px; height: 112px; }
-  .yt-host.docked { z-index: 31; border-radius: 18px; }   /* drawn at 200px and scaled to the card */
+  .pc-frame { width: 208px; height: 208px; min-width: 0; }
+  .yt-host.docked { z-index: 31; }
+  .pcard [data-k="prev"] { display: none; }
   .pc-meta { padding: 2px 0 0; align-content: space-between; }
   .pc-ctl .ib { width: 40px; height: 40px; }
   .view { height: auto; min-height: calc(100dvh - 160px); }
   .listen { display: block; height: auto; }
   .l-head { padding: 14px 12px 0 16px; }
   .views [data-k="pip"] { display: none; }
-  .stage { container-type: inline-size; padding: 10px 16px 18px; }   /* the page scrolls here, so the stage takes its height from what is in it */
-  .stage-in { --s: min(420px, 100cqw, var(--fit, 100cqw)); grid-template-columns: minmax(0, 100cqw); grid-template-areas: "frame" "meta"; gap: 20px; }
+  .views [data-k="lyrics"] { display: grid; }
+  /* the page scrolls here, so the room takes its height from what is in it */
+  .room { container-type: inline-size; overflow: visible; padding: 10px 16px 0; }
+  .room-in { display: block; height: auto; }
+  .now { --s: max(208px, min(420px, 100cqw, var(--fit, 100cqw))); width: auto; justify-self: normal; }
+  .frame { margin: 0 auto; }
+  .meta { padding-top: 20px; }
   .t-title { font-size: 26px; }
-  .strip { padding-bottom: 150px; }
-  .s-head { flex-wrap: wrap; padding: 12px 12px 4px 16px; }
-  .s-note { flex-basis: 100%; margin: 2px 0 0; }
-  .s-list { display: block; padding: 0 4px; -webkit-mask-image: none; mask-image: none; }
-  .tile { --c: 44px; width: auto; display: grid; grid-template-columns: var(--c) minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 12px; }
-  .tile.more .cv { border-radius: 7px; }
-  .tile.more .cv svg { width: 20px; height: 20px; }
-  .tile.more .tt { margin-top: 0; font-size: 14px; }
-  .tr { --c: 44px; width: auto; display: grid; grid-template-columns: var(--c) minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 6px 12px; border-radius: 10px; }
-  .tr .cv { border-radius: 7px; }
-  .tr.cur { background: var(--sel); }
-  .tr.cur .cv { box-shadow: none; }
-  .tr .tt { margin-top: 0; font-size: 14px; }
+  .side { contain: none; display: block; max-width: none; padding: 0; }
+  .side-tabs { display: none; }
+  .room.lyr-on .lyr { height: 52vh; margin-top: 12px; }
+  .ll { font-size: 24px; }
+  .room.lyr-on .queue, .queue { display: block; margin: 0 -16px; padding-bottom: 300px; }   /* room to scroll the last song above the player card */
+  .s-head { padding: 14px 12px 4px 16px; }
+  .s-head h3 { display: block; }
+  .s-head .tb:first-of-type { margin-left: 0; }
+  .s-note { margin: 2px 0 0; }
+  .s-list { overflow: visible; margin: 0; padding: 0 4px; -webkit-mask-image: none; mask-image: none; }
+  .tr, .tile { --c: 44px; gap: 12px; padding: 6px 12px; }
+  .tile.more button { gap: 12px; padding: 6px 12px; }
   .tr .eq { padding-bottom: 10px; }
-  .tr .acts { position: static; opacity: 1; gap: 0; }
-  .tr .acts .ib { width: 40px; height: 40px; background: none; color: rgba(255, 255, 255, .6); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .tr .acts .ib:not(.like) { display: grid; }
-  .tr:has(.like.on) .acts .ib:not(.like) { display: grid; }
-  .ear { padding: 20px 16px 220px; }
+  .tr .end { min-width: 0; }
+  .tr .d { display: none; }
+  .tr .acts, .tr:has(.like.on) .acts { display: flex; }
+  .tr .acts .ib { width: 40px; height: 40px; color: rgba(255, 255, 255, .6); }
+  .tr .acts .ib:not(.like), .tr:has(.like.on) .acts .ib:not(.like) { display: grid; }
+  .ear { padding: 20px 16px 320px; }
   .ear-hero { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .ear h1 { font-size: 24px; }
   .ear .lede { font-size: 15px; }
@@ -715,7 +750,7 @@ a.m-acct:hover { background: var(--hover); }
   .tabs svg { width: 22px; height: 22px; }
   .tabs [aria-current] { color: var(--fg); }
   .toast { left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); }
-  body:has(.pcard:not([hidden])) .toast { bottom: calc(210px + env(safe-area-inset-bottom)); }   /* above the player card, not on its buttons */
+  body:has(.pcard:not([hidden])) .toast { bottom: calc(296px + env(safe-area-inset-bottom)); }   /* above the player card: nothing may sit on YouTube's player */
   .composer { margin: auto auto 0; width: 100vw; max-width: none; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); }
   .composer[open] { animation: up 420ms var(--drawer); }
   @keyframes up { from { transform: translateY(100%); } }
@@ -733,20 +768,53 @@ a.m-acct:hover { background: var(--hover); }
 }
 
 /* ---------- immersive: just the song, the cover and the words ---------- */
-.imm .rail, .imm .strip, .imm .l-head .ttl, .imm .tabs { display: none; }
+.imm .rail, .imm .l-head .ttl, .imm .tabs, .imm .side-tabs, .imm .queue { display: none; }
 .imm .app { grid-template-columns: minmax(0, 1fr); }
-.imm .listen { grid-template-rows: auto minmax(0, 1fr); }
 .imm .l-head { justify-content: flex-end; }
-.imm .stage { padding: 12px 5vw 40px; }
-@container (min-width: 761px) { .imm .stage-in { --s: max(96px, min(560px, 42cqw, 100cqw - 390px, 100cqh - 8px)); } }
-@container (min-width: 560px) { .imm .stage.lyr-on .stage-in { --s: max(96px, min(440px, 30cqw, 100cqh - var(--mh) - 10px)); grid-template-columns: max(var(--s), 312px) minmax(0, 820px); } }
-.imm .ll { font-size: 34px; }
-.imm .stage.lyr-on .t-title { font-size: 26px; }
-.imm .stage.lyr-on .t-artist { font-size: 17px; }
-.imm .yt-host { box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .6); }
+.imm .room { padding: 0 5vw 40px; }
+.imm .now { --s: clamp(208px, min(100cqh - var(--mh), 50cqw - 88px), 760px); }
+.imm .room.no-lyr .room-in { grid-template-columns: minmax(0, 1fr); }
+.imm .room.no-lyr .side { display: none; }
+.imm .room.no-lyr .now { --s: clamp(208px, min(100cqh - var(--mh), 100cqw), 760px); }
+.imm .ll { font-size: clamp(24px, 2.4cqw, 40px); }
 .imm .toast { left: 50%; }
 .imm.idle { cursor: none; }
 .imm.idle .views { opacity: 0; }
+/* On a phone it is one screen that never scrolls, so YouTube's player stays on its cover: the song on top, the words
+   in between, the controls at the thumb. */
+@media (max-width: 899px) {
+  .imm .view { height: 100dvh; min-height: 0; overflow: hidden; }
+  .imm .listen { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; }
+  .imm .room { container-type: size; min-height: 0; padding: 0 20px calc(16px + env(safe-area-inset-bottom)); }
+  .imm .room-in, .imm .room.no-lyr .room-in { display: flex; flex-direction: column; gap: 0; height: 100%; }
+  .imm .now, .imm .meta, .imm .side { display: contents; }
+  .imm .now { --s: 208px; }
+  .imm .room.no-lyr .now { --s: max(208px, min(100cqw, 100cqh - 236px)); }
+  .imm .frame, .imm .t-title, .imm .t-artist, .imm .prog, .imm .ctl { flex: none; }
+  .imm .room .queue { display: none; }
+  .imm .t-title { margin-top: 18px; font-size: 22px; text-align: center; }
+  .imm .t-artist { text-align: center; }
+  .imm .room.no-lyr .t-title, .imm .room.no-lyr .t-artist { text-align: left; }
+  .imm .room.no-lyr .t-title { margin-top: 24px; font-size: 26px; }
+  .imm .t-fine, .imm .t-why { display: none; }
+  .imm .ctl .tb .lbl { display: none; }   /* .meta is no container here, so its width rule can't drop the label */
+  .imm .room.lyr-on .lyr { flex: 1; min-height: 0; height: auto; margin-top: 10px; }
+  .imm .ll { font-size: 24px; }
+  .imm .room .lyr { order: 1; }
+  .imm .prog, .imm .ctl { order: 2; }
+  .imm .prog { margin-top: auto; padding-top: 12px; }
+}
+/* a phone on its side: the cover beside the words */
+@media (max-width: 899px) and (orientation: landscape) {
+  .imm .room-in, .imm .room.no-lyr .room-in { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto auto; column-gap: 28px; }
+  .imm .now, .imm .room.no-lyr .now { --s: max(208px, min(100cqh, 45cqw)); }
+  .imm .frame { grid-area: 1 / 1 / -1; align-self: center; }
+  .imm .t-title, .imm .room.no-lyr .t-title { grid-area: 1 / 2; margin-top: 0; font-size: 22px; text-align: left; }
+  .imm .t-artist, .imm .room.no-lyr .t-artist { grid-area: 2 / 2; text-align: left; }
+  .imm .room.lyr-on .lyr { grid-area: 3 / 2; margin-top: 4px; }
+  .imm .prog { grid-area: 4 / 2; }
+  .imm .ctl { grid-area: 5 / 2; }
+}
 
 /* picture-in-picture window */
 body.pip {

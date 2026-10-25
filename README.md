@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img alt="The player: stations on the left, the song playing with its cover and the reason it was picked, synced lyrics on the right, and the rest of the station below" src="docs/images/player.webp" width="900">
+  <img alt="The player: stations on the left, the song with its cover and the reason it was picked, and synced lyrics with a translation on the right, a tab away from the rest of the station" src="docs/images/player.webp" width="900">
 </p>
 
 Most recommenders work from what millions of other people played next to your song. You get the same few hits,
@@ -36,7 +36,7 @@ go out, so when it isn't sure, a station simply gets fewer songs (its best three
 ### A morning edition
 
 About eight stations, one per kind of music you actually play, up to eight songs each, with
-one line on why each song is there. Full songs play through YouTube's own player, with crossfades and synced lyrics
+one line on why each song is there. Full songs play through YouTube's own player, fading out into the next, with synced lyrics
 that can show a translation and romanization.
 
 ### Ask in your own words

@@ -1,0 +1,5674 @@
+{
+ "id": "2026-10-25 17:28",
+ "created": 1792921150.05772,
+ "took": 664,
+ "lanes": [
+  {
+   "key": "japan_groove",
+   "name": "Tokyo Groove",
+   "english": "Japanese soul and city pop",
+   "blurb": "Japanese pop with piano and funk bass, gospel lift and city-pop gloss, both new and old.",
+   "when": "Tokyo daily life: commuting, cooking, evening walks",
+   "discovery": 0.4,
+   "seeds": [
+    {
+     "vid": "UiW93Thic7I",
+     "title": "エイリアンズ - Aliens",
+     "artists": [
+      {
+       "name": "KIRINJI",
+       "id": "UCwCFAaGtIAn8hhrHnLbB21A"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/SfsDt5ZtwJW9AtTSYCiqcaUf0AhQElOhGwbkG21PwsOwEwYN6PPLnzr9YCMOX9w458z3FORXAsJ_zrk=w544-h544-l90-rj"
+    },
+    {
+     "vid": "3zh9Wb1KuW8",
+     "title": "死ぬのがいいわ - Shinunoga E-Wa",
+     "artists": [
+      {
+       "name": "Fujii Kaze",
+       "id": "UCxjfYUXFwmjUCGHMeBri5_w"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/R4k8Fj3T1Y-LvlSrMIY6ekpKg5OviQqzaNTq4WoL2QHwBjc6C0CHOMl7R8Kbdyj8atWWkpsYi1HPCbnU=w544-h544-l90-rj"
+    },
+    {
+     "vid": "IFCDLIKSArs",
+     "title": "きらり - Kirari",
+     "artists": [
+      {
+       "name": "Fujii Kaze",
+       "id": "UCxjfYUXFwmjUCGHMeBri5_w"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/CWX4YCTA0LaPNQstef6Z84h47u6BhwWy2EwpVJCUDAUegvGYIlOffZxMLFP-xarjDqRlJXtumCRbbwo=w544-h544-l90-rj"
+    },
+    {
+     "vid": "CnlMTBwsBHs",
+     "title": "踊り子 - odoriko",
+     "artists": [
+      {
+       "name": "Vaundy",
+       "id": "UC8_Ag6BVp43Vmrx6eillK9g"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/8TjDZHGcFRV1JP0Vq7BTqF-xvbwkPDcJ2D72hJMGc5oS4B4-wj7LDpggOuJuMW3d526pfNqfVdRLJtjenw=w544-h544-l90-rj"
+    },
+    {
+     "vid": "KMdTrqzEI0I",
+     "title": "恋 - Koi",
+     "artists": [
+      {
+       "name": "Gen Hoshino",
+       "id": "UCUrcaHP1Qrlrxoxg9z1jlmg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/39uozc2Sg5bMX1T_j9LX9jljOnsvcTqMlIIBk7bbjykf7tg0tG6-G8dwNMKi9Ree0ymX9G88AfPCCiPNsA=w544-h544-l90-rj"
+    },
+    {
+     "vid": "92pdJyzIGbw",
+     "title": "Week End",
+     "artists": [
+      {
+       "name": "Gen Hoshino",
+       "id": "UCUrcaHP1Qrlrxoxg9z1jlmg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/_Iynu6U6gxVpT11REQ5DsxiJtEF_aRidV84z6I8pzWQEP8iFtvhkhFhk8N6tzOUQFkBFKY18A--zC0Va=w544-h544-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "h6kLwTpXkEk",
+     "title": "接吻",
+     "artists": [
+      {
+       "name": "Original Love",
+       "id": "UCIq07DAzeAZlG6nAIBQIWxw"
+      }
+     ],
+     "album": {
+      "name": "Sunny Side Of Original Love",
+      "id": "MPREb_g0Z3O28pMuH"
+     },
+     "year": 1993,
+     "thumb": "https://yt3.googleusercontent.com/9WMRFf-NiICFD_8CjgPCpLCdkbJdH0km1ptkBcJs53uFgItcxlKzS6QypDhe5H7663--mo_7coMxWlVk=w544-h544-l90-rj",
+     "dur": 281,
+     "type": "ATV",
+     "reason": "A slow, sensual soul groove that set the warm template for Hoshino Gen. An artist you haven’t saved yet.",
+     "fit": 0.9,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "LSRn4yPQChURLf/N/AT3ABzzBOcM9wAF8vUCBxj59y7zBAIX5gcNEgYCBAD6DwYF",
+     "en": 1.0,
+     "via": [
+      "STAY TUNE - Suchmos",
+      "Drifter - KIRINJI"
+     ]
+    },
+    {
+     "vid": "HbXaUmWaU5Q",
+     "title": "忘れられないの",
+     "artists": [
+      {
+       "name": "sakanaction",
+       "id": "UCtHYsFMAI733Qy6Es3wDU6g"
+      }
+     ],
+     "album": {
+      "name": "834.194",
+      "id": "MPREb_b2ZkPKDNbSz"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/nOt7bbpmEgdxmQIB0tLYV_xeLD0-EkYqltaKOEEF8sqMF-57OwSqXPXdWg5l2NKcF9jswOO31luC1U140w=w544-h544-l90-rj",
+     "dur": 238,
+     "type": "ATV",
+     "reason": "80s city pop with glossy synths and rounded bass lines. Pure night-drive music, close to “エイリアンズ - Aliens”.",
+     "fit": 0.88,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "JEszDzsL9D/r/+PyFQYU5P0V/eoQG/cE5NX3ARHxBRv1/vsQ1xkODQv88wbnFQwH",
+     "en": 1.6,
+     "via": [
+      "エイリアンズ - Aliens - KIRINJI",
+      "Week End - Gen Hoshino",
+      "Climax Night - Yogee New Waves"
+     ]
+    },
+    {
+     "vid": "hci81q8Q49Q",
+     "title": "Fly-day Chinatown",
+     "artists": [
+      {
+       "name": "Yasuha",
+       "id": "UCnmK8YSeUOrNBGtBbxx4wpw"
+      }
+     ],
+     "album": {
+      "name": "Transit",
+      "id": "MPREb_F7W61E8WnXY"
+     },
+     "year": 1981,
+     "thumb": "https://yt3.googleusercontent.com/Oig7EhnD6_EdNf9bX8n4ctw7z1rdqUpf_if-lwBbxzn6zN9VA46Z14nR9ZdPpR_08S0riUMu78MyyWYy=w544-h544-l90-rj",
+     "dur": 211,
+     "type": "ATV",
+     "reason": "A 1981 city-pop classic with bright synths and an easy, breezy chorus, good for an evening walk.",
+     "fit": 0.86,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio"
+     ],
+     "v": "DFoO1tkE9SsD59fJ+gML5v0S4vQkFhfq9dnpGRH2FCLpCPQW7QMMDwr9/wb0EQ4C",
+     "en": 1.89,
+     "via": [
+      "エイリアンズ - Aliens - KIRINJI",
+      "STAY TUNE - Suchmos",
+      "Drifter - KIRINJI"
+     ]
+    },
+    {
+     "vid": "PfxogZd2wj4",
+     "title": "Hatachi No Koi",
+     "artists": [
+      {
+       "name": "Lamp",
+       "id": "UCyClX1ucyro0j7Gix-A1-kw"
+      }
+     ],
+     "album": {
+      "name": "Lamp Genso",
+      "id": "MPREb_UXiHIpR1k07"
+     },
+     "year": 2008,
+     "thumb": "https://yt3.googleusercontent.com/k22KXvhamEcAyTJEOZy7eavuzJw5ZLsOshteEmR5wEX7UZsl7o9J9ahdld2-jhcEJb17VmEeockUsfo=w544-h544-l90-rj",
+     "dur": 194,
+     "type": "ATV",
+     "reason": "Soft bossa chords and whispered vocals, in the same gentle world as “Yume Utsutsu”.",
+     "fit": 0.85,
+     "familiar": 2,
+     "sources": [
+      "radio",
+      "related"
+     ],
+     "v": "s/Xv5/YY2/kTUNPVEyweAA396hAK//sD9vXQGgsEAiTzBv8W7QkADgn6/ADvFBgK",
+     "en": -1.23,
+     "via": [
+      "Yume Utsutsu - Lamp"
+     ]
+    },
+    {
+     "vid": "JyRmSOle6ps",
+     "title": "喜劇",
+     "artists": [
+      {
+       "name": "Gen Hoshino",
+       "id": "UCUrcaHP1Qrlrxoxg9z1jlmg"
+      }
+     ],
+     "album": {
+      "name": "Gen",
+      "id": "MPREb_kD4mpMlO2LB"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/DVw-gUY-uu_cuGMglwrLDEf3RXtIDQ5xm7mKq7M6c5kiWqsL6U5OUlrwPJau1W2dtXDvyyz_uk0oU4I=w544-h544-l90-rj",
+     "dur": 234,
+     "type": "ATV",
+     "reason": "A warm, unhurried groove with a quiet funk pulse. Hoshino Gen at his most homey and tender.",
+     "fit": 0.83,
+     "familiar": 4,
+     "sources": [
+      "radio"
+     ],
+     "v": "UNIoABEP3zjWCM3m/vwM3hcSHQUG8dv+CvkA9wbi+iTh//kK6RUKEhD3/gbzGg4E",
+     "en": 0.79,
+     "via": [
+      "死ぬのがいいわ - Shinunoga E-Wa - Fujii Kaze",
+      "きらり - Kirari - Fujii Kaze",
+      "恋 - Koi - Gen Hoshino"
+     ]
+    },
+    {
+     "vid": "yx_DHIhKDaA",
+     "title": "素敵な夜",
+     "artists": [
+      {
+       "name": "KIRINJI",
+       "id": "UCwCFAaGtIAn8hhrHnLbB21A"
+      }
+     ],
+     "album": {
+      "name": "what a night",
+      "id": "MPREb_8T184fm1DEc"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/bA6uC2-FwNzblNiX0t_NmSeaIkAZ6cFZ8GyKIwlF79hG7z1Jt4kGd62FEcIDYd0e7Ncg8MOZRgoPZR0P=w544-h544-l90-rj",
+     "dur": 228,
+     "type": "ATV",
+     "reason": "New from KIRINJI. The natural next step after “Drifter”, good for a night with nowhere to be.",
+     "fit": 0.8,
+     "familiar": 2,
+     "sources": [
+      "release"
+     ],
+     "v": "LUI53C//BSsnN/ru6v8bEhTr9Nf7Cgn39ODuFPnv9Snp/fwU5AoGB/oL+wXyEQoE",
+     "en": 1.53,
+     "via": [
+      "new:what a night"
+     ]
+    },
+    {
+     "vid": "68uRkBs14o4",
+     "title": "Eye to Eye",
+     "artists": [
+      {
+       "name": "Suchmos",
+       "id": "UCTjMLOtWrtmd9c2K_H3KQHw"
+      }
+     ],
+     "album": {
+      "name": "Sunburst",
+      "id": "MPREb_VijuQX3R7Hq"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/e6pApRch1AJ9aTlHwsp5SKPkCz9ZUTKAOREDgQXXEKJhmljjHflxkiC5pVROHjRdlORkHCD2O1eERLY-=w544-h544-l90-rj",
+     "dur": 328,
+     "type": "ATV",
+     "reason": "A new Suchmos song from “Sunburst”, carrying on the relaxed swagger of “STAY TUNE”.",
+     "fit": 0.74,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "aBUz//D2/UIrPgkF5/j99BX9//X+B/7+/OYDDgzzGCn+CAEV7gz8DAEA8QHvEwgA",
+     "en": 0.76,
+     "mv": "gcO6GiC4nzQ",
+     "via": [
+      "new:Sunburst"
+     ]
+    },
+    {
+     "vid": "dDoFaOWRt94",
+     "title": "BLUE DIVER",
+     "artists": [
+      {
+       "name": "Yogee New Waves",
+       "id": "UCxopYhAL4an7P8T9hh5s0Ww"
+      }
+     ],
+     "album": {
+      "name": "BLUE DIVER",
+      "id": "MPREb_ZQPcHvrcVUh"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/lCL8PZtX-KJzB4PrWGLjJjmoRLUfNs8-9N6m80y-qpVdp0FMZc52JTIRJCFzNv2AH605z4VROkf6Ox81Gg=w544-h544-l90-rj",
+     "dur": 329,
+     "type": "ATV",
+     "reason": "A recent single from Yogee New Waves, good paired with “Climax Night” on the way home.",
+     "fit": 0.7,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "0kEZBzkF3u8a4S3/8f4zCPMW4/8uDv/7FOEDGyDuJBzw9QIh9/4RGwb69AjrCA8E",
+     "en": 1.35,
+     "via": [
+      "new:BLUE DIVER"
+     ]
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "OAdu462HiI0",
+     "title": "NEW ERA",
+     "artists": [
+      {
+       "name": "Nulbarich",
+       "id": "UC9Mr_qx2dUoki2z4VujRImw"
+      }
+     ],
+     "album": {
+      "name": "Guess Who?",
+      "id": "MPREb_eDm4Rn3widN"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/PDz6cq46DBqyABauMTeaIhKQRz03G9zt1eefbo3fKAGufu3w3JYyOjgBrdOHLUiw_Hx2Mm9Yi4bWT84=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "A smooth acid-jazz groove with a touch of falsetto, a good fit beside Suchmos.",
+     "fit": 0.78,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "SxZ08wv4DBoQL/Lu4vQIAA7/++4K/AHs8+LuBQXyDCX6AfkL7xQDDgkC+vrqFgkI",
+     "en": 1.49,
+     "via": []
+    },
+    {
+     "vid": "0t0HtFYjcU8",
+     "title": "NIGHT DANCER",
+     "artists": [
+      {
+       "name": "imase",
+       "id": "UCw1vXKD-vMvGcy2gvMMAFsQ"
+      }
+     ],
+     "album": {
+      "name": "POP CUBE",
+      "id": "MPREb_NmMa6Cojmh1"
+     },
+     "year": 2022,
+     "thumb": "https://yt3.googleusercontent.com/de6baYpledGf1-hk4Nu4bmfNmYSnnJH9cRulBCrE3plYo4JuxZRmEB-gJXYitjADxj-272MHC81SPJlHSg=w544-h544-l90-rj",
+     "dur": 211,
+     "type": "ATV",
+     "reason": "A minimal funk bass line and cool, understated vocals, good for an evening commute.",
+     "fit": 0.76,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio"
+     ],
+     "v": "LAXeJAXv+sbkMqnW+xAe5PEPBRQI/+oS69b3EgrwBx3zBekO/A0AGf37+f3qFRUC",
+     "en": 0.56,
+     "via": [
+      "死ぬのがいいわ - Shinunoga E-Wa - Fujii Kaze",
+      "きらり - Kirari - Fujii Kaze",
+      "踊り子 - odoriko - Vaundy"
+     ]
+    },
+    {
+     "vid": "lILzKiiCEOM",
+     "title": "明るい未来",
+     "artists": [
+      {
+       "name": "never young beach",
+       "id": "UCImTGwk5yoErdqd0T-6OMoQ"
+      }
+     ],
+     "album": {
+      "name": "fam fam",
+      "id": "MPREb_D5leYTKkI2J"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/J8fm5i4PSibKhHsNtDitv_odc1hHK9BcZbSkKeObackCRZwgvjJe2RmMhcQLVe-8-bUx2Ikt4V82Ug=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Bright, crisp guitar and a relaxed sway, from the same revival wave as Yogee New Waves.",
+     "fit": 0.72,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "+EZD8R/w8OXtADj49QUL3B8D9vYw7A4aA/4RFRT7JCXo7fYV8hEVHA71+wH1IRMK",
+     "en": 1.51,
+     "via": []
+    },
+    {
+     "vid": "KftLSF5mAjE",
+     "title": "Burning Friday Night",
+     "artists": [
+      {
+       "name": "Lucky Kilimanjaro",
+       "id": "UCiVXhIDW-3GNIyL5wsydr1Q"
+      }
+     ],
+     "album": {
+      "name": "FULLCOLOR",
+      "id": "MPREb_ZGBVtHsZHQW"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/kacCcQ8bB7L5wJnvS3Kvs0Ct4XlMeBvml0PVZg4Z5JdKGS-0Ki11B1a9HcZmiR_wuf8DS0EFEqRHVBQRhw=w544-h544-l90-rj",
+     "dur": 256,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "JVU/5AraIu71HPbCC/0L2gziD/IaFQoT6egEDgcBBS/5BwH9/gANFwwDB/3wCwcS",
+     "en": 2.11,
+     "via": [
+      "Week End - Gen Hoshino",
+      "STAY TUNE - Suchmos"
+     ]
+    },
+    {
+     "vid": "EjOy4lXtiYE",
+     "title": "幾億光年",
+     "artists": [
+      {
+       "name": "Omoinotake",
+       "id": "UCCUPgHLfyUjv0UbQR426knQ"
+      }
+     ],
+     "album": {
+      "name": "Ikuokukonen",
+      "id": "MPREb_H2XyMIuAPNk"
+     },
+     "year": 2024,
+     "thumb": "https://yt3.googleusercontent.com/WBRE34k17q7giNh2eC_73sGgcafikOhFoXR1Tuelmrnr7AwlIyMyPf2rOCgY-r2rcK4Ob1QLsOm3Nhg=w544-h544-l90-rj",
+     "dur": 277,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "RB9eC/wgCyr3DLkc7u/v5vMF/wkJ/vUT9OT07hH4/Rr8+f0V5w8LDgH/+gHnEBMB",
+     "en": 1.31,
+     "via": [
+      "きらり - Kirari - Fujii Kaze"
+     ]
+    },
+    {
+     "vid": "Fz0YCvsEU20",
+     "title": "Fly By Day feat. JU!iE (feat. JU!iE)",
+     "artists": [
+      {
+       "name": "Tokimeki Records",
+       "id": "UCdZmdkMP_pBRQFNZnW7KwRg"
+      },
+      {
+       "name": "JU!iE",
+       "id": "UCm4ONgB4DZVJYqtZA9RdUzQ"
+      }
+     ],
+     "album": {
+      "name": "Fly By Day feat. JU!iE",
+      "id": "MPREb_ndXhkXO6QXn"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/N3OfWIx-R5XDY2BzRjsW4sb8iszyFZk7ekuagLQtHBJ-TTpeeD7cN9JiLgnVXdY1reVjxUEy6btrDsdL=w544-h544-l90-rj",
+     "dur": 299,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "release"
+     ],
+     "v": "Zx0PAOQXHDAoI/AFAe3vxfrx+A8YDuMY+OkECQj+DyTsAv8R6A8OCQYB9fzkEAIC",
+     "en": 0.57,
+     "mv": "ya_7p5-NV7c",
+     "via": [
+      "new:Fly By Day feat. JU!iE"
+     ]
+    },
+    {
+     "vid": "lDa1V1N1vxQ",
+     "title": "Baby Love",
+     "artists": [
+      {
+       "name": "FNCY",
+       "id": "UCq8zdcaC1LBDdi9pH1Q3kOw"
+      },
+      {
+       "name": "ZEN-LA-ROCK",
+       "id": "UCtEDTgM2_uY-MaNK5BZcVEA"
+      },
+      {
+       "name": "G.Rina",
+       "id": "UCfd3Vk3ejjzdXmwWJez1N4g"
+      },
+      {
+       "name": "CHINZA DOPENESS",
+       "id": "UCF6XENNW1VxSsFg0r7-Bo4Q"
+      }
+     ],
+     "album": {
+      "name": "Baby Love",
+      "id": "MPREb_9Cm2iMWo0Vz"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/67BV2-7Y9PhUaMQCLH74nw2CY_6ho3LbJ91kLPQpq2av-k5am4EdYWrHKIWSdr_8rbFOk1Ca73bNU7vU=w544-h544-l90-rj",
+     "dur": 266,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "release"
+     ],
+     "v": "SOxv/B3zCvoDIQDWCAkXEfP07vEKEBAA7uTuFwH2FSnz/PcT6g39FgD8/QjtEwoJ",
+     "en": 1.48,
+     "mv": "HNlx0spX6rg",
+     "via": [
+      "new:Baby Love"
+     ]
+    },
+    {
+     "vid": "wQiz17AKhjM",
+     "title": "AIZO",
+     "artists": [
+      {
+       "name": "King Gnu",
+       "id": "UC9tx_HmhNISUR39M29r9a8A"
+      }
+     ],
+     "album": {
+      "name": "AIZO",
+      "id": "MPREb_X9jbNXGHvLq"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/hupg9jwXRD_bYZ16qkzCXR3B_ldNn6xqlmcayLXNSxKVejFdsbkJPColBbGdI4P_7HxqDB9k95k-HZz0=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "Sgsw8fEmDu7hA+Qt7esN5PkQ3BPlEfYJDcn4Ahv+HhDq7xcW1g4dEgns+vjgCRAB",
+     "en": 2.07,
+     "via": []
+    },
+    {
+     "vid": "37W7Y2RRyiM",
+     "title": "Pretender",
+     "artists": [
+      {
+       "name": "Official Hige Dandism",
+       "id": "UC84Rm0a3gimYXPtqp5O_JRw"
+      }
+     ],
+     "album": {
+      "name": "Pretender",
+      "id": "MPREb_KM0ObxOYJXt"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/aixVDum8bIjxh-zawNsilqtKif-lH5ogu3B5eUMGp6BPilm5_iYJs5aon8gDUa5Cd5ec67lClIkEwoE6=w544-h544-l90-rj",
+     "dur": 327,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio",
+      "related"
+     ],
+     "v": "LxomGd8m+DTDDQEs7AcV0vQxAAHv+/78FdwB9g/pGh7zBgwJ3Br8Hwfw+ezxBRML",
+     "en": 0.83,
+     "via": [
+      "エイリアンズ - Aliens - KIRINJI",
+      "きらり - Kirari - Fujii Kaze",
+      "踊り子 - odoriko - Vaundy"
+     ]
+    },
+    {
+     "vid": "W0dsUNS4RT8",
+     "title": "オトノケ",
+     "artists": [
+      {
+       "name": "Creepy Nuts",
+       "id": "UC7z9phtXAFRixEvdlRhv-hg"
+      }
+     ],
+     "album": {
+      "name": "LEGION",
+      "id": "MPREb_lo5emt3Kvok"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/8CNikVrcUoyb5r2WuBr3ZDy3XEzfpi9FlR18f8QsXPLePBqGtXKK2SlsATi6XtiwWRPhwS9rtU6OnF7_=w544-h544-l90-rj",
+     "dur": 187,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "JQj7BzQ3zu/q1tQBCfYR2Bgx6fUDHdryFdTpCiPrCxHeBfUQ+RwXDwXpAP/7EAb/",
+     "en": 1.61,
+     "via": [
+      "死ぬのがいいわ - Shinunoga E-Wa - Fujii Kaze"
+     ]
+    },
+    {
+     "vid": "Pxv7cfxyE7k",
+     "title": "You",
+     "artists": [
+      {
+       "name": "Fujii Kaze",
+       "id": "UCxjfYUXFwmjUCGHMeBri5_w"
+      }
+     ],
+     "album": {
+      "name": "Prema",
+      "id": "MPREb_ErmkbWIM73j"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/PV72_pwthrfL37UkyiURYgkv1Rzt2RV_jFcR4qmR2h9sXa3ErxGuklFiq-vwkDBCpHu_sgxwOHFNBgfR=w544-h544-l90-rj",
+     "dur": 282,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 4,
+     "sources": [
+      "playlist",
+      "release"
+     ],
+     "v": "9ukjSyTw9xdIGcnCB/se5Nr99eoMAg4Z9eoCGP7w+xfp9PsT8w0BDwoE9fj1Ewv7",
+     "en": -0.94,
+     "mv": "BbQ3S5_q44Q",
+     "via": [
+      "new:You (EP) (feat. UMI)"
+     ]
+    },
+    {
+     "vid": "jY_rYnvfKO0",
+     "title": "Love Like This",
+     "artists": [
+      {
+       "name": "Fujii Kaze",
+       "id": "UCxjfYUXFwmjUCGHMeBri5_w"
+      }
+     ],
+     "album": {
+      "name": "Prema",
+      "id": "MPREb_ErmkbWIM73j"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/PV72_pwthrfL37UkyiURYgkv1Rzt2RV_jFcR4qmR2h9sXa3ErxGuklFiq-vwkDBCpHu_sgxwOHFNBgfR=w544-h544-l90-rj",
+     "dur": 261,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 4,
+     "sources": [
+      "playlist",
+      "release"
+     ],
+     "v": "DkgINQv37+3ZQdHkIRIy4ukODAkUEREa9dr1Bv3yCSbyAPQS7w/7FQYA8QTxDQ8E",
+     "en": 0.43,
+     "mv": "RoY_ZoWe-eI",
+     "via": [
+      "new:Love Like This"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 572,
+    "rejected": {
+     "format": 40,
+     "liked": 43,
+     "version": 55,
+     "same song": 11,
+     "language": 9
+    },
+    "playlists": 3,
+    "heard": 8
+   }
+  },
+  {
+   "key": "dream_indie",
+   "name": "Hazy Indie",
+   "english": "Dream pop and soft indie",
+   "blurb": "Hazy dream pop and whispered indie folk, with melodic bass and breathy vocals close to the ear.",
+   "when": "Slow afternoons, riding a train alone, easing into rest",
+   "discovery": 0.55,
+   "seeds": [
+    {
+     "vid": "UiW93Thic7I",
+     "title": "エイリアンズ - Aliens",
+     "artists": [
+      {
+       "name": "KIRINJI",
+       "id": "UCwCFAaGtIAn8hhrHnLbB21A"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/SfsDt5ZtwJW9AtTSYCiqcaUf0AhQElOhGwbkG21PwsOwEwYN6PPLnzr9YCMOX9w458z3FORXAsJ_zrk=w544-h544-l90-rj"
+    },
+    {
+     "vid": "txG3E5fafs4",
+     "title": "Climax Night",
+     "artists": [
+      {
+       "name": "Yogee New Waves",
+       "id": "UCxopYhAL4an7P8T9hh5s0Ww"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/6NY2SR1-3Q4vS1eIIIawaxvXivu_Dw6c5jm-jrd5MwYeqqfzvgPnIUeiy7PUqW3KimMwHUgTOarsH9eYOg=w544-h544-l90-rj"
+    },
+    {
+     "vid": "yUcIaHh4HEA",
+     "title": "恋人へ - For Lovers",
+     "artists": [
+      {
+       "name": "Lamp",
+       "id": "UCyClX1ucyro0j7Gix-A1-kw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/45oTrGfSiOFe7QDMcdwt84V_HEDBsgCIX0XesEFT7ntAw9jtHBi3zeE7Es9sEb5dG9KEO-8GSpzhkZA=w544-h544-l90-rj"
+    },
+    {
+     "vid": "DJCB1ZlseJ8",
+     "title": "Show Me How",
+     "artists": [
+      {
+       "name": "Men I Trust",
+       "id": "UCaPOa_Tg0TThuYSVtUEXb8g"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/CYWPdThl46U5DKL6H73UpGVhH5j84kPJQH3LayPp4ufQA2PILNWnxUWp1jBOaizQ_MXz9m6Q5V9iSms=w544-h544-l90-rj"
+    },
+    {
+     "vid": "uC6wKP_RVqU",
+     "title": "Tailwhip",
+     "artists": [
+      {
+       "name": "Men I Trust",
+       "id": "UCaPOa_Tg0TThuYSVtUEXb8g"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/FEVH-vZKgOTZf-84V-QdPDtB0qv5kv9bZmvD68IiAlpV8VglYRM_3CN6OzgXssAJ_3cDYDLn74QboiNx=w544-h544-l90-rj"
+    },
+    {
+     "vid": "xF1Yu-amFfk",
+     "title": "Sofia",
+     "artists": [
+      {
+       "name": "Clairo",
+       "id": "UChC2OO1dG5Vge1Kuc-1QZRg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/O7tPf_tdS29Re6crTsMO-vCwJmX8_TkSXDwAfKpi17vFkJoVyQZUQRovFIkIlEqPKFsMSz7cb-a0UCM=w544-h544-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "5e1zT7miep8",
+     "title": "rises the moon",
+     "artists": [
+      {
+       "name": "liana flores",
+       "id": "UCOOKbAPgT8xKwM6V9GLHiEg"
+      }
+     ],
+     "album": {
+      "name": "recently",
+      "id": "MPREb_y33R4Mu2Cea"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/KHSJ8pUWcJ_9KuT4yE7MLNTsp2pg6YHuPJwF4LATIrMQCw6bLAxsMYCnnGpTnmRQl4y0lCLT8ty05Moq=w544-h544-l90-rj",
+     "dur": 162,
+     "type": "ATV",
+     "reason": "Soft fingerpicking and breathy vocals, like a slow afternoon. Very close to “Glue Song”.",
+     "fit": 0.88,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "nQAxAN0h3AMGJgHmJOUZExDyCfYHF/kU+NHnEgME/yb5Ee8Q6hMYFgwJ8gfpDw4C",
+     "en": -1.17,
+     "via": [
+      "Glue Song - beabadoobee"
+     ]
+    },
+    {
+     "vid": "oodQMZLjoBU",
+     "title": "No One Noticed",
+     "artists": [
+      {
+       "name": "The Marías",
+       "id": "UCVV5M4OEFsKnB9HBhwOhHbA"
+      }
+     ],
+     "album": {
+      "name": "Submarine",
+      "id": "MPREb_vgiTwnmAgjI"
+     },
+     "year": 2024,
+     "thumb": "https://yt3.googleusercontent.com/9tX828QMfnpDS9lfHjgJo0EZ_-G6nO_NunzQK0FONo3uGur2UOZeBljYdZkWzZk9UrvLYwu94jYwn7wn=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Silky bass and murmured vocals wrapped in smoky guitar, close to “Show Me How”.",
+     "fit": 0.86,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio",
+      "related"
+     ],
+     "v": "IuNHKNYd8iz9QSP/FxUWzu4A+voU+hYC+d/3BgfxCjv5A/sR7RD7FAUA8vfxDAwN",
+     "en": -0.51,
+     "via": [
+      "Show Me How - Men I Trust",
+      "Sofia - Clairo",
+      "Glue Song - beabadoobee"
+     ]
+    },
+    {
+     "vid": "a38zVX149pg",
+     "title": "To Ease You",
+     "artists": [
+      {
+       "name": "Men I Trust",
+       "id": "UCaPOa_Tg0TThuYSVtUEXb8g"
+      }
+     ],
+     "album": {
+      "name": "Equus Caballus",
+      "id": "MPREb_tSVb5iTMeh2"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/tRoh8ah7Ly8BXEEKKS4w9OKUN89ldIqOtCUvveHl-OzCKg94mWp3ars9fe0OQq1YJb5czEiVs4du87vq=w544-h544-l90-rj",
+     "dur": 193,
+     "type": "ATV",
+     "reason": "A new Men I Trust song, with soft vocals and the same warm, unhurried groove as “Tailwhip”.",
+     "fit": 0.85,
+     "familiar": 3,
+     "sources": [
+      "release"
+     ],
+     "v": "PSzXQzAb7gHzSwXnHgn87+8U9wIYDggR8enhEv7sBSv5/+8N9RT9CQ39+QLoEAAE",
+     "en": -0.32,
+     "mv": "oZrZNbReL8k",
+     "via": [
+      "new:Equus Caballus"
+     ]
+    },
+    {
+     "vid": "eVRbaYq5Aw4",
+     "title": "Sunsetz",
+     "artists": [
+      {
+       "name": "Cigarettes After Sex",
+       "id": "UCIMuwfTAzgZ5Dg84TmYxYkA"
+      }
+     ],
+     "album": {
+      "name": "Cigarettes After Sex",
+      "id": "MPREb_XTvtN2WnDiB"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/LHBhxCNvBYMqTtgBAOf83nUpFKI6DH-jGw0u6SAM3WnQ-OGXD8geTcB3P10nLolxqj8WItfiGL7kX7vv=w544-h544-l90-rj",
+     "dur": 215,
+     "type": "ATV",
+     "reason": "Slow, chorus-washed guitar and whispered vocals, good for riding a train alone at dusk.",
+     "fit": 0.84,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "zRY6Rhj2vxgXLSP5HBIQ7+kJ9fH9BBcT8tr4FRP8CiPsEQMP7hD8DQHx9QbyGhIK",
+     "en": -0.84,
+     "via": [
+      "Show Me How - Men I Trust",
+      "Sofia - Clairo",
+      "Glue Song - beabadoobee"
+     ]
+    },
+    {
+     "vid": "4VX1P_X5ZvA",
+     "title": "Space Song",
+     "artists": [
+      {
+       "name": "Beach House",
+       "id": "UC785fnTclD2P2WQXRAt2BVg"
+      }
+     ],
+     "album": {
+      "name": "Depression Cherry",
+      "id": "MPREb_6Ui257pBxny"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/tfz2ujV-2YUBVvhUXdOnm6x8yuOWl_1gJwg-X_6sk4L7M4SYdIWBC7m33Tu6kTiqDfIcSAXncFoe8e4=w544-h544-l90-rj",
+     "dur": 321,
+     "type": "ATV",
+     "reason": "Hazy organ, lazy slide lines and a gentle sway, with no wall of noise.",
+     "fit": 0.84,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio"
+     ],
+     "v": "6DxEHBTt4PnnGUjWHxII0O8F+g4UAhAn6ub9ABP/Chzu/vb56woDD/zx9wv3GAwJ",
+     "en": 0.46,
+     "via": [
+      "Sofia - Clairo",
+      "Mystery of Love - Sufjan Stevens",
+      "similar:Beach House"
+     ]
+    },
+    {
+     "vid": "9cTn9Txi2JA",
+     "title": "S P E Y S I D E",
+     "artists": [
+      {
+       "name": "Bon Iver",
+       "id": "UCx-cwf1tCXoZr0KtnpaDwyA"
+      }
+     ],
+     "album": {
+      "name": "SABLE, fABLE",
+      "id": "MPREb_gPOeIed2LUU"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/YytjDhOEN6t--WB9-4dEt6TMxmZXGvL664suXK7jAe-F9sccFokXM8d4X4tUFtziL4fFFkCFjg8TfeI=w544-h544-l90-rj",
+     "dur": 210,
+     "type": "ATV",
+     "reason": "Spare acoustic guitar and fragile falsetto, with the stillness of “Holocene”.",
+     "fit": 0.8,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "thpGKO8Z1QsILwTxD90hOPrrAvIYDgMH/OcYBgjmDBz2AvIc7BEODQr7/vf1GBAD",
+     "en": -0.75,
+     "mv": "th4u1yrpuRE",
+     "via": [
+      "new:SABLE, fABLE"
+     ]
+    },
+    {
+     "vid": "bXHtxctBwEM",
+     "title": "Jonny",
+     "artists": [
+      {
+       "name": "Faye Webster",
+       "id": "UCdKJ6iMnCsPcTDB5p510Ztg"
+      }
+     ],
+     "album": {
+      "name": "Atlanta Millionaires Club",
+      "id": "MPREb_uBMjBA1zgOe"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/4JBtJinVNSllKP1HRTrAbUY2iDpCkKOX4JB2S28j8jOTC-AXqHD2B8vhvRarsvxsZAYlnItVnNl24_yoag=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Pedal steel and sleepy, aching vocals. An artist you haven’t saved yet, living in Clairo’s world.",
+     "fit": 0.8,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist"
+     ],
+     "v": "0Bs89CTG1ScKVg3o/f0P7QwH2vT0AwYP9+nqDvfsGSD4AgAM6ggQE/35/vz4Eg0C",
+     "en": -1.03,
+     "via": []
+    },
+    {
+     "vid": "za4N9VsyLPo",
+     "title": "Wind of Tomorrow",
+     "artists": [
+      {
+       "name": "Sunset Rollercoaster",
+       "id": "UCuuF4aW1yEQqlTwu8u5zLYw"
+      }
+     ],
+     "album": {
+      "name": "QUIT QUIETLY",
+      "id": "MPREb_HON0wPZITur"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/gm2Uni93m8wqR3vS0ZgXdUCuvlau8H_QPhkn5wd2QY7N-2pwiOXUkhnfWpM9CSSvGmzg5LNjpNcxTg8=w544-h544-l90-rj",
+     "dur": 211,
+     "type": "ATV",
+     "reason": "A studio track from Sunset Rollercoaster’s new album, soft and warmly grooving.",
+     "fit": 0.7,
+     "familiar": 4,
+     "sources": [
+      "playlist",
+      "release"
+     ],
+     "v": "0wNBMD0Vy0vyHffwGAMM+AAF+AYlAhH19tb9BA/sDioAC/YS6AIDCgX++P/wFAwF",
+     "en": -0.1,
+     "via": [
+      "new:QUIT QUIETLY"
+     ]
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "xKmqwrQFlpA",
+     "title": "Locket",
+     "artists": [
+      {
+       "name": "Crumb",
+       "id": "UCpGhvsN-Gw-q5yaQ4e3w2Vg"
+      }
+     ],
+     "album": {
+      "name": "Locket",
+      "id": "MPREb_f7LfMCd8ODr"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/SOlPSeycf82KTmOZhBF27zqx7CXVemxeVYs59FoZ1PQD15MpmWvBSA-jlIOAtqvdS_S1g8dJNX1adIkZ=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Swaying, psychedelic, bass-led dream pop with dreamy ebb and flow, from the same corner as Men I Trust.",
+     "fit": 0.78,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "OtZRA//bAy8LOwT09hEc5f/57SIQ+Qv9+dfhJvILFCn8BfYI6BUDEAr+9wbxDgj/",
+     "en": 0.42,
+     "via": []
+    },
+    {
+     "vid": "4u7kNELI76A",
+     "title": "Homage",
+     "artists": [
+      {
+       "name": "Mild High Club",
+       "id": "UC1VEJk_RMKBhUHXgIB5LFUg"
+      }
+     ],
+     "album": {
+      "name": "Skiptracing",
+      "id": "MPREb_PScPWC37qFc"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/b7iYtA-AogPV6ESXWBokKBM58ffZu1T24TQJQURkSUCUW-i4vjmYWx7To8vG-tk4UpgT-NMrrQTSrjmd=w544-h544-l90-rj",
+     "dur": 178,
+     "type": "ATV",
+     "reason": "Jazz chords and a lazy psychedelic drift, good for unwinding.",
+     "fit": 0.75,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "6yAwRxTv1ihLI/XPCQ8Y8f/g+R0E/Q307+H6DxTpBRf6/ucV8gj/Ff7y9PvyFhEC",
+     "en": -0.63,
+     "via": [
+      "Show Me How - Men I Trust"
+     ]
+    },
+    {
+     "vid": "Qy9LTRu89FA",
+     "title": "My Love Mine All Mine",
+     "artists": [
+      {
+       "name": "Mitski",
+       "id": "UCqqY2nAz23oGDMNdiDzKdsA"
+      }
+     ],
+     "album": {
+      "name": "The Land Is Inhospitable and So Are We",
+      "id": "MPREb_RmqucOtx3Hh"
+     },
+     "year": 2023,
+     "thumb": "https://yt3.googleusercontent.com/kAeXWZ-AjfKCAEQFoRExorqx12nUL9--gSaWejnA4uJhkw_yfKia3G4_9I3N39rjv7fVOy8-XScR-D9OUQ=w544-h544-l90-rj",
+     "dur": 138,
+     "type": "ATV",
+     "reason": "A gentle, slow slow-dance ballad sung softly, with a mood close to “Bags”.",
+     "fit": 0.72,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio",
+      "related"
+     ],
+     "v": "7QYONADW4BjwZe/NByYnCgYI7/wa+gL7/uLrDxTwAS/mBgcZ+A79DAIC9//4DRUE",
+     "en": -1.55,
+     "via": [
+      "Show Me How - Men I Trust",
+      "Sofia - Clairo",
+      "Bags - Clairo"
+     ]
+    },
+    {
+     "vid": "o0tqEQ331go",
+     "title": "I Know You",
+     "artists": [
+      {
+       "name": "Faye Webster",
+       "id": "UCdKJ6iMnCsPcTDB5p510Ztg"
+      }
+     ],
+     "album": {
+      "name": "Faye Webster",
+      "id": "MPREb_ma6ZTh232XP"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/fGcLprDWPmvkEmLAcir0hqt4cDGqxBOO-AZVSlqoC3a4drSJniwZ2JhnOjEBRxwigr8PVbB44gtPfdgo=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist"
+     ],
+     "v": "xBoxHCwbqBIMIBD6BeUQ6O38/dwaAP8O99/yFBXyHB74DfEX5A4GCRsH9QD4GQsD",
+     "en": -0.41,
+     "via": []
+    },
+    {
+     "vid": "ZUDBd-md0VE",
+     "title": "Sienna",
+     "artists": [
+      {
+       "name": "The Marías",
+       "id": "UCVV5M4OEFsKnB9HBhwOhHbA"
+      }
+     ],
+     "album": {
+      "name": "Submarine",
+      "id": "MPREb_vgiTwnmAgjI"
+     },
+     "year": 2024,
+     "thumb": "https://yt3.googleusercontent.com/9tX828QMfnpDS9lfHjgJo0EZ_-G6nO_NunzQK0FONo3uGur2UOZeBljYdZkWzZk9UrvLYwu94jYwn7wn=w544-h544-l90-rj",
+     "dur": 225,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "+eswWhLrwAdBGf7TDQMd4uP79QH9DREJ8+vyDBP1/iPzAfMT6Az8EQj59wD3DhIG",
+     "en": -0.71,
+     "via": [
+      "Bags - Clairo",
+      "Mystery of Love - Sufjan Stevens"
+     ]
+    },
+    {
+     "vid": "yNUO6MFaUnM",
+     "title": "Be Sweet",
+     "artists": [
+      {
+       "name": "Japanese Breakfast",
+       "id": "UCYgfTCJgqA23D29kxRIRgLQ"
+      }
+     ],
+     "album": {
+      "name": "Jubilee",
+      "id": "MPREb_Qh0f9AG9jCQ"
+     },
+     "year": 2021,
+     "thumb": "https://yt3.googleusercontent.com/QB_OmJFHuEv9tQCHbs-jNIMv3OiOIIsD2ikDDFBRERA4SH_b3VjIKCGEbFeHdEj9j8rJCfUlPedgoGRt=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "UEzYISkJ9QEER+DdDvv7+A76/fcSGgAF7ejwBgXxDibwAfoX7AoGCgT++QHmEg4D",
+     "en": 0.63,
+     "via": []
+    },
+    {
+     "vid": "YMqiIroCbiY",
+     "title": "Archie, Marry Me",
+     "artists": [
+      {
+       "name": "Alvvays",
+       "id": "UCijE8N5dNSqbRkhOcmsxWKw"
+      }
+     ],
+     "album": {
+      "name": "Alvvays",
+      "id": "MPREb_hcXnen4eYhp"
+     },
+     "year": 2014,
+     "thumb": "https://yt3.googleusercontent.com/VqW504ALwdbaB7spOyKAam9qb1v1fqC2cS4ZO_DW4ZgKZkzDpSzL5uOQPKcnhyRJmG2KmPvMY0swM6NM=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "5i0yAA/75+TmDWPq+B342u71DQYb+gkR/OTq/h3kEBfk9vgC7wIIEwkA2wryHB4M",
+     "en": 0.65,
+     "via": []
+    },
+    {
+     "vid": "9GAYTFWrei4",
+     "title": "Lover Boy",
+     "artists": [
+      {
+       "name": "Phum Viphurit",
+       "id": "UCqss9YQhKnV_1ekC347ckDw"
+      }
+     ],
+     "album": {
+      "name": "Lover Boy",
+      "id": "MPREb_GCZUntpBaxf"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/GPsoB6X4a3qpebt3k-DB9q4dx0L6q84SLvXVjoTTUVuvotyn5KS2PCGOffkHR6gW4oaqx1rMnA9LW6I7=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "PTASFTL44gAaY/bV7AcGBSD+BvETAQj68OXoCw7kFSz2A/UT7wMHCQgA8wHzDAP3",
+     "en": 0.39,
+     "via": []
+    },
+    {
+     "vid": "OPUi06yv1jc",
+     "title": "Everytime",
+     "artists": [
+      {
+       "name": "boy pablo",
+       "id": "UC44DqPxp1-rmGwaURr0iVlQ"
+      }
+     ],
+     "album": {
+      "name": "Roy Pablo",
+      "id": "MPREb_htq0ViBU6Z7"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/T_DfxdN22xGpDsVjRP2jg-0cuisEqt_WYpR3x-MedGwVIpK18GzQKJfjSqGtrq3UPCyurXWHXBC5YGUF=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "HDEyNSEa+jIgShwOEyD17//+/wYiDxkJ7tnpGRD4DCb2A/EU9BQGCQUA+ArrFP8F",
+     "en": -0.1,
+     "via": []
+    },
+    {
+     "vid": "7NLdNjJIRsc",
+     "title": "Night Shift",
+     "artists": [
+      {
+       "name": "Lucy Dacus",
+       "id": "UCt-KqR_ceCdjeMljGYiXSww"
+      }
+     ],
+     "album": {
+      "name": "Historian",
+      "id": "MPREb_JdhzHsCOUJs"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/gSM3fBca30sxvvmZ2NlMF2RBNd6Mt0sQfeFHANNpoo6FARgjaya6wlnv2DDEThmaWODUTzWDgeF1ltI=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "via": []
+    },
+    {
+     "vid": "dhf2YjuGRvI",
+     "title": "Loretta",
+     "artists": [
+      {
+       "name": "Ginger Root",
+       "id": "UC6sTMDwF1CYXE132EMgQtPw"
+      }
+     ],
+     "album": {
+      "name": "City Slicker",
+      "id": "MPREb_u9LfP4iVYHC"
+     },
+     "year": 2021,
+     "thumb": "https://yt3.googleusercontent.com/aNRRq3hOHdnnGxrOrHGw3c8_VjXFn_bHwTV_CPysfL8bYN67GmJ0NwscuJ6A9X31y5G_uJdBEQny_Rc4=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "UC4MDsHQ2gQW5vYDJvMe5DD8BAMaEvL7883zCwLyCxTo9/gY5wkOCv0G/v/tFwYB",
+     "en": 1.33,
+     "via": []
+    },
+    {
+     "vid": "ENZZOh12tZ8",
+     "title": "Cry",
+     "artists": [
+      {
+       "name": "Cigarettes After Sex",
+       "id": "UCIMuwfTAzgZ5Dg84TmYxYkA"
+      }
+     ],
+     "album": {
+      "name": "Cry",
+      "id": "MPREb_UDFNgq4WCZV"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/4_xqTyyux-_5_bEfWisH4FG3sLp2BH3QLcAW5dI_HVDzQja7OeEem4U2B9LAFOF9lYIPLvHVMe6ZZ7U=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "related"
+     ],
+     "v": "0y9CIwffzQ//MzzsERMV5+gF8/YLAwsf6+DyCgboEyX1A/8C4xUKEfvw9AT6FxkH",
+     "en": -0.57,
+     "via": [
+      "Mystery of Love - Sufjan Stevens"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 673,
+    "rejected": {
+     "format": 81,
+     "language": 106,
+     "liked": 27,
+     "taken": 12,
+     "version": 44,
+     "same song": 22
+    },
+    "playlists": 6,
+    "heard": 8
+   }
+  },
+  {
+   "key": "late_jazz",
+   "name": "Late-Night Jazz",
+   "english": "Vocal jazz and trio",
+   "blurb": "Intimate vocal jazz, piano trios and jazz-pop love songs, plus Nujabes’s jazz hip-hop.",
+   "when": "Evenings at home, a quiet drink, rainy nights",
+   "discovery": 0.5,
+   "seeds": [
+    {
+     "vid": "0_M2JX-Olv8",
+     "title": "Feather (feat. Cise Starr & Akin from CYNE)",
+     "artists": [
+      {
+       "name": "Nujabes",
+       "id": "UCxQQET-tQsC4cwzLow9ZsuQ"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/qy-mvoWSpN_RHYA-3wV3BCOJYe_Pp_fGida6hqOo966KAleFo87xHNggk4K4Rq5wBNEgtwob94Yf1ehRdw=w544-h544-l90-rj"
+    },
+    {
+     "vid": "BNMKGYiJpvg",
+     "title": "Feeling Good",
+     "artists": [
+      {
+       "name": "Nina Simone",
+       "id": "UCqj1HtTq76Bo6rBXNwrF5Uw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/SZ-6AGG2OA-Y7AdezADgCoV0uTN4ei7-hSKdBkKOgHG9wE5CSuT7aS7WFobmvEgkrq-J0Fqekx4bCtSk=w544-h544-l90-rj"
+    },
+    {
+     "vid": "h8DeZSB2o-c",
+     "title": "From The Start",
+     "artists": [
+      {
+       "name": "Laufey",
+       "id": "UCJtROTPxo3qnEzww8JyDxuA"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/eJ3BhkvN3MmLZt95bBLG-aqGdUvoA1F_AWIyPOpUx69Rv_WsGlQMOHWSHMD48MppwWppHpQWwjIR2LTA=w544-h544-l90-rj"
+    },
+    {
+     "vid": "Ejvz4EdcXM0",
+     "title": "Valentine",
+     "artists": [
+      {
+       "name": "Laufey",
+       "id": "UCJtROTPxo3qnEzww8JyDxuA"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/PGhM19rxiWkwfxLUxhHQ6WWKXBvwr56z4gYCcWROkRgU93tgeRhupFp9NArOchzthtJMIiabLHsxeXDK=w544-h544-l90-rj"
+    },
+    {
+     "vid": "-LpJ81Yy4Qs",
+     "title": "Guess Who I Saw Today",
+     "artists": [
+      {
+       "name": "Samara Joy",
+       "id": "UC4_tnCln3UUKCZVx_1n9SZw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/-k8BsMpdfDZt3yycJlK8uEwaDGY8fZ7trXYUCnwtOqRQfwdcDZbFYsF04OBXNUCvq5EztPruohyAGsc=w544-h544-l90-rj"
+    },
+    {
+     "vid": "GtOcxj3NDBI",
+     "title": "Don't Know Why",
+     "artists": [
+      {
+       "name": "Norah Jones",
+       "id": "UCxRuL2yOu2ydTJNZuYdU0qg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/g9d_wdzIEjmElwqZ9DlEvXt9ALH5q33rlHN4WThlvDCs1w8zcT1bNcXxyNcvA4VCzaCXNKj--FvHhx9c=w544-h544-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "-h9fALqd1p8",
+     "title": "Cry Me a River",
+     "artists": [
+      {
+       "name": "Julie London",
+       "id": "UC8VFWn9s0SJck0NE_iKkuWw"
+      }
+     ],
+     "album": {
+      "name": "Julie Is Her Name",
+      "id": "MPREb_jWlFZp9Ga10"
+     },
+     "year": 1955,
+     "thumb": "https://yt3.googleusercontent.com/LwtLrog1IlwqwiLzSRnbzyYA06oyVACDZzoaH7reyNmnWi--YyPbvl0Rjm8K1uelP-aCrEVEDnQta_Sr=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Julie London’s “Cry Me a River” is a love song sung right at the mic over simple guitar and bass, perfect for late at night.",
+     "fit": 0.9,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "xxQGzxa+3h77RugUB9z16fH39PD0FQD79evnGATk/SLw6fAM4AMPLgIFBQL5GgYC",
+     "en": -0.88,
+     "via": []
+    },
+    {
+     "vid": "l5TgbuNXk_I",
+     "title": "The Look Of Love",
+     "artists": [
+      {
+       "name": "Diana Krall",
+       "id": "UCHOHY0V0VKiEW0Yw7DR4xQw"
+      }
+     ],
+     "album": {
+      "name": "The Look Of Love",
+      "id": "MPREb_ha5l8ZKc5eP"
+     },
+     "year": 2001,
+     "thumb": "https://yt3.googleusercontent.com/5AjdKXSDO4l7yHDo0L5Y-AUX1X4ZA-EqKxKIKMnF25C_VO9PpW13Rtv7DIBJJt5Xd2VQvlm7J9MCFyLD=w544-h544-s-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Diana Krall’s “The Look Of Love” has a husky voice, lush strings and slow bossa, close to Norah Jones.",
+     "fit": 0.86,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist",
+      "related"
+     ],
+     "v": "xvgmxusW/EsRPdz6GysC4AXw++4OBAUE+OnwCxfvDCX59vwL4wb9Fwv6+/3nGhEL",
+     "en": -0.8,
+     "via": [
+      "Don't Know Why - Norah Jones"
+     ]
+    },
+    {
+     "vid": "ZT3J2uTHA-Q",
+     "title": "Baby I'm A Fool",
+     "artists": [
+      {
+       "name": "Melody Gardot",
+       "id": "UCDFCfcSFCmT1pZE5ySOBX8A"
+      }
+     ],
+     "album": {
+      "name": "My One And Only Thrill",
+      "id": "MPREb_9wnLj56kuzY"
+     },
+     "year": 2008,
+     "thumb": "https://yt3.googleusercontent.com/QhqtfP3vNOMpLttSeFS8xS0URaFSv-yjAL_JsN56g3OJqEyuFT883yoyercn2Kl7MgOH4OZ-9eMYMv8=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "In “Baby I’m A Fool”, Melody Gardot whispers over strings and bossa guitar. Great for a rainy night.",
+     "fit": 0.84,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "xxQb8w/q6xX8WNHlJRX98RDlIP8IBQkL687pFhHwCyH65OgL2w0DFwT8+fzwGQ8H",
+     "en": -1.12,
+     "via": []
+    },
+    {
+     "vid": "rDQ6kgoVE50",
+     "title": "Blue In Green (Album Version - (take 3))",
+     "artists": [
+      {
+       "name": "Bill Evans Trio",
+       "id": "UCriB97bZopXsBHVYOQEIIZg"
+      }
+     ],
+     "album": {
+      "name": "Portrait In Jazz",
+      "id": "MPREb_0BvSioqpzK5"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/Q7IhwjWPgGbNQRi6_9rWLdvByMTBU3RakA0oVGVNQMaLaISdWsJlOYEf-Z_bJnbpQ7acD-hkJbXbuvjbPw=w544-h544-l90-rj",
+     "dur": 323,
+     "type": "ATV",
+     "reason": "“Blue in Green” is Bill Evans at his most inward, with brushed drums and suspended chords, like “Peace Piece”.",
+     "fit": 0.8,
+     "familiar": 3,
+     "sources": [
+      "release"
+     ],
+     "v": "0vTo5fueFC4FPAL0Gs8EBvwmAesFFxv+9u/sBA/dERHzC/kg6ggOAwT6AAH9CQUK",
+     "en": -1.42,
+     "mv": "ZDegpUskkcE",
+     "via": [
+      "new:The Shape of Jazz by Bill Evans Trio. The Legends of Jazz"
+     ]
+    },
+    {
+     "vid": "O4UHOlZOAwg",
+     "title": "Friends",
+     "artists": [
+      {
+       "name": "Brad Mehldau Trio",
+       "id": "UCf-QhVNMqeqO2_em7Bz1iFg"
+      }
+     ],
+     "album": {
+      "name": "Seymour Reads the Constitution!",
+      "id": "MPREb_ELfeZotODA5"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/MJyHQWFsD3Bp26RNy814d2ipOGncgYwQOax6iBdfVN6Ot2PCTsZeghRsh_LyRk-YC50Ri6arOHGbzYhT=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "The Brad Mehldau Trio turns “Friends” into a lyrical piano trio piece, continuing the Bill Evans you like.",
+     "fit": 0.76,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "+Oni4efM1zDhAtrg4/ASFxQV7xgS+04j7d7vBPb5/g7eAOYM5P8KAfnuAAn0EgIR",
+     "en": 0.84,
+     "via": []
+    },
+    {
+     "vid": "4qaLWlr4F-E",
+     "title": "With Every Breath I Take",
+     "artists": [
+      {
+       "name": "Cécile McLorin Salvant",
+       "id": "UC4VmaBTjWjCkGvsliyIdGTA"
+      },
+      {
+       "name": "Metropole Orkest",
+       "id": "UC5yAaBtDJsZFscdGYcfWwyw"
+      },
+      {
+       "name": "Jules Buckley",
+       "id": "UCpV1KZhpukPAaudWlRF1hWw"
+      }
+     ],
+     "album": {
+      "name": "With Every Breath I Take",
+      "id": "MPREb_OUOszevwc1R"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/KafLezT3VolD507kaeQhEaH7yvbOY_JRdBcFMZ5CkkfEv6YoZ7llqzdFzNwFmpIMq1qpdfwXSKIF8-9L=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Cécile McLorin Salvant sings “With Every Breath I Take” deeply and dramatically before warm orchestration.",
+     "fit": 0.75,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "1RQr6RnUDzb9PekHDxcE5f/bE+74GwQK/NHsJhzwEhvt8uoM2hIOFhIMAQnjIgYD",
+     "en": -0.66,
+     "via": []
+    },
+    {
+     "vid": "nOPaDpS0DoI",
+     "title": "Three Little Words",
+     "artists": [
+      {
+       "name": "Samara Joy",
+       "id": "UC4_tnCln3UUKCZVx_1n9SZw"
+      }
+     ],
+     "album": {
+      "name": "Three Little Words",
+      "id": "MPREb_W9BGeVyH01y"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/eM2tw48akk70L62PZfDCAOVwcd4yh8rENP958nrQqL3r4dRYotM8dcNjNs2b5NxAx4IfGJwp_8Bl4UeA=w544-h544-l90-rj",
+     "dur": 291,
+     "type": "ATV",
+     "reason": "Samara Joy sings “Three Little Words” light and swinging, with the same rich phrasing as “Guess Who I Saw Today”.",
+     "fit": 0.74,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "7BYHxy7S/iT1FcwiDOkQCO7pAAsJABv9+MoWDf/u6DPW4v/97w4NGh798goDAwQQ",
+     "en": 1.73,
+     "mv": "aT_3_U0wIT8",
+     "via": [
+      "new:Three Little Words"
+     ]
+    },
+    {
+     "vid": "XiGeqkJbD1o",
+     "title": "When I Fall in Love",
+     "artists": [
+      {
+       "name": "Nat King Cole",
+       "id": "UCirPLQsYtHWBmalEbX1LcAA"
+      },
+      {
+       "name": "Blossom Dearie",
+       "id": "UCuhe4n6FkB6uBa0dqEgPlQg"
+      }
+     ],
+     "album": {
+      "name": "Love Songs and Ballads Top Ten Vol. 8",
+      "id": "MPREb_Jsgkeyct4t3"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/s0T6IdfqkWmvsQsaI8IKp3xDjxmPSCpPzTSytEGns5yiqyBaDCZ1kX1HM_7_8ldfnQ-MG_iN9_xVAmGL=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Nat King Cole’s velvety “When I Fall in Love” has the warmth of the vintage ballads Laufey draws from.",
+     "fit": 0.72,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "zA8ZASHQ8isoLej7GAsR5/rIDfvpKA0ZEeHwERXnBR7uAO4Q3RILGw8E9wbkJgkK",
+     "en": -0.86,
+     "via": []
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "tT3PMNKPDec",
+     "title": "Capricorn",
+     "artists": [
+      {
+       "name": "Gretchen Parlato",
+       "id": "UCqBqIOLrQ9iSJSp0TtuSICA"
+      },
+      {
+       "name": "Alan Hampton",
+       "id": "UCEt9WWXhKuH9F_YMWbrhgmw"
+      }
+     ],
+     "album": {
+      "name": "Capricorn",
+      "id": "MPREb_P5avBGVuhJd"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/9XRvqISIsPxZR9Zi7cW-hab8GtxObekhtqKiLwKsmK7pv58qnvH68E83AFNE4xE0TxCGsvaVPEj3-zErVA=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "In “Capricorn”, Gretchen Parlato’s whispered vocal circles a bossa rhythm, intimate and understated.",
+     "fit": 0.71,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "0fQ0/i0gx0D0NeHeKeYU9gX9/+YdBgj6/9n1EwrzByDy/wIX5hQKEAsCBvn1GwkE",
+     "en": -0.62,
+     "via": []
+    },
+    {
+     "vid": "Q8TFOBdXZj0",
+     "title": "Lover Girl",
+     "artists": [
+      {
+       "name": "Laufey",
+       "id": "UCJtROTPxo3qnEzww8JyDxuA"
+      }
+     ],
+     "album": {
+      "name": "A Matter of Time",
+      "id": "MPREb_P7kflyJRUTn"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/uUrSUghsZQRvNd62pZVJVRDYeKZR2H1vh8ubKC7f1q-t2a0J-dtcAAYb2tfL5YHhGe_z3SluVdOB-2Y=w544-h544-l90-rj",
+     "dur": 165,
+     "type": "ATV",
+     "reason": "“Lover Girl” is Laufey’s lilting bossa, lighter than “From The Start” but in the same world.",
+     "fit": 0.68,
+     "familiar": 4,
+     "sources": [
+      "playlist",
+      "release"
+     ],
+     "v": "y/Aeoxwl3ykIDsoD/Rki3xwG/fYRCAL9AN32AA/sAh7v/f4P3RMCEg33APjtDw0K",
+     "en": 1.15,
+     "mv": "obLSGG-oEyw",
+     "via": [
+      "new:Lover Girl"
+     ]
+    },
+    {
+     "vid": "7f_mlKlOLMo",
+     "title": "So Easy (To Fall In Love)",
+     "artists": [
+      {
+       "name": "Olivia Dean",
+       "id": "UC6GBKGYX6b3guHlqHLx6IzQ"
+      }
+     ],
+     "album": {
+      "name": "The Art of Loving",
+      "id": "MPREb_nd1jk6JOu9E"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/dmrLFXnrV4zb8-mfiEMJJrJ5v3DXHrwgPKgISOFb39fsZ39vsLa1lMZTQmo9oxWG7p1V5cK5-51HWXaZug=w544-h544-l90-rj",
+     "dur": 169,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "1Q5O+gv72g49Pcv3DO8V+v0C+PAO9A702c3xCxsG9B3z+fEX4Qj7EfoCB/zrDQP3",
+     "en": -0.16,
+     "via": [
+      "From The Start - Laufey",
+      "Valentine - Laufey",
+      "Don't Know Why - Norah Jones"
+     ]
+    },
+    {
+     "vid": "w7mz91nTF40",
+     "title": "White Christmas",
+     "artists": [
+      {
+       "name": "Bing Crosby",
+       "id": "UC3BuiU3nA2hT9Fq0ekBIcuQ"
+      }
+     ],
+     "album": {
+      "name": "Christmas Anthology 1942-1955",
+      "id": "MPREb_iaY3CrryvnR"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/99xnDCb0thrJ_boA5CTzcv35LWfIcqW3nW14_HndszeoZinnvZlUCRw521G9dun8niLjo0CuKxFBW0c7=w544-h544-l90-rj",
+     "dur": 183,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "release"
+     ],
+     "v": "0hom5yfN+CAKOOIIJw/y2/nKDwL7DOIKCPHzBgnaCCXjAOkW6w0FJRH98QPtFwX1",
+     "en": -1.36,
+     "mv": "v5ryZdpEHqM",
+     "via": [
+      "new:White Christmas"
+     ]
+    },
+    {
+     "vid": "ULHnIDez6Qk",
+     "title": "Autumn In New York",
+     "artists": [
+      {
+       "name": "Diana Krall",
+       "id": "UCHOHY0V0VKiEW0Yw7DR4xQw"
+      }
+     ],
+     "album": {
+      "name": "This Dream Of You",
+      "id": "MPREb_G9dzYqFa2ZX"
+     },
+     "year": 2020,
+     "thumb": "https://yt3.googleusercontent.com/WhWD-So4vs3rysaomBHe7_twclWDp45EGJWukMYFPYAUvIC9PDhAqgZSWTjJ80s0F_3zINaPMl2PojPw=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist"
+     ],
+     "v": "whAQ5wfP1xYEb+/g+/cH8AkJ8usOHP4EBe3pDQzpBiDx/PwF4xQKFgj6AAPuGQsF",
+     "en": -1.46,
+     "via": []
+    },
+    {
+     "vid": "0NfQmoouvTY",
+     "title": "I Know You Know",
+     "artists": [
+      {
+       "name": "Esperanza Spalding",
+       "id": "UCHI5oe34qE5XHR6-Asywspg"
+      }
+     ],
+     "album": {
+      "name": "Esperanza",
+      "id": "MPREb_xNcQUdicz1A"
+     },
+     "year": 2009,
+     "thumb": "https://yt3.googleusercontent.com/5sYjAYu8fMxFk54GxRCrsL60QNXmTcFBjaQEhHwNGFL3WNiVdbByxrJdjxhCuwsXJzTRUJDKZbGeCBE8=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "H90GyxEH/FT4HMbY/Q4w9hcg+vkGAP0A6b8CEBLyDBbsBP8P2wYFCAH5/fbtChED",
+     "en": 1.13,
+     "via": []
+    },
+    {
+     "vid": "3ZIFNKYQj7g",
+     "title": "Flower Dance",
+     "artists": [
+      {
+       "name": "DJ OKAWARI",
+       "id": "UCJqe44UWvLb6tdU1kgGEjzw"
+      }
+     ],
+     "album": {
+      "name": "A Cup of Coffee",
+      "id": "MPREb_CmUW5YeyptY"
+     },
+     "year": 2010,
+     "thumb": "https://yt3.googleusercontent.com/JlI1G7qFdeTZsMdZ7kiwB9FBP0A2KZzQ9DSXKGs-M3d6pY5Zarc_iWQcZ3iy_VEwk3AxCLLKI00EygXAkg=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "AswROBbvHDLt+grd6Bcw7e3l8Bj9CP3xCbjWJPT3ESn2AOkB/xQBAfr16/LpARD3",
+     "en": -0.39,
+     "via": []
+    },
+    {
+     "vid": "cDrU3weV3_Y",
+     "title": "Put Your Records On",
+     "artists": [
+      {
+       "name": "Corinne Bailey Rae",
+       "id": "UC2Rp4lvp4CBx7vtBnMzDN0w"
+      }
+     ],
+     "album": {
+      "name": "Corinne Bailey Rae",
+      "id": "MPREb_xWuzOZKa0l4"
+     },
+     "year": 2006,
+     "thumb": "https://yt3.googleusercontent.com/nMICy_zvWmKOrgZzC-mXvs9TRJHspHn0hekM0Fexzn8oAoMDfml2pDyNDijo9YbMfOqXgoEOB81hPKQ=w544-h544-l90-rj",
+     "dur": 216,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "EDB5ARgD+SAKQNP7BvMHAPL3D+z05AXw6PjsDQv69if6/vr7+gb7D/70+Pb+//v3",
+     "en": 0.54,
+     "via": [
+      "Don't Know Why - Norah Jones"
+     ]
+    },
+    {
+     "vid": "TvtaSiYAjaQ",
+     "title": "Besame Mucho",
+     "artists": [
+      {
+       "name": "Dave Brubeck",
+       "id": "UCMBevFAp40kVlvIcOvzv5Bw"
+      }
+     ],
+     "album": {
+      "name": "On Time",
+      "id": "MPREb_ydvttA9blHE"
+     },
+     "year": 1966,
+     "thumb": "https://yt3.googleusercontent.com/BTu2XgILH2KxhpiFB6qRcgYWakgSoPi2AUXJuYW3htBWC2kUMV1z30UZQZTa36MSvR2KusHcEtH_984=w544-h544-s-l90-rj",
+     "dur": 355,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "playlist",
+      "radio"
+     ],
+     "v": "Ctzr3L7H6CsF7uf3++QbECsd7xUh9ioT8Nb1Ahz7GhHaAuUL7wgFAgH2/AnuFP8U",
+     "en": 0.63,
+     "via": [
+      "My Foolish Heart - Bill Evans",
+      "similar:Dave Brubeck Quartet"
+     ]
+    },
+    {
+     "vid": "7d_rHsDm2tg",
+     "title": "Your Heart Is As Black As Night",
+     "artists": [
+      {
+       "name": "Melody Gardot",
+       "id": "UCDFCfcSFCmT1pZE5ySOBX8A"
+      }
+     ],
+     "album": {
+      "name": "My One And Only Thrill",
+      "id": "MPREb_9wnLj56kuzY"
+     },
+     "year": 2008,
+     "thumb": "https://yt3.googleusercontent.com/QhqtfP3vNOMpLttSeFS8xS0URaFSv-yjAL_JsN56g3OJqEyuFT883yoyercn2Kl7MgOH4OZ-9eMYMv8=w544-h544-l90-rj",
+     "dur": 163,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "0Q4W/Q234jgyStj6/vYNAwX47//qAQ4V89P+AwnqCCfv8OYL8wf7EgD6//3tDhIM",
+     "en": -1.14,
+     "via": [
+      "Don't Know Why - Norah Jones",
+      "Come Away With Me - Norah Jones"
+     ]
+    },
+    {
+     "vid": "IexAQKkm3w8",
+     "title": "dark days",
+     "artists": [
+      {
+       "name": "Moby",
+       "id": "UC35GdXKfexT9GAZv3SJq0uA"
+      },
+      {
+       "name": "Lady Blackbird",
+       "id": "UCrVnpHyDdlnnjTZ5wQfsHvw"
+      }
+     ],
+     "album": {
+      "name": "always centered at night",
+      "id": "MPREb_qdZptqFad6e"
+     },
+     "year": 2024,
+     "thumb": "https://yt3.googleusercontent.com/lwJP4kABw0CTS_o-Py6_zcwM4a63zY0RY3pbR2Ov8fbYiax5b7Z0Ho-Ar_EhjCWx6m0zO16coWzJ-byF=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "JCc33gzkEOMFNBvDDQ8N4hPh+df2IhcK2tgOCiMDESnuDP/58f0JD/z4AgvvDggN",
+     "en": 2.11,
+     "via": []
+    },
+    {
+     "vid": "qX9-o1MnFaA",
+     "title": "Mr. Eclectic",
+     "artists": [
+      {
+       "name": "Laufey",
+       "id": "UCJtROTPxo3qnEzww8JyDxuA"
+      }
+     ],
+     "album": {
+      "name": "A Matter of Time",
+      "id": "MPREb_P7kflyJRUTn"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/uUrSUghsZQRvNd62pZVJVRDYeKZR2H1vh8ubKC7f1q-t2a0J-dtcAAYb2tfL5YHhGe_z3SluVdOB-2Y=w544-h544-l90-rj",
+     "dur": 155,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 4,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "reD74icT0RNKDdjg+Pwf4wz59PoPABUF/9juEQH/BiHy/vYR3wv9Fgn6/gDuGA4J",
+     "en": -0.16,
+     "via": [
+      "From The Start - Laufey",
+      "Valentine - Laufey"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 770,
+    "rejected": {
+     "format": 67,
+     "liked": 24,
+     "version": 120,
+     "same song": 18,
+     "taken": 14,
+     "language": 12
+    },
+    "playlists": 6,
+    "heard": 8
+   }
+  },
+  {
+   "key": "piano_score",
+   "name": "Quiet Piano",
+   "english": "Piano and film score",
+   "blurb": "Solo piano, neoclassical pieces and Japanese film scores, with lots of empty space and a touch of melancholy.",
+   "when": "Reading, reflecting, falling asleep, or any time you need quiet",
+   "discovery": 0.5,
+   "seeds": [
+    {
+     "vid": "IuLTPjjHezw",
+     "title": "Overcome",
+     "artists": [
+      {
+       "name": "Olafur Arnalds",
+       "id": "UCDQlvsMEM5j0k5cqmfHBzVA"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/N-YZNFS9boo-cG4fefi7NevozFvNz7UdqDJQBKKAUo-9z-80e6ipMl5gtQrc4cawn_RKaesuTOG3u6ie=w544-h544-l90-rj"
+    },
+    {
+     "vid": "Az4SnX521pI",
+     "title": "Waltz for Debby (2025 Remastered Version)",
+     "artists": [
+      {
+       "name": "Bill Evans Trio",
+       "id": "UCriB97bZopXsBHVYOQEIIZg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/waup6mBceEylftU2RBYqzSIQ9uHQFo2jQIz9EQD0nt6tSnVw6KGVUm-muyuOUX9ecliy12KVZqlHiZ0=w544-h544-s-l90-rj"
+    },
+    {
+     "vid": "-49G2-0GBSA",
+     "title": "Peace Piece (Remastered 2024)",
+     "artists": [
+      {
+       "name": "Bill Evans Trio",
+       "id": "UCriB97bZopXsBHVYOQEIIZg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/0jsC0dZtucnggzZM4FJCvI7eha_uMVts-TW-NcuJuOQZVym6FbEIsS8umt1qfaPCrGUd1p18Y6X8p76wow=w544-h544-l90-rj"
+    },
+    {
+     "vid": "kXDnu6WVdqE",
+     "title": "My Foolish Heart",
+     "artists": [
+      {
+       "name": "Bill Evans",
+       "id": "UCriB97bZopXsBHVYOQEIIZg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/QbAjcFFAaD3dtDJ1uYKrIAI5vaK8bt6Q69faskftB7l3w5tRhkN46Pb-pNsTj3mOh0YMG_PuLi16Jw4NPw=w544-h544-l90-rj"
+    },
+    {
+     "vid": "IMLoCIzwg4g",
+     "title": "マイ・ソング - My Song",
+     "artists": [
+      {
+       "name": "Keith Jarrett",
+       "id": "UCm3Mj3cmimqk3qMPK_UJHvw"
+      },
+      {
+       "name": "Jan Garbarek",
+       "id": "UCY6OueviObx1AH6lmT1Uq5A"
+      },
+      {
+       "name": "Palle Danielsson",
+       "id": "UCWU0dn8_V-R1L8M9Io-VErw"
+      },
+      {
+       "name": "Jon Christensen",
+       "id": "UCcS2hSPkaHUP-HYjK6Ev3pA"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/-9ydI-HOa7AHbiIFMmoxYGekPkLeMNP4_ZfXoK1MQd-K5LI4lCAdmKbnt5opMd0sYT_cZyDbuecMcrPS=w544-h544-s-l90-rj"
+    },
+    {
+     "vid": "af9B2NH2Wvs",
+     "title": "Merry Christmas Mr. Lawrence",
+     "artists": [
+      {
+       "name": "Ryuichi Sakamoto",
+       "id": "UCfWELfxrSN1ryuNWZtXqR3g"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/bc_783tFiHWbr9iPIsj0J4wGSkeSIIGAIsBfCIy_pNJn1f2VTElgIHvoTqVHbZjV9LCMENTggObJZ32I=w544-h544-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "tUMc_-Bcunk",
+     "title": "Richter: On the Nature of Daylight",
+     "artists": [
+      {
+       "name": "Max Richter",
+       "id": "UCQ9qvYOejrGR1fNOmTIreSQ"
+      },
+      {
+       "name": "Louisa Fuller",
+       "id": "UCfXwwAnGP6oNuY2P1Dr4fdg"
+      },
+      {
+       "name": "Natalia Bonner",
+       "id": "UCzmY_vjDx1BOf9rq2uauxBg"
+      },
+      {
+       "name": "John Metcalfe",
+       "id": "UC5e7Qd1u6qEMAWvt9qRVOtA"
+      }
+     ],
+     "album": {
+      "name": "The Blue Notebooks (15 Years)",
+      "id": "MPREb_lWkER0Ra9IW"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/v1pr4hWDnqr4zpF6dBwjGLyQIij3ihLVCBBkFaqZM4hqUfIjk_pNTkwu1Qz-FX_q3_5-2BViD8xC7ObeQw=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "A slow string lament over sparse piano. As hushed as “Overcome”.",
+     "fit": 0.9,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "5ef7VOP8EifpCvEH+CoG/AnZGM7vA/kv7/v3BRXeATIA7BAI6vUdEwoH/xLxGxAA",
+     "en": -1.51,
+     "via": []
+    },
+    {
+     "vid": "LGVIP4vGbPw",
+     "title": "What Are You Doing The Rest Of Your Life?",
+     "artists": [
+      {
+       "name": "Bill Evans",
+       "id": "UCriB97bZopXsBHVYOQEIIZg"
+      }
+     ],
+     "album": {
+      "name": "From Left To Right (Expanded Edition)",
+      "id": "MPREb_wbcClJtcWOZ"
+     },
+     "year": 1971,
+     "thumb": "https://yt3.googleusercontent.com/78pedWVTdyq4-uWdGIaj9k1nKSnqveeWy9XmlF8lOfT1y429AegkjamMHBarZ9e472vXdXI15q7p_kKUiA=w544-h544-l90-rj",
+     "dur": 245,
+     "type": "ATV",
+     "reason": "Bill Evans plays a gentle, unhurried ballad with the same late-night calm as “Peace Piece”.",
+     "fit": 0.87,
+     "familiar": 3,
+     "sources": [
+      "radio",
+      "related"
+     ],
+     "v": "0+vj9vq8EEESMez0JCH66xP2BPYXA/71+dPaBRL3Byn1DPYW5hUOFAwG/fXmIxMN",
+     "en": -1.8,
+     "via": [
+      "Peace Piece (Remastered 2024) - Bill Evans Trio",
+      "My Foolish Heart - Bill Evans",
+      "マイ・ソング - My Song - Keith Jarrett"
+     ]
+    },
+    {
+     "vid": "eMnxjdGTK4w",
+     "title": "Gymnopédie No. 1",
+     "artists": [
+      {
+       "name": "Erik Satie",
+       "id": "UCUROzjdfvV996Ow-GqUGsUw"
+      }
+     ],
+     "album": {
+      "name": "Gymnopédies",
+      "id": "MPREb_iyLpFuMrUVg"
+     },
+     "year": 2011,
+     "thumb": "https://yt3.googleusercontent.com/YS6JnbJZTdetEvPU1_DFlxcLgZZ6oc3I2owciJY43Q8MAOiATH9Jr7aTSV6HDYO4pjcgUbSEO2i4Bqo=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Satie’s wide, drifting waltz, the old source of Ryuichi Sakamoto’s quiet piano.",
+     "fit": 0.86,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "7dzoMtHRBz+/BhHv4v8wA+4EE+ULFQQE2+/kDfzs+SjtBeUP7Q//+gXu9fzqDf3/",
+     "en": -0.95,
+     "via": []
+    },
+    {
+     "vid": "3FmH7GOjHPI",
+     "title": "190304-08",
+     "artists": [
+      {
+       "name": "Hideyuki Hashimoto",
+       "id": "UC19COebsSJvsvi7vKaijowg"
+      }
+     ],
+     "album": {
+      "name": "Soukou",
+      "id": "MPREb_pDu9B1Fb2sM"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/Dnaf7cyfYPMTWhybLXHA2lWuVyYXWUtr77pl3McefMa9KaZwBmXfD1gnYKNudBLGwZeANisAy5Mg4hA=w544-h544-l90-rj",
+     "dur": 170,
+     "type": "ATV",
+     "reason": "Felt piano recorded up close, intimate and fragile. Good for reading or drifting off slowly.",
+     "fit": 0.82,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio"
+     ],
+     "v": "9L3rQtrtEBfRBQ/13/lD5/ngA/Am+Qvp7+j1+wnoByza9QsY7hEIBQX3BPHyBAb+",
+     "en": -0.81,
+     "via": [
+      "Overcome - Olafur Arnalds",
+      "Peace Piece (Remastered 2024) - Bill Evans Trio",
+      "Aqua - Ryuichi Sakamoto"
+     ]
+    },
+    {
+     "vid": "vXt-k6QEgvA",
+     "title": "Sakamoto: Andata",
+     "artists": [
+      {
+       "name": "Georgijs Osokins",
+       "id": "UC2c4lBuTv4NsZHGnt87xquw"
+      },
+      {
+       "name": "Ryuichi Sakamoto",
+       "id": "UCfWELfxrSN1ryuNWZtXqR3g"
+      }
+     ],
+     "album": {
+      "name": "Sakamoto: Andata",
+      "id": "MPREb_x65Oz4EvtN7"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/TMyd528Q1dWNqbtaI6dX6EAWeEjxwQ-qLpJ3atej-efxldBYkZb8yt5KpO_DNE-lsxXkvizNJcyVMlDd=w544-h544-l90-rj",
+     "dur": 157,
+     "type": "ATV",
+     "reason": "Ryuichi Sakamoto’s “Andata” on solo piano, its hymn-like calm kept simple and slow.",
+     "fit": 0.78,
+     "familiar": 2,
+     "sources": [
+      "release"
+     ],
+     "v": "6dflN+XcETDUIQXx0gk/COv8HfUMGf/94dLqFwXt+C7nAucQ7gwLCgrz//3uDAb6",
+     "en": -0.76,
+     "via": [
+      "new:Sakamoto: Andata"
+     ]
+    },
+    {
+     "vid": "39Qdzx_Ge-g",
+     "title": "Yumeji's Theme (Theme from 'in the Mood for Love')",
+     "artists": [
+      {
+       "name": "Shigeru Umebayashi",
+       "id": "UCW0jvZ2hqlp3E4mu5F3f0Eg"
+      }
+     ],
+     "album": {
+      "name": "Yumeji's Theme (Original Motion Picture Soundtrack)",
+      "id": "MPREb_pUp7iL8BHMi"
+     },
+     "year": 2013,
+     "thumb": "https://yt3.googleusercontent.com/DVV4n9ll4h4-1L2o6nU-TDuCS5e7K7iZ_Kk4--Hg5sH2X1jnJcb9-5KXi7jVVw6pXUwQeMj8qWYVGvQ=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Sad strings in a slow, sighing waltz, with a film-score mood close to Joe Hisaishi.",
+     "fit": 0.78,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "4fIFC8Tm6RQR4O0lHSkA+SjXF+DlFhUm4PPzA/7mDxQZ/MwL+vMiChEA5wfjEg72",
+     "en": -0.05,
+     "via": []
+    },
+    {
+     "vid": "jP9Hj5_eSzU",
+     "title": "Jóhannsson: Good Night, Day",
+     "artists": [
+      {
+       "name": "Jóhann Jóhannsson",
+       "id": "UC7S5bZP45MbwgfwFy9NEmcA"
+      },
+      {
+       "name": "Hildur Guðnadóttir",
+       "id": "UCzY71RJtOlKpMaDP5aljnhw"
+      },
+      {
+       "name": "London Recording Orchestra",
+       "id": null
+      },
+      {
+       "name": "Anthony Weeden",
+       "id": "UCK8ubBoJAxjFMT_n-ADaFGQ"
+      }
+     ],
+     "album": {
+      "name": "Orphée",
+      "id": "MPREb_ugOajC1wKsh"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/8D1IgmQ4DpsP4Xehvw1qE4RXfG8ozdUKWmghFSGc0lYB4_4uH1IMnPNGvklwrdcOMTfSUylPWZdpIkZk=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Jóhann Jóhannsson’s soft piano and muted strings fade like dusk, quiet all the way through.",
+     "fit": 0.76,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "9uX5IeMADTva8yESCjgQ8vXbGevVAfIfDub0DR/X5yQU9AoA2QQgDgkLBBz3GhP+",
+     "en": -0.59,
+     "via": []
+    },
+    {
+     "vid": "znfYwABeSZ0",
+     "title": "Comptine d'un autre été, l'après-midi",
+     "artists": [
+      {
+       "name": "Yann Tiersen",
+       "id": "UCli1g9p40EDKDs1DyqYFxUQ"
+      }
+     ],
+     "album": {
+      "name": "Le Fabuleux destin d'Amélie Poulain (Bande originale du film)",
+      "id": "MPREb_38q9jhEinFI"
+     },
+     "year": 2001,
+     "thumb": "https://yt3.googleusercontent.com/5wU3N46AWpmgjA6K9rK-HIlZvqQWB-i1zp7nYTQf-oPEtEfp_K82YgA9uqb1CjXJtNyB0Xsdx05UYbA=w544-h544-l90-rj",
+     "dur": 141,
+     "type": "ATV",
+     "reason": "A simple, nostalgic piano piece, much like Joe Hisaishi’s “Summer”.",
+     "fit": 0.74,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "/tr7OOYUOy/SCgkR0+85Ee/7A+QIBBsP3Or1DgP2CCLdFOEV7REHAw3s9vL1DfPy",
+     "en": -0.16,
+     "via": [
+      "One Summer's Day (from 'Spirited Away') - Joe Hisaishi"
+     ]
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "mYlCZtW6krQ",
+     "title": "Beving: Ala",
+     "artists": [
+      {
+       "name": "Joep Beving",
+       "id": "UCL7mKfYwHeGeCf9MWAc333g"
+      }
+     ],
+     "album": {
+      "name": "Ala",
+      "id": "MPREb_QpvMHyuvW7S"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/mPiRUVlKZCsYuyJpFs0lHP7whSuPqnFO9FkSsuVp6c4v4TgMjOY7tiTXeLt9zIM4lZ4tfY7zpoMEB62A=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Joep Beving’s muffled felt piano and short, patient motifs. Good for unwinding.",
+     "fit": 0.72,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "4tHoO+/1ExbK/QcG5/xIBvTtC+UGCw8O7tbpCPAF8yPUDOUd7BMH/wHo9OrsD/z0",
+     "en": -0.71,
+     "via": []
+    },
+    {
+     "vid": "HRrQckINCJ0",
+     "title": "The Promise",
+     "artists": [
+      {
+       "name": "Michael Nyman",
+       "id": "UC775PsYtqzEHM-w6BAbjggw"
+      }
+     ],
+     "album": {
+      "name": "The Piano: Music From The Motion Picture",
+      "id": "MPREb_ucZvCiiy5Fl"
+     },
+     "year": 1993,
+     "thumb": "https://yt3.googleusercontent.com/-hp0hypBX79fnD-SvQ4ClRyqzSn0U87tw9XSztpoRLxPQR2N-XDgxY6LucP329fgzYrR2_IsS-LxmEcg=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "A flowing, romantic piano piece from “The Piano”, smooth and never loud.",
+     "fit": 0.7,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "1hXyJQP3KSDJ8eMU3i8XEeXqJNoD//z59tD09wTj/BruHN0d3xIEEf3w7wPwIP75",
+     "en": -0.15,
+     "via": []
+    },
+    {
+     "vid": "nv9X9wLxi94",
+     "title": "Rest (& be thankful) (feat. Niamh Regan)",
+     "artists": [
+      {
+       "name": "Memorial",
+       "id": "UCvKrI1QgPafzfDFxLwJKY6A"
+      }
+     ],
+     "album": {
+      "name": "Rest (& be thankful)",
+      "id": "MPREb_OGIF2nit2zE"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/TiTf4Q1QQSq9sLgPdJdyhTAOL4IlrfKWhi1mTN0MC-W-S-sz4kVGAPyhVzyGRRdkaABdXfCukULTfCSLLQ=w544-h544-l90-rj",
+     "dur": 201,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "release"
+     ],
+     "v": "yfwsQTQeyTQjHPLdGfcRAfL97gIJ9xXw9tgJFBT7ByfyCQIi5wH+AQQC/fj1Fgv6",
+     "en": -0.53,
+     "mv": "uAXCSI66qR0",
+     "via": [
+      "new:Dawn"
+     ]
+    },
+    {
+     "vid": "ux5NBzehxFA",
+     "title": "Teeth",
+     "artists": [
+      {
+       "name": "Memorial",
+       "id": "UCvKrI1QgPafzfDFxLwJKY6A"
+      }
+     ],
+     "album": {
+      "name": "Dawn",
+      "id": "MPREb_49mSoRh8W8L"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/uwrrk1Gelqxr0vNppO2cNbO0ljbhPQ4xnILDYa7e249mfpDg11f6Y82Yj0mVt93Iz46fjRmkBwMf2hYg=w544-h544-l90-rj",
+     "dur": 259,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "release"
+     ],
+     "v": "vw9KOcUHxiH5LAkGH/kFGQUE+v8cEf7++OQECxPqDh76DgAR4wcKBw38/wLxExEH",
+     "en": -1.09,
+     "via": [
+      "new:Dawn"
+     ]
+    },
+    {
+     "vid": "LNYCuj4ur-U",
+     "title": "Bathroom Dance",
+     "artists": [
+      {
+       "name": "Hildur Guðnadóttir",
+       "id": "UCzY71RJtOlKpMaDP5aljnhw"
+      }
+     ],
+     "album": {
+      "name": "Joker (Original Motion Picture Soundtrack)",
+      "id": "MPREb_HoXImUsMKEm"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/6tiQo6Rz59n7vE0t3tGfrbOaDTXmvUgoP3KnjHT__5qRzJR10CCGIYEGSVp9AVPplgTGP9l4tpumGObr=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "7+73NNgI/yrq/h4O/zkb8uPX/fHHEfcUGMrsFSDo8SMG+BUF4QAkDRgAEhD9BREE",
+     "en": -0.63,
+     "via": []
+    },
+    {
+     "vid": "4p3HPLfBpok",
+     "title": "River Flows in You",
+     "artists": [
+      {
+       "name": "Yiruma",
+       "id": "UCcweg-swJlth9a_0pEzvdxw"
+      }
+     ],
+     "album": {
+      "name": "Baby Classics - Calm Music to Help Children Fall Asleep",
+      "id": "MPREb_TqWKfRe7eM2"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/xmZlXUdppARsl7XpGOVfG5lwycbz1DCX1OEAHo6hHlVJoX320N46TAyekWAz4HVdtyFymaLQYcW3y8wk=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "3ebxUPLtHinu8vj03OtIENr6EuoDCRMC3/XwDQz2AiTdDuMi8Q4HCwfx+PjwE/r4",
+     "en": -0.72,
+     "via": []
+    },
+    {
+     "vid": "2MHsDNV9lgY",
+     "title": "Einaudi: Experience",
+     "artists": [
+      {
+       "name": "Ludovico Einaudi",
+       "id": "UCinzb98c2WE_NEkfX9pbrcQ"
+      },
+      {
+       "name": "Daniel Hope",
+       "id": "UCfrB_Vg3Nrs2wddApqX4kfQ"
+      },
+      {
+       "name": "I Virtuosi Italiani",
+       "id": "UCBuYtXRCi7-Y1HSY5JvonTQ"
+      }
+     ],
+     "album": {
+      "name": "In A Time Lapse (Deluxe Edition)",
+      "id": "MPREb_ntn1WLApjFc"
+     },
+     "year": 2013,
+     "thumb": "https://yt3.googleusercontent.com/uNzH7f-fNZlxeU_oa2AjEebuqtCDceY4Q_Kuwt3Rbjtk_RIWC6XZR2xvnR6xwqGrfT3PCSBZLKISN7dLcA=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "49HpKdznKivIHxAR3fIw+Pf6D9wXFv344eje/Rb4ESTwDvkm5gwFABf3APrsEP/5",
+     "en": -1.24,
+     "via": []
+    },
+    {
+     "vid": "X9taBhAT0XI",
+     "title": "The Beast",
+     "artists": [
+      {
+       "name": "Jóhann Jóhannsson",
+       "id": "UC7S5bZP45MbwgfwFy9NEmcA"
+      }
+     ],
+     "album": {
+      "name": "Sicario (Original Motion Picture Soundtrack)",
+      "id": "MPREb_2H3UOfRnqDX"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/16vOEg4gr3dpsak5K4xjpBjQPC7qd59QnnICw6STfRb50P1DsIehmJzGc6j2vUYi_IijyL_CCLyap24=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "HdfyPAkNHxgDFy8R+RvoHfbq4hjrDgcSEt0NJiLLCxEV8g/x0vofAADwEv7z9gL5",
+     "en": -0.08,
+     "via": []
+    },
+    {
+     "vid": "df8WMULy7rI",
+     "title": "Looped",
+     "artists": [
+      {
+       "name": "Kiasmos",
+       "id": "UCXWADwj6t4af0WJkP8LAIZw"
+      }
+     ],
+     "album": {
+      "name": "Kiasmos",
+      "id": "MPREb_YhdtKLW1LUJ"
+     },
+     "year": 2014,
+     "thumb": "https://yt3.googleusercontent.com/r8qZ8ESzz6CyEb7-R112E76T5fDFvdpf0O7Z09V0H9yYNNIWZ9SSQSu9itDMlNn3P9XtBO2IN_OBj4EM=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "DdfeGOfr4vPHGdni2C8V2skF7AcMBRoB4c0RGv7kFB8EEwYP7gMFCAAG/vHqDg3+",
+     "en": 1.14,
+     "via": []
+    },
+    {
+     "vid": "0onZ4Qb4H5w",
+     "title": "Monuments Again",
+     "artists": [
+      {
+       "name": "Nils Frahm",
+       "id": "UCHUlZT-VoVWIID4xcJZ5s6g"
+      }
+     ],
+     "album": {
+      "name": "Monuments Again",
+      "id": "MPREb_BSTQs2GXURe"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/Japx-964yJgyNqc4EzjmRNnYl5zYO0mwLjrQ4X00RzfixwQv2fO_M9G1cyrU8druNpVMQPFZREEDPsF3=w544-h544-l90-rj",
+     "dur": 327,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "ALrRI/fbJSz6PQwC6OMoDhH7C/EkJR0G5e/lBh3nCyfm/P4V9wYA+/wBAO/vEQQB",
+     "en": -1.09,
+     "mv": "FL0ULiXO5I0",
+     "via": [
+      "new:Night",
+      "new:Monuments Again"
+     ]
+    },
+    {
+     "vid": "iOdnpdlYl0I",
+     "title": "Come Rain Or Come Shine",
+     "artists": [
+      {
+       "name": "The Bill Evans Trio",
+       "id": "UCriB97bZopXsBHVYOQEIIZg"
+      }
+     ],
+     "album": {
+      "name": "The Classic Trio 1959-61",
+      "id": "MPREb_sGPQj01B7u1"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/RRt7W2iK6iMhc0pv9tx1G4VHvTwW-2qDyn1NAg_AwdeBPuj6jaaLNJ467nsqGxOnPs2oUOVMMeY8pw6awg=w544-h544-l90-rj",
+     "dur": 202,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 3,
+     "sources": [
+      "release"
+     ],
+     "v": "COXq4NDH3zDw8Orw8+oVGiQi7AsdAEQc8Mz1DAX2Bgjc/+sN5wcI/frx+gruEP0L",
+     "en": 0.92,
+     "mv": "KCxf3xnbV7E",
+     "via": [
+      "new:The Shape of Jazz by Bill Evans Trio. The Legends of Jazz"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 482,
+    "rejected": {
+     "version": 92,
+     "format": 103,
+     "liked": 18,
+     "taken": 36,
+     "language": 50,
+     "same song": 13
+    },
+    "playlists": 1,
+    "heard": 8
+   }
+  },
+  {
+   "key": "mando_canto",
+   "name": "Taipei Songbook",
+   "english": "Mandarin and Cantonese indie",
+   "blurb": "Taiwanese indie folk and band pop plus Cantonese ballads, mostly singer-songwriters, sincere and honest.",
+   "when": "Homesick nights, missing Taipei, singing along softly",
+   "discovery": 0.45,
+   "seeds": [
+    {
+     "vid": "DOgI7qUduP8",
+     "title": "陀飛輪",
+     "artists": [
+      {
+       "name": "Eason Chan",
+       "id": "UC2rCynaFhWz7MeRoqJLvcow"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/PpWVFMBwKK82NRpzBHaRa-sakgAcEE_aKH8UJrcJgbCEg31j9VRRp95sQbEl1fPy9Vaidcay81s60-s=w544-h544-l90-rj"
+    },
+    {
+     "vid": "CPONUbyJ3YM",
+     "title": "You are my magic",
+     "artists": [
+      {
+       "name": "Accusefive",
+       "id": null
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/OGwjukQmEhrlRmc5fQeK9ytRon7Wh956UY4C23ONIbpgZOXkiYbZKnSHTeTY_u7l3AkggtvNqdLKkWts=w544-h544-l90-rj"
+    },
+    {
+     "vid": "2fQ5es-qLaY",
+     "title": "爛泥",
+     "artists": [
+      {
+       "name": "草東沒有派對",
+       "id": "UC-1kIjeEOX6NkWWKX3Y1W8Q"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/FjwFq3jbqx9DacHJSxCrHSUUjZoq9qZaoNgETH3Nj57HQ-1Nrf8FFD6474I67aJqdsZgs4zAOagwER2a=w544-h544-l90-rj"
+    },
+    {
+     "vid": "MAsTXqkfw4s",
+     "title": "海浪",
+     "artists": [
+      {
+       "name": "deca Joins",
+       "id": "UCFGk4hg7Du-TCUV0FRHF-PA"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/FII6XVcBzxvDGhuE_lpxHmbQutoIDirOusVm5J30biw1jePD9o0_71Mrjn56FRnvBg4tEcffi8fsSpQN=w544-h544-l90-rj"
+    },
+    {
+     "vid": "IiGaqPIE6ok",
+     "title": "only you (Insert Song of \"Yong-Jiu Grocery Store\")",
+     "artists": [
+      {
+       "name": "waa wei",
+       "id": "UCYul_G85M2ySouSZlqX_ipg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/h5SDimBxc0o1c55fWjvniFOoHQKoX0eVpSHKwsr-4vra4oJwDLu5MtLm-xeSJalP9ZrmOCFW_rxwUf2x=w544-h544-l90-rj"
+    },
+    {
+     "vid": "KTQGxaSY-AE",
+     "title": "旅行的意義 (Travel is Meaningful)",
+     "artists": [
+      {
+       "name": "陳綺貞 (Cheer Chen)",
+       "id": "UC3Sf91aR21dEBHWwOxzXCRw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/JePa2yRvsWAuZ9wcMQGLIezWo2H6ttpobneOdQpn6q6QRI5Pds-65LDZSP7CitH5TzDWpSA5czr5rgI=w544-h544-s-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "XleOfeKnfF0",
+     "title": "After 17",
+     "artists": [
+      {
+       "name": "陳綺貞 (Cheer Chen)",
+       "id": "UC3Sf91aR21dEBHWwOxzXCRw"
+      }
+     ],
+     "album": {
+      "name": "After 17",
+      "id": "MPREb_mLfibkkMS5T"
+     },
+     "year": 2004,
+     "thumb": "https://yt3.googleusercontent.com/rijoolYo8bCW7rlmZOauHmHEilkGCW1Y3xPExsJ1iK8kb0bLlhB2q54A073PfOzTmCT8s8N8NSx5Xf5K=w450-h450-l90-rj",
+     "dur": 166,
+     "type": "ATV",
+     "reason": "“After 17” is Cheer Chen at her plainest: guitar, a soft voice, and growing up.",
+     "fit": 0.92,
+     "familiar": 3,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "qhFFFu8W0wsDPQDfI8gLCOv5EvkL8/EE7+LyGAb6Dhr2A/UN6RsHCAgB+P/wCwT+",
+     "en": -1.73,
+     "via": [
+      "only you (Insert Song of \"Yong-Jiu Grocery Store\") - waa wei",
+      "旅行的意義 (Travel is Meaningful) - 陳綺貞 (Cheer Chen)"
+     ]
+    },
+    {
+     "vid": "Zs42LRnMIB0",
+     "title": "我不難過",
+     "artists": [
+      {
+       "name": "Sun Yanzi",
+       "id": "UCLFS9T3qlBLQsVlLASHC1ug"
+      }
+     ],
+     "album": {
+      "name": "To Be Continued",
+      "id": "MPREb_j6nBgPGfFhB"
+     },
+     "year": 2003,
+     "thumb": "https://yt3.googleusercontent.com/baVGe7JSXfC5uZUNgrtjT6h4wAz2ycj5Uk08eQ0cXTVZ-nQnwZq7xj-kHoGv1SvtlTK-Qqwi60HhFfIX=w544-h544-l90-rj",
+     "dur": 321,
+     "type": "ATV",
+     "reason": "Stefanie Sun’s small, clear voice over transparent arrangements, lightly sad and easy to hum along with.",
+     "fit": 0.86,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio",
+      "related"
+     ],
+     "v": "wxRCJrcG2DgCCOHjBg/h8RMO/PgQHAfx+truFAr0BiPzBvsR6gAHDQoB9wbvEQwG",
+     "en": -0.89,
+     "via": [
+      "only you (Insert Song of \"Yong-Jiu Grocery Store\") - waa wei",
+      "旅行的意義 (Travel is Meaningful) - 陳綺貞 (Cheer Chen)",
+      "太陽 (Immortal) - 陳綺貞 (Cheer Chen)"
+     ]
+    },
+    {
+     "vid": "JoDvT0PrzlY",
+     "title": "我還年輕 我還年輕",
+     "artists": [
+      {
+       "name": "老王樂隊",
+       "id": "UCdxpW3sUpUGJIwKhHam5bhQ"
+      }
+     ],
+     "album": {
+      "name": "Stolen Childhood",
+      "id": "MPREb_qygumUN6Mei"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/MOVYaCNhaj1mgwFbLw0ExE3tO01SmaF90tJRSslx6oFatMtv-kpLihpqNMdIAROP37ih0SB2rL8HZsXIEQ=w544-h544-l90-rj",
+     "dur": 348,
+     "type": "ATV",
+     "reason": "Rough, crisp Taiwanese indie about lost youth, a close relative of “爛泥” but gentler.",
+     "fit": 0.85,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "5y1M3h7f2PP8HxDaBfz13zTn4h/6+hIK8PMIERDoECn36ugJAxEfFQv09vb0FxEB",
+     "en": 1.12,
+     "via": [
+      "You are my magic - Accusefive",
+      "爛泥 - 草東沒有派對",
+      "海浪 - deca Joins"
+     ]
+    },
+    {
+     "vid": "BQQV2I-ncRg",
+     "title": "愛我別走",
+     "artists": [
+      {
+       "name": "張震嶽",
+       "id": "UCiQZhrWSEiWdoHwPJgAon4A"
+      }
+     ],
+     "album": {
+      "name": "祕密基地",
+      "id": "MPREb_8ZCJuoV2UcC"
+     },
+     "year": 1998,
+     "thumb": "https://yt3.googleusercontent.com/MXpPBnI0dmXenEYrBcSyMS52fzjb5Ovw8FSukMR9ohljG6uWjtaTQt0YdjfNL1v4ElEQKhhbEY7vjERQeA=w544-h544-l90-rj",
+     "dur": 285,
+     "type": "ATV",
+     "reason": "A late-’90s Taipei classic: just one guitar and one plea, good for humming quietly to yourself.",
+     "fit": 0.84,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio"
+     ],
+     "v": "0TJTAgYW+wP2ITe/EQH7+O0aF/4Y7Asa6vcBFQDwIiIA6/MX4wIMFPz1AQL1Ew7+",
+     "en": -0.34,
+     "via": [
+      "only you (Insert Song of \"Yong-Jiu Grocery Store\") - waa wei",
+      "旅行的意義 (Travel is Meaningful) - 陳綺貞 (Cheer Chen)",
+      "太陽 (Immortal) - 陳綺貞 (Cheer Chen)"
+     ]
+    },
+    {
+     "vid": "mRygpNHY7Oc",
+     "title": "安和桥",
+     "artists": [
+      {
+       "name": "Song Dongye",
+       "id": "UCMdFDxEToxd_t62afiTNGng"
+      }
+     ],
+     "album": {
+      "name": "安和桥北",
+      "id": "MPREb_Ktb5zgSmPH8"
+     },
+     "year": 2013,
+     "thumb": "https://yt3.googleusercontent.com/BVUlZw5zKm8ZwFXwFJWvJ2J09UgvwR02nW5lXhg2bIHZkpEGeoZyUBjmiAo4LG4h0vE7qd02Y6OpNZar=w544-h544-l90-rj",
+     "dur": 251,
+     "type": "ATV",
+     "reason": "Minimalist Beijing folk, with fingerstyle guitar and a story about home, made for nights when you miss it.",
+     "fit": 0.8,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "sh9SF80X7BgKIg3RDf8RFf8Y6fAQJv/x+vjzHg3vGB/vA/4U7PkKAwb+//vvDQ0B",
+     "en": -0.76,
+     "via": [
+      "爛泥 - 草東沒有派對",
+      "海浪 - deca Joins"
+     ]
+    },
+    {
+     "vid": "KKrkoAy-2nk",
+     "title": "在這裡停一下",
+     "artists": [
+      {
+       "name": "deca joins",
+       "id": "UCFGk4hg7Du-TCUV0FRHF-PA"
+      }
+     ],
+     "album": {
+      "name": "在這裡停一下",
+      "id": "MPREb_pULlz8gFWvO"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/U7KjoBgAMUT_oHZZUMdqPUTl5QS9bBYgA4WUtrnrN1c3v-j0knXca6x9pGaIaZjkvbRIGJfduBPjwcU=w544-h544-l90-rj",
+     "dur": 290,
+     "type": "ATV",
+     "reason": "A new song from deca joins that keeps the hazy, unhurried mood of “海浪”.",
+     "fit": 0.78,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "FQENLBcSyEK1BwkM9RoJ5Qg9Cvf6E/IBCeDwCw7lDR/lBQwK4B3/GAj89fH3BxUL",
+     "en": 0.17,
+     "via": [
+      "new:在這裡停一下"
+     ]
+    },
+    {
+     "vid": "sj8LmHVqoRU",
+     "title": "普通的日子（電影「深度安靜」宣傳曲）",
+     "artists": [
+      {
+       "name": "魏如萱",
+       "id": "UCYul_G85M2ySouSZlqX_ipg"
+      }
+     ],
+     "album": {
+      "name": "普通的日子（電影「深度安靜」宣傳曲）",
+      "id": "MPREb_OpFxLd9CPDz"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/w8obchfGunHd1CT6NAyOU0Ewdyj7C5FSCEVfHzU2dfNdGHi21nviZIE2GghjnzUYR9B5jHhrNT5P13vCSg=w544-h544-l90-rj",
+     "dur": 240,
+     "type": "ATV",
+     "reason": "waa wei’s rough, husky voice sings about ordinary days, in a song written for a film.",
+     "fit": 0.76,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "wuwzUMnZBCAVGubrAR0c4AblCP4PBfYE8tf6EgH0ECH19f4L6RYLDwT+9/7pDg0B",
+     "en": -1.85,
+     "mv": "MTC9XuO3wrI",
+     "via": [
+      "new:普通的日子（電影「深度安靜」宣傳曲）"
+     ]
+    },
+    {
+     "vid": "PtOY_rgfNoM",
+     "title": "太陽與地球",
+     "artists": [
+      {
+       "name": "盧廣仲 (Crowd Lu)",
+       "id": "UCTPByZ54kHfs6pwoGNAcCzQ"
+      }
+     ],
+     "album": {
+      "name": "HeartBreakFast 傷心早餐店",
+      "id": "MPREb_fXJAA2WLbUZ"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/SDHwqZp6fgaUL0DkWXI2BQHwEpO2y68b1JDjG8lrm9VJC4_c2t_OgW-NTLC766gYvub0WEmTJUoeS1I1=w544-h544-l90-rj",
+     "dur": 262,
+     "type": "ATV",
+     "reason": "Warm acoustic songwriting from 盧廣仲’s “傷心早餐店”, light and a little wistful.",
+     "fit": 0.74,
+     "familiar": 1,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "zh1PN9HZGDEMHNvy/vEWAQUe9uoYEgIN99fxCwLmDR3sEPcR4xAICQIA9gT1Dgn9",
+     "en": -1.13,
+     "via": [
+      "唯一 (三立/台視戲劇【戀愛是科學】插曲) - 告五人",
+      "魚仔 (He-R) - 電視劇<花甲男孩轉大人>主題曲 - 盧廣仲 (Crowd Lu)"
+     ],
+     "near": "陀飛輪"
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "A_bsrwv2Mg8",
+     "title": "在這裡等你",
+     "artists": [
+      {
+       "name": "告五人",
+       "id": "UC2lbjBep5vvd-Spo0oGn97g"
+      }
+     ],
+     "album": {
+      "name": "在這裡等你",
+      "id": "MPREb_gphtMVzT84G"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/bhQeJTF5y96me0NSqm3Umpp2Tdw1fa8UwVooIKYc17xCv9ZXhvExiqwBuN0hMp9aRwk2ICtNAOCUb_MVHg=w544-h544-l90-rj",
+     "dur": 287,
+     "type": "ATV",
+     "reason": "A new single from 告五人. If you’ve been looping “唯一”, try this one next.",
+     "fit": 0.7,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "qy9GGRkSBgLnHg3EEwPr1gsAAArtCggDAOLxEAkKCB/fAQgE5PoLCgoEBPLyFQMH",
+     "en": -0.49,
+     "mv": "ssiaDceVFwY",
+     "via": [
+      "new:在這裡等你"
+     ]
+    },
+    {
+     "vid": "1oZrvwVR-fU",
+     "title": "兜圈",
+     "artists": [
+      {
+       "name": "林宥嘉",
+       "id": "UC8VIeph9z_a5jHiHxqFjLPg"
+      }
+     ],
+     "album": {
+      "name": "必娶女人電視原聲帶",
+      "id": "MPREb_CJQZTRSFFUF"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/JG-7gIJ20BdjmkIlTFcmoTOYjEV1wZGjEHH0RMNwTeje2aim0ZRF44E4IwaDT63TExlJ1if73f-I0G6f=w544-h544-l90-rj",
+     "dur": 244,
+     "type": "ATV",
+     "reason": "An artist you haven’t saved yet: 林宥嘉 sings a restrained, tender ballad with no over-the-top arrangement.",
+     "fit": 0.68,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "qypQ+wwPFQHsIejDCQHp5wjnH+0CC/cL8+nyEArvDSX4+f8S4wEPEwwB+/3vFAsC",
+     "en": -0.65,
+     "via": [
+      "only you (Insert Song of \"Yong-Jiu Grocery Store\") - waa wei",
+      "魚仔 (He-R) - 電視劇<花甲男孩轉大人>主題曲 - 盧廣仲 (Crowd Lu)"
+     ]
+    },
+    {
+     "vid": "ZRx-AGtRdII",
+     "title": "只要為我好",
+     "artists": [
+      {
+       "name": "Miriam Yeung",
+       "id": "UCSCtPmO9UFq-DF01nsNoF6g"
+      }
+     ],
+     "album": {
+      "name": "THINK BIG",
+      "id": "MPREb_uhqM5huHxLc"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/wwlPdybqADJnva7UcdCm_I60eGpN03eoJiaZapJhgbPKj2cwurVM9mf8OT0IHZbSepiz9ioUG8kXswroMw=w544-h544-l90-rj",
+     "dur": 252,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "release"
+     ],
+     "v": "xBEnMS4MGVDeB+rM7vMS5wUJ9f79GQX0A+rgEfv4ECrqAvgH4goPFQz/9QLyFQwK",
+     "en": -0.65,
+     "via": [
+      "new:大激想 - THINK BIG"
+     ]
+    },
+    {
+     "vid": "pu1qKZqf4Sw",
+     "title": "請你",
+     "artists": [
+      {
+       "name": "Edmond Leung",
+       "id": "UCiUV8DRLYtN_gvKIhQvg_Kg"
+      }
+     ],
+     "album": {
+      "name": "THINK BIG",
+      "id": "MPREb_uhqM5huHxLc"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/wwlPdybqADJnva7UcdCm_I60eGpN03eoJiaZapJhgbPKj2cwurVM9mf8OT0IHZbSepiz9ioUG8kXswroMw=w544-h544-l90-rj",
+     "dur": 224,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "release"
+     ],
+     "v": "+zoyAjn5/j8mJQbKGRUh6dny8O36IwT/+t7y+wjvCizgBfgJ5hIDBgH/+P32CggA",
+     "en": 0.35,
+     "via": [
+      "new:大激想 - THINK BIG"
+     ]
+    },
+    {
+     "vid": "KVVsS1j0kpg",
+     "title": "多遠都要在一起",
+     "artists": [
+      {
+       "name": "G.E.M. 鄧紫棋",
+       "id": "UCBRh2Z_U1Lw9-YJ-XGZ8M2Q"
+      }
+     ],
+     "album": {
+      "name": "新的心跳",
+      "id": "MPREb_WwnkzT2c69X"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/TwHQX4FNqf4gf188-6KeS5_ePh7sePubVpZF0cng12noICuNcu3VYqg8uSyQ0iuOk0tQZngGsy2zOAOQ=w544-h544-l90-rj",
+     "dur": 217,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "xjBKQOj4HgobENAEDwQU7fQO/ecEDBEJAcgEAxPgDyXvCQYK4xUGEAYD9P/4Egv+",
+     "en": -0.36,
+     "via": [
+      "only you (Insert Song of \"Yong-Jiu Grocery Store\") - waa wei",
+      "旅行的意義 (Travel is Meaningful) - 陳綺貞 (Cheer Chen)",
+      "唯一 (三立/台視戲劇【戀愛是科學】插曲) - 告五人"
+     ]
+    },
+    {
+     "vid": "GkchX5GLLyM",
+     "title": "說謊",
+     "artists": [
+      {
+       "name": "林宥嘉",
+       "id": "UC8VIeph9z_a5jHiHxqFjLPg"
+      }
+     ],
+     "album": {
+      "name": "感官/世界",
+      "id": "MPREb_dsvnP83bc1N"
+     },
+     "year": 2009,
+     "thumb": "https://yt3.googleusercontent.com/QffBhu-BhRCN1gFEieXA-onHSS8-MBBm-5HpKMaOZGCFdASzfmeme1a2nzjv5iAY9-4SeNUip3YVZFU=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "ujM7BgrjIw7nGx6x9wcH4vcJ8gsx+wv7/ev2BgnqFiDx/eoL6gkOEP3/+AbvDgv6",
+     "en": -0.46,
+     "via": []
+    },
+    {
+     "vid": "Z-UbDR0nopI",
+     "title": "愛你",
+     "artists": [
+      {
+       "name": "Kimberley Chen",
+       "id": "UCBbSPidrzyV6pINY4h0bs7Q"
+      }
+     ],
+     "album": {
+      "name": "Kimberley Debut Album",
+      "id": "MPREb_soBVbmYQxh8"
+     },
+     "year": 2012,
+     "thumb": "https://yt3.googleusercontent.com/FIglJYXgUson2qHTGsbH7eaDTF9_Wrxm6HdXYnBya94b6ahyvR4j-RESeFerdMcWIUGfLQPewBSCdxdu=w544-h544-l90-rj",
+     "dur": 208,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "uiBjLAcS4AkNMezvIN0A5d3/Bfj67Qrz6+/uCxcJDRf5AP0F4wz8BQIA/vzvCPwE",
+     "en": -0.93,
+     "via": [
+      "only you (Insert Song of \"Yong-Jiu Grocery Store\") - waa wei",
+      "旅行的意義 (Travel is Meaningful) - 陳綺貞 (Cheer Chen)",
+      "太陽 (Immortal) - 陳綺貞 (Cheer Chen)"
+     ]
+    },
+    {
+     "vid": "H57bXnWR3nM",
+     "title": "路過人間",
+     "artists": [
+      {
+       "name": "郁可唯",
+       "id": "UCnXm2v7mhygE66HX9x3ituA"
+      }
+     ],
+     "album": {
+      "name": "路過人間",
+      "id": "MPREb_BXZwKXx7v0d"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/zqBjx-HFwxWNzaJUobovZUreasS5YK9_AaaWNyC4xkIn770n9NU8P2mi50exEQ5ZV6CdqD2u-19aTDpC=w544-h544-l90-rj",
+     "dur": 248,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "qS1UEPoMEv7nEALFC+3k2BMHAPsMAfz0Adr+DQ8BFCLr+/4Q4P0DDAX+//zzEgsJ",
+     "en": -0.57,
+     "via": [
+      "only you (Insert Song of \"Yong-Jiu Grocery Store\") - waa wei",
+      "旅行的意義 (Travel is Meaningful) - 陳綺貞 (Cheer Chen)",
+      "太陽 (Immortal) - 陳綺貞 (Cheer Chen)"
+     ]
+    },
+    {
+     "vid": "mghMddhSOdY",
+     "title": "像晴天像雨天（电视剧《难哄》心动曲）",
+     "artists": [
+      {
+       "name": "汪苏泷",
+       "id": "UCa8_wcHvvjeywQrEXGPqvSg"
+      }
+     ],
+     "album": {
+      "name": "像晴天像雨天（电视剧《难哄》心动曲）",
+      "id": "MPREb_1hDLzHXn5Bp"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/2Wnpyy4A1TErdFEbk0XXXdg2cnJyLp9t95RT9PSXAwHthJD6F-G10I77TnoWAS61pwOdnMgPXREh6PRF_g=w544-h544-l90-rj",
+     "dur": 237,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "6R1mH9n35wcNHcf3Evrz7PYe7OMTIBb38s/s/RHwCBfqAfgN6A/8Cg4B+P70DAv8",
+     "en": 0.1,
+     "via": [
+      "You are my magic - Accusefive",
+      "魚仔 (He-R) - 電視劇<花甲男孩轉大人>主題曲 - 盧廣仲 (Crowd Lu)"
+     ]
+    },
+    {
+     "vid": "5djxKY_qj2U",
+     "title": "年少有为",
+     "artists": [
+      {
+       "name": "Ronghao Li",
+       "id": "UCLZ9hbBmb_5mEclHVY5yOBg"
+      }
+     ],
+     "album": {
+      "name": "Ear",
+      "id": "MPREb_nL3WYiOSdwk"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/zHXMxbAf7opvEi6sz9ixX7CVzd36zxC4eN6SfwCkSqdGHCSUHwLdTtIHNch5j7GjhBjkkZfL0134a8c=w544-h544-l90-rj",
+     "dur": 280,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "wxdBQ7r4ASgcF9rqDPH/CxAoBfkaGPb1/trzDgP1AR7zDfYM6BAICwQF/Ab2EQcD",
+     "en": -1.44,
+     "via": [
+      "魚仔 (He-R) - 電視劇<花甲男孩轉大人>主題曲 - 盧廣仲 (Crowd Lu)"
+     ]
+    },
+    {
+     "vid": "XETs8zyxwQ0",
+     "title": "家家酒",
+     "artists": [
+      {
+       "name": "家家 (JiaJia)",
+       "id": "UCfQNuvDQMiZzqy3I-b7g6VA"
+      }
+     ],
+     "album": {
+      "name": "還是想念",
+      "id": "MPREb_PkPmyG4HsAQ"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/WCfeMs9uAt58gI4dNby_UGSEudnyicFbLqeZhYOjNpgkVo4FbmaXaowIm2fmVWxqJ-R4Egr0K3-V9ku4=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "playlist"
+     ],
+     "v": "xUxsEAv1IRoLI+3p+Abs8AoOEvL9+w8PA/D5BAftCCPpAQEN5QYACQMDBf34FAkA",
+     "en": -0.34,
+     "via": [
+      "similar:家家"
+     ]
+    },
+    {
+     "vid": "C3KcTp5voGY",
+     "title": "Run Away",
+     "artists": [
+      {
+       "name": "陶喆",
+       "id": "UCUfR8ZO3dAsLC5yQx1E4E9Q"
+      }
+     ],
+     "album": {
+      "name": "Live Again 陶喆 小人物狂想曲 現場專輯",
+      "id": "MPREb_rNUpnXJoJ8O"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/VAJ9VGCm72vqOnLy75qpzo4eZZMJdFEdcfw4YtoQNQQUPQUkkmEVauIxQ46rAsfwpjyC0dme_Ww-ePvu=w544-h544-l90-rj",
+     "dur": 322,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 4,
+     "sources": [
+      "release"
+     ],
+     "via": [
+      "new:Live Again 陶喆 小人物狂想曲 現場專輯"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 743,
+    "rejected": {
+     "liked": 20,
+     "same song": 8,
+     "format": 30,
+     "version": 38,
+     "taken": 1,
+     "language": 4
+    },
+    "playlists": 4,
+    "heard": 8
+   }
+  },
+  {
+   "key": "seoul_indie",
+   "name": "Seoul Indie",
+   "english": "Korean indie and ballads",
+   "blurb": "Korean indie bands with a retro warmth, plus gentle acoustic pop ballads.",
+   "when": "Breezy weekends and nostalgic summer nights",
+   "discovery": 0.5,
+   "seeds": [
+    {
+     "vid": "cSAXXE7VBYo",
+     "title": "Comes and Goes",
+     "artists": [
+      {
+       "name": "HYUKOH",
+       "id": "UCUUPndfCXVm8-srwV6dzXcg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/IEKcOLhwh9J3ad483zd8Mb1rh3inRJ14cU_4wkds1eJy6r7MTaWBZWJ3vSgjz9_Z90Xx6a3yfHK7FBJsxg=w544-h544-l90-rj"
+    },
+    {
+     "vid": "bVrW1eDMtL8",
+     "title": "Wi Ing Wi Ing",
+     "artists": [
+      {
+       "name": "HYUKOH",
+       "id": "UCUUPndfCXVm8-srwV6dzXcg"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/GF7zSdJi3LX5B2FC8OSdERoW5UPb5CuF_hOjzokCF5dG_ktzyacDfHB5HF08HI7lQdzcWMD_LLZGHEI=w544-h544-l90-rj"
+    },
+    {
+     "vid": "Kx8pJzPodsY",
+     "title": "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만)",
+     "artists": [
+      {
+       "name": "JANNABI(잔나비)",
+       "id": "UC8-EI2rTBYgkZl5kB_b-2Pw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/tgD3rt6NlFBizFnDAjNC61RFkYChEDQzculw7b7pNgAR5bNtR-aPLrrWE1etAIchzkeZP9HtX-Lw8cJ3=w544-h544-l90-rj"
+    },
+    {
+     "vid": "t8P-zdkoeJA",
+     "title": "for lovers who hesitate(주저하는 연인들을 위해)",
+     "artists": [
+      {
+       "name": "JANNABI",
+       "id": "UC8-EI2rTBYgkZl5kB_b-2Pw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/V7QOylWmzZtvehy7le_aRcV0GzhUQESVFW7Haid4ZL6oaLskDnFN5OiFEkvALccZtUF_KskSdmJXhi0=w544-h544-l90-rj"
+    },
+    {
+     "vid": "KczYjTVrK_o",
+     "title": "어떻게 이별까지 사랑하겠어, 널 사랑하는 거지(How can I love the heartbreak, you're the one I love)",
+     "artists": [
+      {
+       "name": "AKMU",
+       "id": "UC-IG_h142pRnsilk8TkoZxA"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/fu0kUkT0NOAnyiSh7-by8IgWS8o8va1yoBCQa-uDbAkBVQSE1b4rgo9bl87pqkuCv-SLvbCFZe1iCUYY=w544-h544-l90-rj"
+    },
+    {
+     "vid": "2C1Jg04INb4",
+     "title": "Palette (feat. G-DRAGON)",
+     "artists": [
+      {
+       "name": "IU",
+       "id": "UCTUR0sVEkD8T5MlSHqgaI_Q"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/COFBRD6GDIkwnlWYON62L4UwGdvKjw_xAsID5YeI66lpSrM6-Az-WzfTyRFgfGnu5OsL9IWRa8DMU8nr=w544-h544-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "HXV5aZaBLDo",
+     "title": "EVERYTHING",
+     "artists": [
+      {
+       "name": "The Black Skirts",
+       "id": "UCR90rtDqmA4FV1bVnD6o0nQ"
+      }
+     ],
+     "album": {
+      "name": "TEAM BABY",
+      "id": "MPREb_JLGOJpNgyjn"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/b_fq_HDOw_sDE7SXoD5l7cDTSSzmuEtnvoG54vDwJ-IIcLsQBu4y4phRhbQTtcAYN3g5yhMH8BYVCHQ=w544-h544-l90-rj",
+     "dur": 293,
+     "type": "ATV",
+     "reason": "A hazy lo-fi indie-rock love song with the soft warmth of a bedroom recording, very close to JANNABI.",
+     "fit": 0.9,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist",
+      "radio"
+     ],
+     "v": "2D5EFwHgzSzxQQDjByML4+Lz8OUN/AwJEf7nBQPpAS7uCAAM8RYCCvn59fz4BwkG",
+     "en": -1.13,
+     "via": [
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ]
+    },
+    {
+     "vid": "lCgcGWJHOFE",
+     "title": "Gondry",
+     "artists": [
+      {
+       "name": "HYUKOH",
+       "id": "UCUUPndfCXVm8-srwV6dzXcg"
+      }
+     ],
+     "album": {
+      "name": "22",
+      "id": "MPREb_kj4sr3sf4IQ"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/IEKcOLhwh9J3ad483zd8Mb1rh3inRJ14cU_4wkds1eJy6r7MTaWBZWJ3vSgjz9_Z90Xx6a3yfHK7FBJsxg=w544-h544-l90-rj",
+     "dur": 309,
+     "type": "ATV",
+     "reason": "HYUKOH’s loose, crisp guitar and lazy vocals make this a natural next song after “Wi Ing Wi Ing”.",
+     "fit": 0.88,
+     "familiar": 3,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "0/UsFzn02DgNIA3I6/4V0xEG8PIj+v0H+9nnEAfcFjDyC/UM7RgCDwsD8vz2EwwF",
+     "en": -0.85,
+     "via": [
+      "Wi Ing Wi Ing - HYUKOH"
+     ]
+    },
+    {
+     "vid": "-RqRdRoEzJo",
+     "title": "She (HIDDEN TRACK NO.V 1월 선정곡)",
+     "artists": [
+      {
+       "name": "JANNABI",
+       "id": "UC8-EI2rTBYgkZl5kB_b-2Pw"
+      }
+     ],
+     "album": {
+      "name": "She (Hidden Track No.V 1월 선정곡)",
+      "id": "MPREb_TgioFgPORBe"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/N05ScoheX4GQydoi_CO2CxyYZPuFdJ7faBtYngLco5lWTskhNwsB1DuykR5QrEVWQuqMuTM_6CmaLg4=w544-h544-l90-rj",
+     "dur": 194,
+     "type": "ATV",
+     "reason": "JANNABI at their most retro, with the intoxicating feel of an old-school band ballad, ideal for a summer night.",
+     "fit": 0.86,
+     "familiar": 2,
+     "sources": [
+      "playlist",
+      "radio",
+      "related"
+     ],
+     "v": "1iEyOUIF6k0PD/rZ/wEV5fYL9AEPBAj9+9nqFQPz/y3qD/UX5BMBD/0D9f31ERAE",
+     "en": -0.47,
+     "via": [
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ],
+     "near": "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만)"
+    },
+    {
+     "vid": "XfzE8ku3TCI",
+     "title": "‎Good Night Good Dream (좋은 밤 좋은 꿈)",
+     "artists": [
+      {
+       "name": "Nerd Connection",
+       "id": "UCCaBM8AtUiqVwJQZHbtua2w"
+      }
+     ],
+     "album": {
+      "name": "‎Good Night Good Dream (좋은 밤 좋은 꿈)",
+      "id": "MPREb_iYdSE4KuOVq"
+     },
+     "year": 2020,
+     "thumb": "https://yt3.googleusercontent.com/hZhVpQE6C8tVkRmQ3UT7OOL2o352IPiqh3DzZ9rPVkvkdwquq6_RNH-hhmYZRlfrxTr9u9SnG2dOU_fZbA=w544-h544-l90-rj",
+     "dur": 266,
+     "type": "ATV",
+     "reason": "A grand, nostalgic band ballad with soaring vocals, from a band you haven’t saved yet.",
+     "fit": 0.82,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist",
+      "radio"
+     ],
+     "v": "1DpWJNPmzTIMJBD9BhIC/wQT7ugYCQwPDPPtDgLjFSn1CvgL8QwGFAP4/PzzDA4A",
+     "en": -1.08,
+     "via": [
+      "Comes and Goes - HYUKOH",
+      "Wi Ing Wi Ing - HYUKOH",
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)"
+     ]
+    },
+    {
+     "vid": "_pcl_JPqMfw",
+     "title": "Your Shampoo Scent in the Flowers",
+     "artists": [
+      {
+       "name": "Jang Beom June",
+       "id": "UCvolP1xNN2maB52Tb1PkXzg"
+      }
+     ],
+     "album": {
+      "name": "Be Melodramatic, Part 3 (OST)",
+      "id": "MPREb_is3ydtV134x"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/fJQ-xGHkUDjbk1JScw1MrHEOflw6QnM7tRepbSiRdLhFyXVgVAjpRncbNi1LQzn4UhrT4AcZHbGiPU4=w544-h544-l90-rj",
+     "dur": 169,
+     "type": "ATV",
+     "reason": "Busker-style acoustic guitar with an easy melody, good for a breezy weekend afternoon.",
+     "fit": 0.8,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "BiRNL/9JEjMlNwYQ9vX0F/0KABIc6hf7+uP9CQ/qGyP6//ch9Q8FCv7y+wf4FAQA",
+     "en": -0.2,
+     "via": [
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ]
+    },
+    {
+     "vid": "jITtvlqyxr0",
+     "title": "NAN CHUN",
+     "artists": [
+      {
+       "name": "SE SO NEON",
+       "id": "UCZ1tXypKXk2vM1h4DtGWvbg"
+      }
+     ],
+     "album": {
+      "name": "NAN CHUN",
+      "id": "MPREb_0ePPDr7uO9s"
+     },
+     "year": 2020,
+     "thumb": "https://yt3.googleusercontent.com/LZEb2xfl3kV_XwPqVSXU-X2grs4NTJambQjmzhc-M38UUvLm5o2LtyzhucxdWjIRY4iNrhjUvkMSbMQ=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "SE SO NEON is guitar-led and full of groove, with retro tones, and comes from the same circle as HYUKOH.",
+     "fit": 0.78,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "related"
+     ],
+     "v": "DANOD9UV6VP+RhT88QoY1AoZ7QcK9wj5APPwGRTxFRzzA/gN9xANGg39AAPwEw4L",
+     "en": -0.47,
+     "via": [
+      "Wi Ing Wi Ing - HYUKOH"
+     ]
+    },
+    {
+     "vid": "BCaIO1yELbQ",
+     "title": "Spring Snow",
+     "artists": [
+      {
+       "name": "10CM",
+       "id": "UC9oomNHPNLrh819sxCgcYTA"
+      }
+     ],
+     "album": {
+      "name": "Lovely Runner, Pt. 8 (Original Soundtrack)",
+      "id": "MPREb_DJJGBxOKWqI"
+     },
+     "year": 2024,
+     "thumb": "https://yt3.googleusercontent.com/0QaqK26wdvatrpNSZc-fM7jcgkow5TMOevItmfYz2ZaHf0Jz9H5ZYv1txKRFKpv6pRSbz-m4L3ocuj9G=w544-h544-l90-rj",
+     "dur": 202,
+     "type": "ATV",
+     "reason": "A gentle acoustic ballad from 10CM, with a soft, wistful voice that pairs well with “Romantic Sunday”.",
+     "fit": 0.76,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "qC9EIxME+SL+Nc0MFA71+vfrFeQMAPkA+OD9EPvyGB/68foQ6AMDEvTyA/LyFP/9",
+     "en": -1.46,
+     "via": [
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "Romantic Sunday - Car, the Garden"
+     ]
+    },
+    {
+     "vid": "W9ijK-vx9P8",
+     "title": "Still",
+     "artists": [
+      {
+       "name": "Car the garden",
+       "id": "UCX63EN7MeI3_ThgKMzV4ZXQ"
+      }
+     ],
+     "album": {
+      "name": "Blue Heart",
+      "id": "MPREb_egcmNeLoTYl"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/mmqyX-z60W3jpUy6r0GUjQlwEw8T3BjymlylJxjCKnFECo6GKD055V0H5qY5Dy3PMdCGlqdHwb-wXaJs=w544-h544-l90-rj",
+     "dur": 239,
+     "type": "ATV",
+     "reason": "New work from Car, the Garden, with the soft, romantic murmur you like.",
+     "fit": 0.7,
+     "familiar": 1,
+     "sources": [
+      "radio",
+      "release"
+     ],
+     "v": "yC9eCRIe3iHzRfwbEPkG/eHuAfwU/gT98Pn5HAXzExwB++4S5QkaFAP9Bvj0GAX2",
+     "en": -0.27,
+     "via": [
+      "Romantic Sunday - Car, the Garden",
+      "new:Blue Heart"
+     ]
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "Mhyi9p7T7OM",
+     "title": "예뻤어 You Were Beautiful",
+     "artists": [
+      {
+       "name": "Day6",
+       "id": "UCFEVXX0YX4eT6tdNkXi40vg"
+      }
+     ],
+     "album": {
+      "name": "Every DAY6 February",
+      "id": "MPREb_bNZdpDgaUNx"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/0nU01lXGnV7H_GPNUknz2fSI4BBPh-tfD1L_1-oAVuDHjBV-PWi_PwB8z4U3r_nUZMCyA_Px-qiD8kI=w544-h544-l90-rj",
+     "dur": 284,
+     "type": "ATV",
+     "reason": "A band-driven heartbreak ballad with real guitar sounds and a bittersweet big chorus.",
+     "fit": 0.74,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "00JHJzUD6TnzEvAi9A/88vAlBukMEwwZ/OnsBQr4DCTxAwMA2AsEDgb9/wPzERUC",
+     "en": 0.31,
+     "via": [
+      "Wi Ing Wi Ing - HYUKOH",
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ]
+    },
+    {
+     "vid": "HPydp0Njlow",
+     "title": "다시 난, 여기 Here I Am Again",
+     "artists": [
+      {
+       "name": "Yerin Baek",
+       "id": "UCa5b_7ImijW-GNEt4hNUzWg"
+      }
+     ],
+     "album": {
+      "name": "Crash Landing on You, Part 4 (Original Sound Track)",
+      "id": "MPREb_AtDWuc4Kjxk"
+     },
+     "year": 2020,
+     "thumb": "https://yt3.googleusercontent.com/HqpWX1fqGjg-P3oV0B9my2sBcWOgLBJFjdNj0OVJl_VRmBfcxA2DNOfU0l_Jo1dBh1SU8ojniPO3mSXlzQ=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "白艺潾’s soft, smoky voice on a restrained ballad, with a mood close to “한숨(Breathe)”.",
+     "fit": 0.72,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "related"
+     ],
+     "v": "wTVeIv3rIgTxGADWBxHtywIJAOoQ/QgR/9/9AhvtESLtAAgD4woCEAj8/AL3EAsC",
+     "en": -0.65,
+     "via": [
+      "한숨(Breathe) - LeeHi",
+      "Romantic Sunday - Car, the Garden"
+     ]
+    },
+    {
+     "vid": "ItAXIBzMxn8",
+     "title": "Till The End of Time",
+     "artists": [
+      {
+       "name": "The Black Skirts",
+       "id": "UCR90rtDqmA4FV1bVnD6o0nQ"
+      }
+     ],
+     "album": {
+      "name": "Another Miss Oh, Pt. 7 (Original Television Soundtrack)",
+      "id": "MPREb_JdkFefcXdBW"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/4RxhsGwf7df1tj2RLFMJG77pmCgoxwcYjmCEWQP5LHpnOGTsZBH8xPACfMWJLUlf0QhAdW3d5wgjfws=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist",
+      "related"
+     ],
+     "v": "siVHCPMa3QjROAjPFukFHPPtCe4hAv0J+/QDDwXpDyP8A+wN6w0O//n48v73FQ39",
+     "en": -0.84,
+     "via": [
+      "Comes and Goes - HYUKOH",
+      "Wi Ing Wi Ing - HYUKOH"
+     ]
+    },
+    {
+     "vid": "PfpERIQXIrk",
+     "title": "A Little Girl",
+     "artists": [
+      {
+       "name": "OHHYUK",
+       "id": "UC8Cr_MPqO05LnesFg4cLdnA"
+      }
+     ],
+     "album": {
+      "name": "Reply 1988 (Original Television Soundtrack), Pt. 3",
+      "id": "MPREb_SDSEFrIZ3Rr"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/W9pCJV-mGjEo2PynaBQOeiaqgZRIWN7oR6lmsgwu6D0NiATaAURv_SvnmFo3iO2bWXy7YG2hA4n-bGL3=w544-h544-l90-rj",
+     "dur": 227,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "+wtLIMvC0TgeMebrEAcO9hIR4uMXAQQL/fLsDQ/tDSrsCgIN+QoJEgv9/QP6DgoA",
+     "en": -1.23,
+     "via": [
+      "Comes and Goes - HYUKOH",
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ]
+    },
+    {
+     "vid": "IMWT6937uUs",
+     "title": "If I have you only (My love X Nerd Connection) (그대만 있다면 (여름날 우리 X 너드커넥션 (Nerd Connection)))",
+     "artists": [
+      {
+       "name": "Nerd Connection",
+       "id": "UCCaBM8AtUiqVwJQZHbtua2w"
+      }
+     ],
+     "album": {
+      "name": "If I have you only (My love X Nerd Connection) (그대만 있다면 (여름날 우리 X 너드커넥션 (Nerd Connection)))",
+      "id": "MPREb_vNoLXP0FcjD"
+     },
+     "year": 2023,
+     "thumb": "https://yt3.googleusercontent.com/ByRU7QoW11SylOEoPhybFwZ4opjcSNoEGe0WcrskC4hhSRBtighRhjbZhd_bzwwTWdkkXWTwc8rOKU8=w544-h544-l90-rj",
+     "dur": 251,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "tDVHSu/rASIgK/X98wsM8+wW8usABwABBeL8CAvuDyfvCv8C4hAICwD7/Pr2DAz9",
+     "en": -1.31,
+     "via": [
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ]
+    },
+    {
+     "vid": "krpfUwaftPs",
+     "title": "썸 탈꺼야",
+     "artists": [
+      {
+       "name": "BOL4",
+       "id": "UCa5qWh5TRLCVFkCO67_gOtw"
+      }
+     ],
+     "album": {
+      "name": "Red Diary, Page 1",
+      "id": "MPREb_TknM2ohFA9w"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/LtE5-LAg1KnlgFgdle7vh3PULWRqmZe10rePmY23qBqj8yMtm4MUEmg4NoomYWwhRrJVozomSKNFgOs=w544-h544-l90-rj",
+     "dur": 182,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "I/swNxxUDQUaNND9D9zX8BAKAgQOBg374tfx/hDsDyT0+/kX7AoCBQD//AfyEwn9",
+     "en": 0.15,
+     "via": [
+      "Palette (feat. G-DRAGON) - IU",
+      "eight(Prod.&Feat. SUGA of BTS) (에잇(Prod.&Feat. SUGA of BTS)) (feat. SUGA ) - IU",
+      "Make Up (feat. Crush) - Sam Kim(샘김)"
+     ]
+    },
+    {
+     "vid": "eFcI7q1h-1g",
+     "title": "Say Yes",
+     "artists": [
+      {
+       "name": "Loco",
+       "id": "UCJVA-stKCH0IS_C1qIOUjTA"
+      },
+      {
+       "name": "Punch",
+       "id": "UCA3rcJNdGiEbdr_jdCTg0EA"
+      }
+     ],
+     "album": {
+      "name": "Moon Lovers: Scarlet Heart Ryeo, Part 2 (Original Sound Track)",
+      "id": "MPREb_QamtjxRPOQl"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/6ULl_SSLe_5eNOr6mZ95XDVatqMawGRufTcpXoNpZyP9pbEgPpXJ9R5AOWD8SmeVPJdqD6Lzye7ENEVI=w544-h544-l90-rj",
+     "dur": 219,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio",
+      "related"
+     ],
+     "v": "KuZ7A+oxBxwEJNnoA/f/BfwXDwMGBAH4/uLnEAv1AB3+APUX+wv3FQb3+/rvFgwF",
+     "en": 0.4,
+     "via": [
+      "Wi Ing Wi Ing - HYUKOH",
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ]
+    },
+    {
+     "vid": "mgFVZfGBEpM",
+     "title": "ALWAYS",
+     "artists": [
+      {
+       "name": "Yoon Mi Rae",
+       "id": "UCv1sKlSRZwVZm2AaJ8rMQcQ"
+      }
+     ],
+     "album": {
+      "name": "Descendants Of The Sun Pt.1 (Original Television Soundtrack)",
+      "id": "MPREb_sNRxsrSJaYH"
+     },
+     "year": 2016,
+     "thumb": "https://yt3.googleusercontent.com/Lg5Fny090xoWG5WSc5bK6mofh-Y93_lk8AjSSmaOu5Wp56PADmZn18ct11SHtIKhuMBfaNUvIR-sdWnHwQ=w544-h544-l90-rj",
+     "dur": 206,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio"
+     ],
+     "v": "xgxIRcD+7zD9F9j3Gfv5DAkD9OYYDQX4BNz8FBbqCyTqCAUR7xcADv4AAfrzChEA",
+     "en": -1.56,
+     "via": [
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI",
+      "어떻게 이별까지 사랑하겠어, 널 사랑하는 거지(How can I love the heartbreak, you're the one I love) - AKMU",
+      "eight(Prod.&Feat. SUGA of BTS) (에잇(Prod.&Feat. SUGA of BTS)) (feat. SUGA ) - IU"
+     ],
+     "near": "어떻게 이별까지 사랑하겠어, 널 사랑하는 거지(How can I love the heartbreak, you're the one I love)"
+    },
+    {
+     "vid": "U31mUH2DnWk",
+     "title": "NO PAIN",
+     "artists": [
+      {
+       "name": "Silica Gel",
+       "id": "UCWqbaWENrp5JLNzAyg_vueQ"
+      }
+     ],
+     "album": {
+      "name": "NO PAIN",
+      "id": "MPREb_dZadK24ebWY"
+     },
+     "year": 2022,
+     "thumb": "https://yt3.googleusercontent.com/-V2vyRArXHs-MopfpULVmDC7amR_plX0qmZUnMeXLLKNejenmiaqTzqAwB78DLHhnjwngmrfbYgaK0l8eA=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "BjdJAvAP9CfhHSI53hUY/ukk+O8SEwwKCO76FRH2KBjv/xEMzwkVFA0C8frpAxIP",
+     "en": 1.23,
+     "via": []
+    },
+    {
+     "vid": "2FRBdRK-nwI",
+     "title": "Bawling",
+     "artists": [
+      {
+       "name": "Primary",
+       "id": "UCkop82wxg40aqLNrEFPf-wg"
+      },
+      {
+       "name": "OHHYUK",
+       "id": "UC8Cr_MPqO05LnesFg4cLdnA"
+      }
+     ],
+     "album": {
+      "name": "Lucky You!",
+      "id": "MPREb_Jl3SaERHlZf"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/-izyFZinHfNFjfD8xuJ8uhWTfoBICOCnsEW2VSYGkkQgqYk94r-OSICaUsU_sIq4r_MoUejdPd953hHZ=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "playlist",
+      "related"
+     ],
+     "v": "K/BQ4DPr+Db7FsjrGxgOAAD/It0NAPQA9dv8BhrvAi/3BQgS3xMIDwoC+wbtEwkD",
+     "en": 1.15,
+     "via": [
+      "Wi Ing Wi Ing - HYUKOH"
+     ]
+    },
+    {
+     "vid": "cn8gCkw6H5A",
+     "title": "Do you want to walk with me? (Romance 101 X Jukjae) (나랑 같이 걸을래 (바른연애 길잡이 X 적재))",
+     "artists": [
+      {
+       "name": "Jukjae",
+       "id": "UCs0hbjTPASbs8Eevsd-1xfg"
+      }
+     ],
+     "album": {
+      "name": "Do you want to walk with me? (Romance 101 X Jukjae) (나랑 같이 걸을래 (바른연애 길잡이 X 적재))",
+      "id": "MPREb_EfLCKhakYA4"
+     },
+     "year": 2020,
+     "thumb": "https://yt3.googleusercontent.com/Z1JW9MXbtBmN3BQoWz1z3URae6YiM_E4rWzRkZl_jnOsnnOCLnu8IfwYUPb2tu6mCNqdNZgmWRXZXAA=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "related"
+     ],
+     "v": "zCxUMs379isuJtfxGvoBBBMTDgIHAQT/8u/3AgjxDibx+fYZ6hQJDAT8BAb/HggF",
+     "en": -1.22,
+     "via": [
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI",
+      "similar:JUKJAE"
+     ]
+    },
+    {
+     "vid": "4FvqdZtH4xo",
+     "title": "A thought on an autumn night (가을밤에 든 생각)",
+     "artists": [
+      {
+       "name": "JANNABI",
+       "id": "UC8-EI2rTBYgkZl5kB_b-2Pw"
+      }
+     ],
+     "album": {
+      "name": "JANNABI's Small Pieces l (잔나비 소곡집 l)",
+      "id": "MPREb_FDBKa3EasEW"
+     },
+     "year": 2020,
+     "thumb": "https://yt3.googleusercontent.com/LJgpIPmKsuBYFCOqcRcXmoRM6N9ATrtyA5DQJBz6zd7l6Lye2mstIaXeJMcGs0nBknTbhtl5-QGlEZoW=w544-h544-l90-rj",
+     "dur": 187,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 2,
+     "sources": [
+      "playlist",
+      "radio",
+      "related"
+     ],
+     "v": "rRQkPwYN4DQ8LPHL++kK+fX49vwD+/X8/+31EA38Ay3xA+8T8wkFEAYAAQPxFw8F",
+     "en": -1.98,
+     "via": [
+      "Comes and Goes - HYUKOH",
+      "Summer(뜨거운 여름밤은 가고 남은 건 볼품없지만) - JANNABI(잔나비)",
+      "for lovers who hesitate(주저하는 연인들을 위해) - JANNABI"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 787,
+    "rejected": {
+     "liked": 66,
+     "version": 36,
+     "language": 2,
+     "same song": 11,
+     "format": 183,
+     "taken": 3
+    },
+    "playlists": 7,
+    "heard": 8
+   }
+  },
+  {
+   "key": "soul_rnb",
+   "name": "Soft Soul",
+   "english": "Neo-soul and R&B",
+   "blurb": "Warm neo-soul and alternative R&B sung in English, Korean and Chinese, with falsetto and Rhodes electric piano.",
+   "when": "Late-night unwinding, cooking dinner, slow and intimate moods",
+   "discovery": 0.45,
+   "seeds": [
+    {
+     "vid": "OMF7ESWdDJk",
+     "title": "Ascension (Don't Ever Wonder)",
+     "artists": [
+      {
+       "name": "Maxwell",
+       "id": "UCJi2SPlLeotVfx_p60TMBRw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/N6EoO1EcO80hoLH1v2h8dL2jX4Bhf7AWsi6ROhuFiTO3AI6EZHrwKub7mZLV9i58P_LgXGgQVbcCZkw=w544-h544-l90-rj"
+    },
+    {
+     "vid": "HZ5xd_3yOcQ",
+     "title": "저 별 Star",
+     "artists": [
+      {
+       "name": "헤이즈 Heize",
+       "id": "UCmTdAlgitpNLCFwxynjmjpw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/Y8vNK9_uYpbh3qkxt51cyLrl6UMgoUS_5XgBnrI6yIaMZNST6RZE0H1xabTx5h2AoON6wYCToeNW_aii=w544-h544-l90-rj"
+    },
+    {
+     "vid": "zNhtz0Lygik",
+     "title": "Best Part (feat. H.E.R.)",
+     "artists": [
+      {
+       "name": "Daniel Caesar",
+       "id": "UCcbtSIy5DlnpVIxW8hIvxBw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/UG-TOebohrsQ4y04qCjYcfqF9AsMuKD2QWg57ZaVasCP6YJOqd_3KDQf4nKhTe3VIlNE9HNYRXszJ3xSlA=w544-h544-l90-rj"
+    },
+    {
+     "vid": "Tp-7Lnt7xH4",
+     "title": "沙灘 - Blue Moon",
+     "artists": [
+      {
+       "name": "David Tao",
+       "id": "UCUfR8ZO3dAsLC5yQx1E4E9Q"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/BLQmNRQAuA_1C29i16CC2BYp2sH6G7qvQntDtxza8Ul1uBMzbJQaNHPMCC7h9kO85WthsNcUMOesqZrv=w544-h544-l90-rj"
+    },
+    {
+     "vid": "3zh9Wb1KuW8",
+     "title": "死ぬのがいいわ - Shinunoga E-Wa",
+     "artists": [
+      {
+       "name": "Fujii Kaze",
+       "id": "UCxjfYUXFwmjUCGHMeBri5_w"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/R4k8Fj3T1Y-LvlSrMIY6ekpKg5OviQqzaNTq4WoL2QHwBjc6C0CHOMl7R8Kbdyj8atWWkpsYi1HPCbnU=w544-h544-l90-rj"
+    },
+    {
+     "vid": "HMqhXxH5-RQ",
+     "title": "まつり - Matsuri",
+     "artists": [
+      {
+       "name": "Fujii Kaze",
+       "id": "UCxjfYUXFwmjUCGHMeBri5_w"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/CWX4YCTA0LaPNQstef6Z84h47u6BhwWy2EwpVJCUDAUegvGYIlOffZxMLFP-xarjDqRlJXtumCRbbwo=w544-h544-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "hp0KiJs0S5g",
+     "title": "When I'm in Your Arms",
+     "artists": [
+      {
+       "name": "Cleo Sol",
+       "id": "UCw5j4m9SCsNNlY3srtac_KQ"
+      }
+     ],
+     "album": {
+      "name": "Rose in the Dark",
+      "id": "MPREb_vFH1pbeS4TG"
+     },
+     "year": 2020,
+     "thumb": "https://yt3.googleusercontent.com/LNsoTs6grCBxhlYrTMBYw0tWLM-k6NPg0qoOCzA5V_b7fpvDmnJy-2hfTBAHr8S2csM9OlkmTQdH7D7I=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Whispered, spiritual British soul over warm keys, right for very late at night. You haven’t saved Cleo Sol yet.",
+     "fit": 0.86,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "JNIr4Bf1zT/7H/TSECQa5ggQ9/f1D+Xz3esQDA0BJC/tBgQP2PoXBRvwB/33ChYB",
+     "en": 1.18,
+     "via": []
+    },
+    {
+     "vid": "B4OiobY8rvk",
+     "title": "流沙",
+     "artists": [
+      {
+       "name": "David Tao",
+       "id": "UCUfR8ZO3dAsLC5yQx1E4E9Q"
+      }
+     ],
+     "album": {
+      "name": "David Tao",
+      "id": "MPREb_1KstX8aQ5jW"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/DYrmeP7QkjLsfj76fgJbcxTDI-UvzE8_gMDh1mp6x2K2IRFyny2NQDWo22immcLDjVKTfB7K_HbJ9Iqc=w544-h544-l90-rj",
+     "dur": 243,
+     "type": "ATV",
+     "reason": "陶喆’s “流沙” has a slow groove and layered harmonies, and shares the mood of “沙灘 - Blue Moon”.",
+     "fit": 0.85,
+     "familiar": 4,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "sgI6QRMa9DIoLtzKCuz9/fH/Dvj4Dgv69O73FxAADBnx/+378f4BCQ76+PjoDgoB",
+     "en": -1.39,
+     "via": [
+      "沙灘 - Blue Moon - David Tao",
+      "春風吹 - Spring Breeze - Khalil Fong"
+     ]
+    },
+    {
+     "vid": "pthz7n9uc-s",
+     "title": "愛愛愛",
+     "artists": [
+      {
+       "name": "Khalil Fong",
+       "id": "UC_PRHIP9cby-5TBzhl4Oytg"
+      }
+     ],
+     "album": {
+      "name": "This Love",
+      "id": "MPREb_XHDA58swYZ3"
+     },
+     "year": 2007,
+     "thumb": "https://yt3.googleusercontent.com/ykkMEfKcJMF5OgUwY6LDLRioQ2LZneODQz5IFat2mOfSOvGNKOPbpFN9SdueQJsLBoD2jH48Aww46rW58Q=w544-h544-s-l90-rj",
+     "dur": 214,
+     "type": "ATV",
+     "reason": "方大同’s “愛愛愛” is light, jazzy Mandarin soul that’s good while cooking, and close to “春風吹 - Spring Breeze”.",
+     "fit": 0.8,
+     "familiar": 4,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "1SpjFef1+CclNNjoIgYIBf/0E90MCAsC9+HxDQjiCyP8+f8U5RAHDwH7+/j4FAgC",
+     "en": -0.99,
+     "via": [
+      "沙灘 - Blue Moon - David Tao"
+     ],
+     "near": "三人遊"
+    },
+    {
+     "vid": "35-MnoI1drY",
+     "title": "Them Changes",
+     "artists": [
+      {
+       "name": "Thundercat",
+       "id": "UCUl7CLMqbyYVb62zJ7nbLfA"
+      }
+     ],
+     "album": {
+      "name": "The Beyond / Where the Giants Roam",
+      "id": "MPREb_FWpZtAwAhKr"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/a3fIl6JXSMO3jO2dq8piQxlt0Vvtm6o0KwCz8LiBi6kILzL_US8IN1i9juTPjHQG8k36psMLuQjdCsnE=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Thundercat’s “Them Changes” has a thick, bouncy bassline carrying a melancholy falsetto, pure late-night funk.",
+     "fit": 0.8,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "RuEBGkj040EZ+/jLAgIR5QMB8/UOHOTx9eMECQThCy7wE/kU5Bf/C/j67/rrCAsK",
+     "en": 0.7,
+     "via": []
+    },
+    {
+     "vid": "18PJVrGvCiM",
+     "title": "Over",
+     "artists": [
+      {
+       "name": "Lucky Daye",
+       "id": "UCzj_b294hukUPPkbwgiMmLQ"
+      }
+     ],
+     "album": {
+      "name": "Candydrip",
+      "id": "MPREb_UTE4SBYhPY6"
+     },
+     "year": 2022,
+     "thumb": "https://yt3.googleusercontent.com/ZaxZZwqkt7whegj_lH6gjjc7lOKyLH4Zm9yVPABzAHNiOiFluAbpiXubCBqJ8v-GkJyLZWX3YhnE6PY=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Lucky Daye’s “Over” keeps a loose, D’Angelo-style groove and effortless singing, a good follow-up after Maxwell.",
+     "fit": 0.77,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "KMBHKhNAB/MgOugAEQ7mJff/CPcWGAD9At3tExL5+xzuA+sQ6QIOBwD1/vzzEwwC",
+     "en": -0.07,
+     "via": []
+    },
+    {
+     "vid": "PWK8EuUSMSI",
+     "title": "Easy",
+     "artists": [
+      {
+       "name": "Mac Ayres",
+       "id": "UCtg1qMdoDfEVAgd8mIe4F_Q"
+      }
+     ],
+     "album": {
+      "name": "Drive Slow",
+      "id": "MPREb_27sK9qhLHo6"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/b4Fk-cTbb6nKZ-KXW2sbiXXtwbUfx9nTzBcYTnpIBeQpiPhK86oR900MK9vlLQfgIiuMUS7OgXbAyGsB=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Mac Ayres’ “Easy” pairs soft falsetto with Rhodes chords, a quiet companion to “Best Part”.",
+     "fit": 0.75,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "OL1T+vLy9S3aL+n6CQcn8/IDFvsZ9QELD/MLBwjoBCj1CwcM4QgTDAv4/fnwIBQI",
+     "en": 0.68,
+     "via": []
+    },
+    {
+     "vid": "AmtDAVVtTsE",
+     "title": "Call On Me",
+     "artists": [
+      {
+       "name": "Daniel Caesar",
+       "id": "UCcbtSIy5DlnpVIxW8hIvxBw"
+      }
+     ],
+     "album": {
+      "name": "Son Of Spergy",
+      "id": "MPREb_q3KK5Vxx5jV"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/geWLWl5Qe5z9oD38UbwlsGD4nHD10cT7aglW08XSWXNhD9NxF1OMTA_xyaBWpQwqxso8GVgbe8P-sgYX=w544-h544-l90-rj",
+     "dur": 170,
+     "type": "ATV",
+     "reason": "Daniel Caesar’s “Call On Me” is a newer song, slow-paced, with a warm gospel feel.",
+     "fit": 0.74,
+     "familiar": 3,
+     "sources": [
+      "release"
+     ],
+     "v": "RQFBD0340ykY/P3u8P3/I/r/+fL4F/r2+eXwAhLeGzP7AvoX6wj3GAz+9/npDBAC",
+     "en": 1.47,
+     "mv": "lG0YUUeZVmw",
+     "via": [
+      "new:Call On Me"
+     ]
+    },
+    {
+     "vid": "9_Po1rlFivA",
+     "title": "Running Away",
+     "artists": [
+      {
+       "name": "Tom Misch",
+       "id": "UCCCWJwLEvpPAs4r_nJiKe2Q"
+      }
+     ],
+     "album": {
+      "name": "Full Circle",
+      "id": "MPREb_VzsPFo1nIDc"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/qH4oZ34sQu49X0BBU1aLXBc4JcmqgXRaAPJ5jCDwhWwsgshwe68jF51e8H82PIEGvSIlZ8wneJau1EMdyA=w544-h544-l90-rj",
+     "dur": 166,
+     "type": "ATV",
+     "reason": "“Running Away” is a new Tom Misch song, built on jazzy guitar and soft drums.",
+     "fit": 0.7,
+     "familiar": 2,
+     "sources": [
+      "release"
+     ],
+     "v": "wQUw5xQV1QbuOw4FGQYk+9rcB+omCv/aDNPq9wb0GBngBw4EABYZERX78v39HRH6",
+     "en": 0.08,
+     "mv": "KvEVAC7pKok",
+     "via": [
+      "new:Full Circle"
+     ]
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "5lrvYZPfhPU",
+     "title": "Heroine",
+     "artists": [
+      {
+       "name": "Zion.T",
+       "id": "UCdS-U2PcmohOBkzYenZfTcQ"
+      }
+     ],
+     "album": {
+      "name": "POSER",
+      "id": "MPREb_rPy5WeFbEHV"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/NIQjdexCHSc0NVWMoZQGJMUUXqzWHDAFxitDI33MV3drAqwlM0ODtBAwNf2nCMrYkHb24cEJ4LlaiwDo=w544-h544-l90-rj",
+     "dur": 239,
+     "type": "ATV",
+     "reason": "Zion.T’s “Heroine” is a new song sung in Korean, with his smooth, restrained soul voice up front.",
+     "fit": 0.68,
+     "familiar": 3,
+     "sources": [
+      "release"
+     ],
+     "v": "PTLy+wEO4P/Z/rXH1voA2N3iBRH85f0F9OT6CArZCSXpBvAT+A8DDgEE9ATrBggE",
+     "en": 1.61,
+     "mv": "oUZx9-VMURw",
+     "via": [
+      "new:POSER"
+     ]
+    },
+    {
+     "vid": "hCMuvYSrMuY",
+     "title": "If Only",
+     "artists": [
+      {
+       "name": "Raveena",
+       "id": "UCjHR_nohTZDURBR9KUqKQcQ"
+      }
+     ],
+     "album": {
+      "name": "If Only",
+      "id": "MPREb_borUVlITgBf"
+     },
+     "year": 2017,
+     "thumb": "https://yt3.googleusercontent.com/H9hxonJWVJ5G-9Fx6n5-lLq1VPqSkkB6JgthP_VOPsWorL56CnauG2P_9Rtbb6w9U_FlCLcESBsGl-B8=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Raveena’s “If Only” is dreamy, soft-focus neo-soul, with her voice floating over gentle keys.",
+     "fit": 0.68,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "G8cqOUHw2y0tEe7HEfUW6vb5FOYYBAoEAPH7Fgnj/invCfsW7/0EDwoB+QTyEQwF",
+     "en": -0.26,
+     "via": []
+    },
+    {
+     "vid": "HfpR4tAmI7E",
+     "title": "Love Me Not",
+     "artists": [
+      {
+       "name": "Ravyn Lenae",
+       "id": "UCN8pGtbprga7vJL5B4dhXrg"
+      }
+     ],
+     "album": {
+      "name": "Bird's Eye",
+      "id": "MPREb_lQ9SYtXVv8K"
+     },
+     "year": 2024,
+     "thumb": "https://yt3.googleusercontent.com/9GvLqz3cbA2XyceqbS6IlraFkW5cipVpiINKUoEKPHH41K448Zm9WbBsHncoNG134LsLJq1E5NHsf3g=w544-h544-l90-rj",
+     "dur": 214,
+     "type": "ATV",
+     "reason": "Ravyn Lenae’s “Love Me Not” has an airy, playful vocal with a little bounce. It connects to Clairo, whom you listen to.",
+     "fit": 0.66,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "Lkc3FSzo3egAPt3j/BsdDgfsAAH//w785t/QBBfz/iD2B+oS+QYEDggC+v7pEQ8D",
+     "en": 1.33,
+     "via": [
+      "Bags - Clairo"
+     ]
+    },
+    {
+     "vid": "SJKoWAd5ySo",
+     "title": "晴天",
+     "artists": [
+      {
+       "name": "周杰倫",
+       "id": "UCL2MDNdwEtV6aYUgNjFQGZA"
+      }
+     ],
+     "album": {
+      "name": "葉惠美",
+      "id": "MPREb_nqKuADavt3c"
+     },
+     "year": 2003,
+     "thumb": "https://yt3.googleusercontent.com/KOB_XqxgZ6gYTX9viVFxsTuIyBZ7FbbhoTRitN8RNpK6IXY3GrdV7ivdMhp3AtMuFPPGZEM1SwqbD6w=w544-h544-s-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "playlist"
+     ],
+     "v": "t0NpHP8ICQYDJxUA/gb5Ae8dF+r9+BIb/fkGFAD1EibxAwME5Ab8B//1Afz0DwwD",
+     "en": -0.29,
+     "via": [
+      "similar:Jay Chou"
+     ]
+    },
+    {
+     "vid": "5chu4S-eEZY",
+     "title": "Do Well",
+     "artists": [
+      {
+       "name": "SIRUP",
+       "id": "UCNOawli2PNwt-9L_mqjCxUA"
+      }
+     ],
+     "album": {
+      "name": "Do Well",
+      "id": "MPREb_M404aHAnDao"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/362PbkTBYCGxBKAwXqQcSlyT-cZSAGCYb_CV1qe8n4TKpKsXnTwPAVVpF9rBpc1pa8gQ2ZlTzWsGxdJq=w544-h544-l90-rj",
+     "dur": 206,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio",
+      "related"
+     ],
+     "v": "QDLpAAnh/eIJP8zO8AYs8wsABQQQGvTt9MX6EwvpDSUBFPEL6gz6F/f9+/zsDRID",
+     "en": 1.54,
+     "via": [
+      "STAY TUNE - Suchmos"
+     ]
+    },
+    {
+     "vid": "ZpIDrkIkqEE",
+     "title": "Eternal Light",
+     "artists": [
+      {
+       "name": "Free Nationals",
+       "id": "UC5Hd1WkaGt-WM4uxe3O3_Qg"
+      },
+      {
+       "name": "Chronixx",
+       "id": "UCYZj7mrKRhTwrFJNL2j5GrQ"
+      }
+     ],
+     "album": {
+      "name": "Free Nationals",
+      "id": "MPREb_ydgn99Hhkax"
+     },
+     "year": 2019,
+     "thumb": "https://yt3.googleusercontent.com/jtwvL7g9CZB5d3XD6TSXTvJtryyWqDEk3ps1E4zcAEB5CR99AN9HgcWD6zLa7_psepa-qKWMKgmLvEA=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "GPxEJgbU3PNQJffECf4jBvP79eP/B/4B6tv8EBDvECby9vsW4g4EFQb7/AHuFAAA",
+     "en": -0.15,
+     "via": []
+    },
+    {
+     "vid": "Bl0Gtp5FMd4",
+     "title": "You'll Be in My Heart",
+     "artists": [
+      {
+       "name": "NIKI",
+       "id": "UCFeCzD2Fqr3jlMcGTt0Jnlg"
+      }
+     ],
+     "album": {
+      "name": "You'll Be In My Heart",
+      "id": "MPREb_jD5Bq0GPwsr"
+     },
+     "year": 2022,
+     "thumb": "https://yt3.googleusercontent.com/cHcDiGjSTHGiKZ7Meq5FpPQXePVong7ABbvc_pye9teYE15ePKcjn0aC3k86Q3n0AP2JEKr1YeywWk6p=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "AB5PKtsn9jXmKgMZ/iEP2+wQ6fnvEin//eMHCyD3CxfqCQgL0wQCFRP89gL0EBgD",
+     "en": 0.71,
+     "via": []
+    },
+    {
+     "vid": "2r8lH0sEYkY",
+     "title": "LOOP",
+     "artists": [
+      {
+       "name": "SIRUP",
+       "id": "UCNOawli2PNwt-9L_mqjCxUA"
+      }
+     ],
+     "album": {
+      "name": "Loop",
+      "id": "MPREb_WMGjHxfBpfE"
+     },
+     "year": 2018,
+     "thumb": "https://yt3.googleusercontent.com/u-DjbJGtTL8l8L1CNTVpVUwxQWiRQfijpeD2fvVYgIo2WjpwYl070flE7Rvj9bojQqU79lwFHcm9aES3pg=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "Gss6IVLx5yMbANnKDQMR7fH9CfkdEPoQ9OfzEAXsBDDn/wcb8QgDEAgD9wjzGQUG",
+     "en": 0.3,
+     "via": []
+    },
+    {
+     "vid": "YIOgsPgMwSM",
+     "title": "몸매 Mommae (feat. Ugly Duck)",
+     "artists": [
+      {
+       "name": "박재범 Jay Park",
+       "id": "UCmpIV45msPJWMOBaPMmufSg"
+      }
+     ],
+     "album": {
+      "name": "몸매 Mommae",
+      "id": "MPREb_KTHgzvXoBNa"
+     },
+     "year": 2015,
+     "thumb": "https://yt3.googleusercontent.com/oMfslbtUiW47dWSXI89-b-qDn3pz2A1i4XkVh4Iu8WvmbKhUkasIkBD66BwDXP40Rl2hbwI--gIDMVOeqQ=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "O/Vs5CMQGu3/+PPv7AETJfL21fkBJOz7Av7kDAfXGB35/AEM8A73D/v2Aur0GQcN",
+     "en": 2.08,
+     "via": []
+    },
+    {
+     "vid": "pRmsP7A-DtY",
+     "title": "something between us (Romance 101 X george) (좋아해.. (바른연애 길잡이 X 죠지))",
+     "artists": [
+      {
+       "name": "george",
+       "id": "UCK9DGUQe7gzpvFayfJ5wGFw"
+      }
+     ],
+     "album": {
+      "name": "something between us (Romance 101 X george) (좋아해.. (바른연애 길잡이 X 죠지))",
+      "id": "MPREb_UeGt3rDkaXZ"
+     },
+     "year": 2021,
+     "thumb": "https://yt3.googleusercontent.com/u2Nk1AVbpL1o9WAoeQEwpgIeKSSnf5gkFsL-bh1zp8JU4NVas_700lf7O1ZknAWTP_JAx6zn_0gbjov2=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "9hRPMb3f7C0YItreJgAN9QoS8NkZCQkKA/DoDAvuBiTjAvsG8wsAFwj69fr4EA0B",
+     "en": -1.4,
+     "via": []
+    },
+    {
+     "vid": "OQjOfjBal3Y",
+     "title": "你不知道的事",
+     "artists": [
+      {
+       "name": "Wang Leehom",
+       "id": "UCSirtpIlKNCvnrTN4i0GFvw"
+      }
+     ],
+     "album": {
+      "name": "18 Martial Arts",
+      "id": "MPREb_f5JnEu7YC8F"
+     },
+     "year": 2010,
+     "thumb": "https://yt3.googleusercontent.com/lNeVfTrx6w_80BK4cOhiTC0DcSbFG4CdlDVRZ7gotNrqMZ5yfKGA-Rn8e7ykY9A1YbQHmIOFi5kgQwLw=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "playlist"
+     ],
+     "v": "zidSGhnuMkXrG9ME7RYK9vT4DN33CwEHCOL1BgveDBbrC/0R6BIIDwcJ+ALyDw/+",
+     "en": -0.56,
+     "via": [
+      "similar:Leehom Wang - Wang Leehom"
+     ]
+    },
+    {
+     "vid": "lkZPRWAHQzU",
+     "title": "生命之樹",
+     "artists": [
+      {
+       "name": "Khalil Fong",
+       "id": "UC_PRHIP9cby-5TBzhl4Oytg"
+      }
+     ],
+     "album": {
+      "name": "Emi The Dreamer Catcher Graphic Novels 1-6 Mini Album",
+      "id": "MPREb_8g0lVGpM1ao"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/uI-PGfQk2_iitfr-ySgCTGnqaq0Q_THVvWCY112VqQoF_1wv6sm_PfD-0oewytnraCP-eW4ta2vDQqU=w544-h544-l90-rj",
+     "dur": 193,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 4,
+     "sources": [
+      "release"
+     ],
+     "v": "AOM6JzP840HaJOHcEwgf1fUY++wfEAEI9Nb4Cw3gDyfuBQ4L6BMIDw3/9v3xBw4G",
+     "en": -0.08,
+     "via": [
+      "new:艾美夢遊圖畫小說 1-6專輯 - Emi The Dreamer Catcher Graphic Novels 1-6 Mini Album"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 784,
+    "rejected": {
+     "version": 63,
+     "liked": 24,
+     "same song": 22,
+     "format": 83,
+     "taken": 60,
+     "language": 54
+    },
+    "playlists": 5,
+    "heard": 8
+   }
+  },
+  {
+   "key": "bossa",
+   "name": "Bossa Nova",
+   "english": "Bossa nova and MPB",
+   "blurb": "Whispered bossa nova and gentle MPB, with nylon-string guitar, soft percussion and jazz piano.",
+   "when": "Slow sunlit mornings, weekend cafés, warm evenings",
+   "discovery": 0.45,
+   "seeds": [
+    {
+     "vid": "yUcIaHh4HEA",
+     "title": "恋人へ - For Lovers",
+     "artists": [
+      {
+       "name": "Lamp",
+       "id": "UCyClX1ucyro0j7Gix-A1-kw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/45oTrGfSiOFe7QDMcdwt84V_HEDBsgCIX0XesEFT7ntAw9jtHBi3zeE7Es9sEb5dG9KEO-8GSpzhkZA=w544-h544-l90-rj"
+    },
+    {
+     "vid": "AJdTBPuZkHU",
+     "title": "Yume Utsutsu",
+     "artists": [
+      {
+       "name": "Lamp",
+       "id": "UCyClX1ucyro0j7Gix-A1-kw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/k22KXvhamEcAyTJEOZy7eavuzJw5ZLsOshteEmR5wEX7UZsl7o9J9ahdld2-jhcEJb17VmEeockUsfo=w544-h544-l90-rj"
+    },
+    {
+     "vid": "Ejvz4EdcXM0",
+     "title": "Valentine",
+     "artists": [
+      {
+       "name": "Laufey",
+       "id": "UCJtROTPxo3qnEzww8JyDxuA"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/PGhM19rxiWkwfxLUxhHQ6WWKXBvwr56z4gYCcWROkRgU93tgeRhupFp9NArOchzthtJMIiabLHsxeXDK=w544-h544-l90-rj"
+    },
+    {
+     "vid": "oG32V_T3a68",
+     "title": "Romantic Sunday",
+     "artists": [
+      {
+       "name": "Car, the Garden",
+       "id": "UCX63EN7MeI3_ThgKMzV4ZXQ"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/xeG9L7-oVlNDlXQUA4pAYiaqZ3zbs5HU71l9MetVODzrt5Nj-NlJcy0o8XHzmiFwjISOf89rsT4O0421=w544-h544-l90-rj"
+    },
+    {
+     "vid": "9HA5p1v7rMw",
+     "title": "Garota De Ipanema (2006 Version)",
+     "artists": [
+      {
+       "name": "Lisa Ono",
+       "id": "UCtIp0bCz1IQLKorWCVCfvVw"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/8TU0okkCR7olimNOE-RGW3oucoK1kt_uJaOqRUQ3_cq7Pbn9HKz3cpzPs5lLwSE49dtBjWh1cnKpHbFB=w544-h544-l90-rj"
+    },
+    {
+     "vid": "b7d6wnaRm2E",
+     "title": "Baby",
+     "artists": [
+      {
+       "name": "Gal Costa",
+       "id": "UCSv4Mv6YMSJXaPav-cSRDxQ"
+      },
+      {
+       "name": "Caetano Veloso",
+       "id": "UCo7VN5w1PpeBOapTqtal75Q"
+      }
+     ],
+     "thumb": "https://yt3.googleusercontent.com/YuKhVukD46FKQtko3RbvuPXn8K_5PRve_4-ExudALNXE2kBMj6Ms5UrRx-Qz5KohQPXCGnc70sXD42-B=w544-h544-l90-rj"
+    }
+   ],
+   "picks": [
+    {
+     "vid": "QNBO7wIU3yI",
+     "title": "Chove Chuva",
+     "artists": [
+      {
+       "name": "Jorge Ben",
+       "id": "UCprFt4Sn4rnLyXUnXFX9ksQ"
+      }
+     ],
+     "album": {
+      "name": "Samba Esquema Novo",
+      "id": "MPREb_49pU0WsCtNI"
+     },
+     "year": 1963,
+     "thumb": "https://yt3.googleusercontent.com/aKPkN-GWPSasiF4RTdupIbtbNnZ9RkBxJ3rRTuPMbNETPsMuXanuD_AIaiFreYH2Xs_F-QqZW-B1VUQkJw=w544-h544-l90-rj",
+     "dur": 185,
+     "type": "ATV",
+     "reason": "Early Jorge Ben, all nylon-string swing and easy samba, right next to the Gal and Caetano you listen to.",
+     "fit": 0.9,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "ofwzrBIT//ocGv3W9QcSAQII5fIXAAEI7+4AKwjpAyfzCPkZ8AMIEwkG+P7xChH6",
+     "en": 0.33,
+     "via": [
+      "Baby - Gal Costa",
+      "Coração Vagabundo - Caetano Veloso",
+      "Águas De Março - Elis Regina"
+     ],
+     "near": "Saudade Fez um Samba"
+    },
+    {
+     "vid": "tlp8iY4g--4",
+     "title": "Chega De Saudade",
+     "artists": [
+      {
+       "name": "Tom Jobim",
+       "id": "UCDg8OKNNZEvWvMAYtXZMPMQ"
+      }
+     ],
+     "album": {
+      "name": "Inédito",
+      "id": "MPREb_Vbto3oOlY9q"
+     },
+     "year": 1987,
+     "thumb": "https://yt3.googleusercontent.com/H64k4cBTrBYTaFCrWCAeyJ4a05rmGa1J-7RIi4jrvhxSlLqF3tzcsfwrjCwFBCzA9XIEV6OKmElkOV4=w544-h544-l90-rj",
+     "dur": 234,
+     "type": "ATV",
+     "reason": "Jobim sings “Chega De Saudade” himself, calm and friendly, a natural pair for “Águas De Março”.",
+     "fit": 0.86,
+     "familiar": 3,
+     "sources": [
+      "playlist",
+      "radio"
+     ],
+     "v": "reX+0jE46i8w9MntABUZ8wD89vEQDwAFB9zsDgTx/SXvCvsM5gkDDQsE+wH0DAoH",
+     "en": 0.31,
+     "via": [
+      "Garota De Ipanema (2006 Version) - Lisa Ono",
+      "Águas De Março - Elis Regina"
+     ],
+     "near": "Diz Que Fui Por Ai"
+    },
+    {
+     "vid": "HryeZjGg660",
+     "title": "Onde Anda Você",
+     "artists": [
+      {
+       "name": "Toquinho",
+       "id": "UCKCdY6tlFf3ttS9veVkk-vg"
+      },
+      {
+       "name": "Vinícius de Moraes",
+       "id": "UCnh0uRfN74Nom-M8NWyjh9A"
+      }
+     ],
+     "album": {
+      "name": "Vinicius & Toquinho",
+      "id": "MPREb_gV1znU5Xtr4"
+     },
+     "year": 1975,
+     "thumb": "https://yt3.googleusercontent.com/w_yPJjkEX2Sjq60-3Uxbs5ZIX9MGBypIbk4ZvV_3gueB1_sNBG1dWaDt5AYQlsuNaBD8akXntvAFJoc=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Toquinho’s guitar and Vinícius’s weathered voice, a quiet bossa nova you could hear at a café table.",
+     "fit": 0.85,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "explore"
+     ],
+     "v": "wgMB6gI8CxYyPuHODS4FEAT88g0SJuz79OzeDw/pAjD/DugL/eMECAjvAPrvDw0D",
+     "en": -0.58,
+     "via": [
+      "similar:Vinícius de Moraes"
+     ]
+    },
+    {
+     "vid": "SZA0Hdua9Y0",
+     "title": "Vilarejo",
+     "artists": [
+      {
+       "name": "Marisa Monte",
+       "id": "UCrtBsnR6zPUFP0UbVLKKKWg"
+      }
+     ],
+     "album": {
+      "name": "Infinito Particular",
+      "id": "MPREb_5xDvMYOH25B"
+     },
+     "year": 2006,
+     "thumb": "https://yt3.googleusercontent.com/c_SVOJDCPh682P5651zr4SMfRQTAbRrm1_zmdXygpiJMSQ34YqP1KoF-pcJ79qNUA_8TCX1Oo__7CKjkmw=w544-h544-l90-rj",
+     "dur": 210,
+     "type": "ATV",
+     "reason": "“Vilarejo” is warm, gently swaying MPB, and Marisa Monte is a voice you haven’t saved yet.",
+     "fit": 0.84,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "wwREHNYz5ij/IfTlMQAf7hH58fD6BgT39NkBEBn7CiLdBPgN2AkNCgX//v3zFhME",
+     "en": -0.52,
+     "via": [
+      "Samba de Verão - Marcos Valle"
+     ]
+    },
+    {
+     "vid": "0rJz-tazK4I",
+     "title": "Tudo O Que Você Podia Ser",
+     "artists": [
+      {
+       "name": "Milton Nascimento",
+       "id": "UCAUtDRUZL_D4dmTNhNHTv7g"
+      }
+     ],
+     "album": {
+      "name": "Clube Da Esquina",
+      "id": "MPREb_ssu6fPzQdWm"
+     },
+     "year": 1972,
+     "thumb": "https://yt3.googleusercontent.com/AtdDrMq5yCB28V0MwxpHdSrsRCyJ6mWdvUX6_TOzvR1iR4s2bu5RHPqkWCR_m1JT2qibAObfWwxtH_6t=w544-h544-l90-rj",
+     "dur": 177,
+     "type": "ATV",
+     "reason": "Milton’s high tenor floats over the shimmering sounds of Clube da Esquina, the Minas side of what Caetano does.",
+     "fit": 0.78,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "/xBC1e4/6TP3NgnfDQApD/UMCv4MBAj49dMAChjoESbrCvwl6g4XFQH8/gXyIAgI",
+     "en": 0.9,
+     "via": [
+      "Coração Vagabundo - Caetano Veloso",
+      "Águas De Março - Elis Regina"
+     ]
+    },
+    {
+     "vid": "Trx8qZEkK-M",
+     "title": "Oração Ao Tempo",
+     "artists": [
+      {
+       "name": "António Zambujo",
+       "id": "UCPh50PP9dqy8iCpOuYsQgKQ"
+      },
+      {
+       "name": "Caetano Veloso",
+       "id": "UCo7VN5w1PpeBOapTqtal75Q"
+      }
+     ],
+     "album": {
+      "name": "Oração Ao Tempo",
+      "id": "MPREb_D5sa0w2mRZD"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/gfKI_3MC6XvqUT4Xz66pez9AQ6rdOuuFsJfKtzA9UGgdhqjkLEo7YEvi7eGPovrzaw_k9D9ToIyviqc=w544-h544-l90-rj",
+     "dur": 245,
+     "type": "ATV",
+     "reason": "António Zambujo brings fado tenderness to Caetano’s “Oração Ao Tempo” with his soft voice.",
+     "fit": 0.74,
+     "familiar": 2,
+     "sources": [
+      "release"
+     ],
+     "v": "vxsvDfI59SD/OAPQ/gggDPbq8PEBKfTrD9nzBPbpBjLr+PQR9g4VFRT3Afj9BxIE",
+     "en": -0.76,
+     "mv": "iKJDqA0UuhI",
+     "via": [
+      "new:Oração Ao Tempo"
+     ]
+    },
+    {
+     "vid": "xs_ypwRxV2w",
+     "title": "Eu Vim da Bahia",
+     "artists": [
+      {
+       "name": "Gal Costa",
+       "id": "UCSv4Mv6YMSJXaPav-cSRDxQ"
+      }
+     ],
+     "album": {
+      "name": "Caetano, Gal, Gil E Bethânia",
+      "id": "MPREb_Dw0z2SMsnjS"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/vxQNscOexTU3VkdzRZX5er8ek1ohaAsGrbOYpvL5U0ez9ZUZ12I2IU18Wyw6erXNPdXLsAysK7h2AZF9OQ=w544-h544-l90-rj",
+     "dur": 175,
+     "type": "ATV",
+     "reason": "Gal Costa sings “Eu Vim da Bahia”, bright and light, close to the bossa nova roots of “Baby”.",
+     "fit": 0.72,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "qucUxCsk9xA3ANrj/iQH9gXtDPwTIgIJAt3xBxLrCinxCgAb7AUGEBP/+wHvEQYI",
+     "en": 0.35,
+     "mv": "t0W0_7ZKFH8",
+     "via": [
+      "new:Eu Vim da Bahia / Sim, Foi Você"
+     ]
+    },
+    {
+     "vid": "1Nc98GQ-BXU",
+     "title": "Malemolencia",
+     "artists": [
+      {
+       "name": "Céu",
+       "id": "UChw8YehA1g8Q5oCUxsa1YYA"
+      }
+     ],
+     "album": {
+      "name": "Céu",
+      "id": "MPREb_FwWt6I2qcqC"
+     },
+     "year": 2005,
+     "thumb": "https://yt3.googleusercontent.com/W32ORCD-R5kvkeBdOKcsu1LzsEQ5720vOKtyWkA9Vz-kNDWlhIMNkBhCRlUUaTI04yacTPkhflp9ynCa=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "Céu’s lazy, understated groove is modern MPB that keeps the calm of the classics.",
+     "fit": 0.7,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "3e088Pke2/FVJ93ACP4b/f8E7PnrB/zy3eTyFhb0/h3sCfMR4w8EDAD3A/buFw/8",
+     "en": 0.16,
+     "via": []
+    }
+   ],
+   "reserve": [
+    {
+     "vid": "HBKY5_hNyf0",
+     "title": "Wave - Só Danço Samba - Samba de Uma Nota Só",
+     "artists": [
+      {
+       "name": "Lisa Ono",
+       "id": "UCtIp0bCz1IQLKorWCVCfvVw"
+      }
+     ],
+     "album": {
+      "name": "Wave - Só Danço Samba - Samba de Uma Nota Só",
+      "id": "MPREb_DFnWPmnuQYu"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/uM5IkjB0k-QvFpvLiHtBufKPjsLJKNggBcFF20l5gQrfI_80uFZ9b3SwAhWKralcp6D5-1NYg9sG_1M=w544-h544-l90-rj",
+     "dur": 292,
+     "type": "ATV",
+     "reason": "小野丽莎 sings a Jobim classic in a feather-light style, continuing the spirit of her “Garota De Ipanema”.",
+     "fit": 0.66,
+     "familiar": 1,
+     "sources": [
+      "release"
+     ],
+     "v": "mtYB0x8k8hMuBNTb7vAZ/AgD8/YSEwgA+M7tDvv0BCP0DvMS6gz9FAUD+gLsDgkF",
+     "en": -0.14,
+     "via": [
+      "new:Wave - Só Danço Samba - Samba de Uma Nota Só"
+     ],
+     "near": "Diz Que Fui Por Ai"
+    },
+    {
+     "vid": "9y2xB90A0CY",
+     "title": "Cálice",
+     "artists": [
+      {
+       "name": "Chico Buarque",
+       "id": "UC0KFB-23-1AeWp1pOi6bvpQ"
+      },
+      {
+       "name": "Milton Nascimento",
+       "id": "UCAUtDRUZL_D4dmTNhNHTv7g"
+      }
+     ],
+     "album": {
+      "name": "Chico Buarque",
+      "id": "MPREb_IhwGLPKelTt"
+     },
+     "year": 1978,
+     "thumb": "https://yt3.googleusercontent.com/JoUJbsiLsVFe4RtDqFaPhLs72DLd_Eli7FgNkO_jTvS7C6Ry0DT_m8SaadDS-VBqfd2Ro4i0S6Rtsinh=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "uiQ5+ekz8SD2GO/CBAcdCOny+PgRF/T+AOHYChDZBzHzB/IR7wkQGAj6+Qz1CgkB",
+     "en": -0.56,
+     "via": []
+    },
+    {
+     "vid": "ZnUEeXpxBJ0",
+     "title": "Aquarela",
+     "artists": [
+      {
+       "name": "Toquinho",
+       "id": "UCKCdY6tlFf3ttS9veVkk-vg"
+      }
+     ],
+     "album": {
+      "name": "Aquarela",
+      "id": "MPREb_MyZIKj9I6mC"
+     },
+     "year": 1983,
+     "thumb": "https://yt3.googleusercontent.com/VNnR5SXX9Rg12M9foSFAuGtWNeSseZppXhDpWNRPT15qPiHCyONVl3uDSuSAkUD0-5qB7d2Cw3pAXXo=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "ti42K/T+KxwhEPjJ+RUs8PEB+fgHEAP3+tzvChLgDi/zAvUb6wgPEwkC/wPuEgsF",
+     "en": -0.77,
+     "via": []
+    },
+    {
+     "vid": "LZJ6QGSpVSk",
+     "title": "Apesar De Você",
+     "artists": [
+      {
+       "name": "Chico Buarque",
+       "id": "UC0KFB-23-1AeWp1pOi6bvpQ"
+      },
+      {
+       "name": "Quarteto Em Cy",
+       "id": "UCKStGgHJzDTLd6kKMjosQsQ"
+      }
+     ],
+     "album": {
+      "name": "Chico Buarque",
+      "id": "MPREb_IhwGLPKelTt"
+     },
+     "year": 1978,
+     "thumb": "https://yt3.googleusercontent.com/JoUJbsiLsVFe4RtDqFaPhLs72DLd_Eli7FgNkO_jTvS7C6Ry0DT_m8SaadDS-VBqfd2Ro4i0S6Rtsinh=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "3ekQ1xtmAwgtLe/k8QgOJRL53wMKE/0C+uTpFhHUBiDqEPUL8PIGCfryAAPyBxMG",
+     "en": 0.51,
+     "via": []
+    },
+    {
+     "vid": "BwGZKIx5FN8",
+     "title": "Amiga da Minha Mulher",
+     "artists": [
+      {
+       "name": "Seu Jorge",
+       "id": "UC1gBRCF5sZQA2eQMtnmCB8A"
+      }
+     ],
+     "album": {
+      "name": "Musica para Churrasco, Vol. 1",
+      "id": "MPREb_62BDDpT33u1"
+     },
+     "year": 2011,
+     "thumb": "https://yt3.googleusercontent.com/8ntfTSFzlrfsIX7cfFpqUAHN5xEj2GzQ40U42cR1ITZUZmHbarlDvztnRdJtUB72x8WRbB9b9ru9Rg2m=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "playlist"
+     ],
+     "v": "H/kG/hVcBwZALvj18Pv2HSH14gUOEer14uT+ARrXDgvpC+YV6RUVAP3d+wb4IRD8",
+     "en": 0.72,
+     "via": []
+    },
+    {
+     "vid": "5MlIZo29lTs",
+     "title": "Me Chamando de Paixão (Sonsual)",
+     "artists": [
+      {
+       "name": "Jorge Ben Jor",
+       "id": "UCprFt4Sn4rnLyXUnXFX9ksQ"
+      }
+     ],
+     "album": {
+      "name": "Sonsual",
+      "id": "MPREb_WODss7hdIfs"
+     },
+     "year": 1984,
+     "thumb": "https://yt3.googleusercontent.com/uAkvLKrav3OkLUqIANPpyIC2GUWi8irfOVE1_ZP4k6S0lx1sHlwjM0DS3Q4rEJ8WvvrJ5roj2HrLYeb2=w544-h544-l90-rj",
+     "dur": 200,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore",
+      "radio"
+     ],
+     "v": "ExAfAUH651I4IAK9CBcJ+QH5/+kSH/b89t37DwbkDyfsCvwc7gn/Bwb89vz1DhAF",
+     "en": 0.1,
+     "via": [
+      "Samba de Verão - Marcos Valle"
+     ]
+    },
+    {
+     "vid": "9bgyuqM4LcU",
+     "title": "Aliança",
+     "artists": [
+      {
+       "name": "Tribalistas",
+       "id": "UCOTV5IMHu8f2buB1mFGWeBg"
+      }
+     ],
+     "album": {
+      "name": "Tribalistas",
+      "id": "MPREb_X2fqeUyGA2K"
+     },
+     "year": 2021,
+     "thumb": "https://yt3.googleusercontent.com/XSnAWyLhAG-ay_khsDLIaCzH_BMdhQRm9VimixOaNJebv--IEx4RJsVk_WAP_i_XKMVR-mHwbfnaRjM=w544-h544-l90-rj",
+     "dur": 238,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "artist",
+      "radio"
+     ],
+     "v": "3esn6/AvwiXoIAAMHxcVAQ0I5+nlA//d+7b8HRkH3PrtEfAD6AgR/QMCAfPuHw74",
+     "en": 0.81,
+     "via": [
+      "Coração Vagabundo - Caetano Veloso",
+      "Águas De Março - Elis Regina",
+      "similar:Tribalistas"
+     ]
+    },
+    {
+     "vid": "1edwebkYvYQ",
+     "title": "Quem Sabe Isso Quer Dizer Amor",
+     "artists": [
+      {
+       "name": "Milton Nascimento",
+       "id": "UCAUtDRUZL_D4dmTNhNHTv7g"
+      }
+     ],
+     "album": {
+      "name": "Pietá",
+      "id": "MPREb_9MlXsVY59sX"
+     },
+     "year": 2002,
+     "thumb": "https://yt3.googleusercontent.com/MGPCLNyFUQ-0cahos_3T78vZTjDhFAuW7YevfjzhL-naEmcFDDEpy9-hmnYqj4tFKgQYMKR4KuKSfiM=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "yS4jMSIf1ylGHvzaBuwVHe/+/wEE9Rj+++EFCQ3lESn1+eod+wkEEgX0/Qf4HA0E",
+     "en": -0.54,
+     "via": []
+    },
+    {
+     "vid": "G1YE72pSw-8",
+     "title": "Totalmente Seu",
+     "artists": [
+      {
+       "name": "Marisa Monte",
+       "id": "UCrtBsnR6zPUFP0UbVLKKKWg"
+      }
+     ],
+     "album": {
+      "name": "Portas",
+      "id": "MPREb_wK4FoXcYZT6"
+     },
+     "year": 2022,
+     "thumb": "https://yt3.googleusercontent.com/sZTiqRgEPzgZh6g_s0QRSI0-ylZQpVn9NIdt9hTx7CEommX2cVsYRXrrJIQfy1YyVAIsyG0AmUugNmOu=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "wBM5NN7iFi8dJODh8/Us/gAK9u8HAPoN4NjrCRDrDSPpDOsU7RIJDQf8+QPwFRL8",
+     "en": -1.42,
+     "via": []
+    },
+    {
+     "vid": "-YmhWG1UtW4",
+     "title": "Preciso Dizer Que Te Amo",
+     "artists": [
+      {
+       "name": "Cazuza",
+       "id": "UCRpECJZSh3wGVoNtHBLXA7Q"
+      },
+      {
+       "name": "Bebel Gilberto",
+       "id": "UCet6txOjOrDDHkTvGzNddGA"
+      }
+     ],
+     "album": {
+      "name": "Red Hot & Rio",
+      "id": "MPREb_lNfCQCRroSV"
+     },
+     "year": 1996,
+     "thumb": "https://yt3.googleusercontent.com/XVkp_L0pk1p0nJESrhmoeCcsQOEhhwW3gvqmCr2SWsG1dtiCJGOjPVTR7kB5U_N0VVBujt2bWg_2oJWUSQ=w544-h544-l90-rj",
+     "dur": 0,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 0,
+     "sources": [
+      "explore"
+     ],
+     "v": "wNwV6gk17QoPVAjX/PUEFQzrDgMkFvoY5N/SDA3vBTH2BPcN9AkOFgsE/P/0Ewj9",
+     "en": -1.26,
+     "via": []
+    },
+    {
+     "vid": "FshUfjh4yrA",
+     "title": "How I Get",
+     "artists": [
+      {
+       "name": "Laufey",
+       "id": "UCJtROTPxo3qnEzww8JyDxuA"
+      }
+     ],
+     "album": {
+      "name": "A Matter of Time: The Final Hour",
+      "id": "MPREb_nqaJIQdfN2M"
+     },
+     "year": 2026,
+     "thumb": "https://yt3.googleusercontent.com/Hp4wxa7jYt4iQ0uLaaNQMNs8qV9SJv6wEveCW69jMEdP8cc-P2PkYVOQc_QTDzIY8tiHzAO1_f_TKIw=w544-h544-l90-rj",
+     "dur": 220,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 4,
+     "sources": [
+      "release"
+     ],
+     "v": "4gg5EdwQ9kLmLR4J+EEQ2Pv6IO78EfwOBNL2CgbsFir39/z+3Q4WHQwB+QDuDQcH",
+     "en": -0.63,
+     "mv": "ZtRNT-JYg1w",
+     "via": [
+      "new:How I Get"
+     ]
+    },
+    {
+     "vid": "cecEC5uF674",
+     "title": "Snow White",
+     "artists": [
+      {
+       "name": "Laufey",
+       "id": "UCJtROTPxo3qnEzww8JyDxuA"
+      }
+     ],
+     "album": {
+      "name": "A Matter of Time",
+      "id": "MPREb_P7kflyJRUTn"
+     },
+     "year": 2025,
+     "thumb": "https://yt3.googleusercontent.com/uUrSUghsZQRvNd62pZVJVRDYeKZR2H1vh8ubKC7f1q-t2a0J-dtcAAYb2tfL5YHhGe_z3SluVdOB-2Y=w544-h544-l90-rj",
+     "dur": 194,
+     "type": "ATV",
+     "reason": "",
+     "fit": 0,
+     "familiar": 4,
+     "sources": [
+      "release"
+     ],
+     "v": "ohE/IxkR8CD2NfEAEgz3/ATqCeIUEwf6AcULEwn2Ehf3+/UP2wgHD/38AvDsHQgE",
+     "en": -1.04,
+     "mv": "LeG3jPeeMec",
+     "via": [
+      "new:Snow White"
+     ]
+    }
+   ],
+   "stats": {
+    "candidates": 713,
+    "rejected": {
+     "version": 44,
+     "format": 387,
+     "taken": 39,
+     "liked": 19,
+     "same song": 23,
+     "language": 19
+    },
+    "playlists": 7,
+    "heard": 8
+   }
+  }
+ ],
+ "focus": {
+  "blurb": "You haven’t saved a long-focus playlist yet. Based on your taste, good backgrounds are light jazz piano, bossa nova guitar, Nujabes-style jazz hip-hop and quiet Japanese piano.",
+  "when": "Long stretches of work or study that need warmth without distraction",
+  "picks": [
+   {
+    "vid": "s-yKTj4jvvo",
+    "title": "SMOOTH NEO SOUL JAZZ FLOW (2H+) 🎷 | Warm Analog Grooves for Deep Work & Study",
+    "artists": [
+     {
+      "name": "Velvet Radio",
+      "id": "UCQ0Nys9esryYdBJWY8J9Nnw"
+     }
+    ],
+    "album": null,
+    "year": null,
+    "thumb": "https://i.ytimg.com/vi/s-yKTj4jvvo/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3l7eQh1XJyhV-RvkFNFJY637Hy_OA",
+    "dur": 9058,
+    "type": "UGC",
+    "reason": null,
+    "fit": null,
+    "familiar": 0,
+    "sources": [
+     "search"
+    ],
+    "via": [
+     "neo soul instrumental rhodes mix study"
+    ]
+   },
+   {
+    "vid": "YIgC9ZoI0AI",
+    "title": "最高のビル・エヴァンス",
+    "artists": [
+     {
+      "name": "BluesJazzSoul",
+      "id": "UC01fAKAOMxpe3MEjfD4YZGg"
+     }
+    ],
+    "album": null,
+    "year": null,
+    "thumb": "https://i.ytimg.com/vi/YIgC9ZoI0AI/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mkYewoGCJnO9cKQhz7-c1JnS_aCQ",
+    "dur": 3760,
+    "type": "UGC",
+    "reason": null,
+    "fit": null,
+    "familiar": 0,
+    "sources": [
+     "search"
+    ],
+    "via": [
+     "bill evans style jazz piano trio playlist 2 hours"
+    ]
+   },
+   {
+    "vid": "bZrfMU71W9I",
+    "title": "Ryuichi Sakamoto Slow Piano Music Collection For Working (No Mid-roll Ads)",
+    "artists": [
+     {
+      "name": "Little Honda",
+      "id": "UCOifsNemY8Xk39zKUQ-YgRg"
+     }
+    ],
+    "album": null,
+    "year": null,
+    "thumb": "https://i.ytimg.com/vi/bZrfMU71W9I/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nDYHnzJoYcxAh9gSAyJ1pi7OfJrg",
+    "dur": 22504,
+    "type": "UGC",
+    "reason": null,
+    "fit": null,
+    "familiar": 0,
+    "sources": [
+     "search"
+    ],
+    "via": [
+     "ryuichi sakamoto style ambient piano mix"
+    ]
+   },
+   {
+    "vid": "9CE6-2DwPK4",
+    "title": "Nujabes Compilation｜Best of Nujabes ｜Mixlofihiphop, jazzhop and chillhop",
+    "artists": [
+     {
+      "name": "LOFIMIX",
+      "id": "UCOCAUPQdY1fg6yOjq06t4lw"
+     }
+    ],
+    "album": null,
+    "year": null,
+    "thumb": "https://i.ytimg.com/vi/9CE6-2DwPK4/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kovZQ5dNpM12NYhvxAv2BioHvxPw",
+    "dur": 7190,
+    "type": "UGC",
+    "reason": null,
+    "fit": null,
+    "familiar": 0,
+    "sources": [
+     "search"
+    ],
+    "via": [
+     "nujabes inspired jazz hip hop mix for study"
+    ]
+   }
+  ]
+ },
+ "audio_coverage": 0.99,
+ "lang": "en"
+}

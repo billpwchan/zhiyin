@@ -234,13 +234,20 @@ def cover_url(t: dict, size: int = 120) -> str:
     return u or f"https://i.ytimg.com/vi/{t['vid']}/mqdefault.jpg"
 
 
+def _cover_path(u: str):
+    return store.CACHE / "img" / hashlib.sha1(u.encode()).hexdigest()
+
+
+def cover_cached(u: str) -> bool:
+    return _cover_path(u).exists()
+
+
 def cover_file(u: str):
     from urllib.parse import urlparse
     if urlparse(u).hostname not in COVER_HOSTS:
         raise ValueError("host")
-    d = store.CACHE / "img"
-    d.mkdir(parents=True, exist_ok=True)
-    f = d / hashlib.sha1(u.encode()).hexdigest()
+    f = _cover_path(u)
+    f.parent.mkdir(parents=True, exist_ok=True)
     if not f.exists():
         data = b""
         with httpx.stream("GET", u, timeout=15, follow_redirects=True) as r:

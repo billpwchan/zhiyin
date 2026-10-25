@@ -81,6 +81,10 @@ Only songs the editor rates 0.7 or higher go out, up to 8 per station. A station
 if none reach 0.7, its best three go out so the station isn't empty.
 The rest become the station's reserve, which plays when the queue runs out.
 
+Listeners on the server's API key get Sonnet as their editor. On the same eight shortlists, Sonnet kept 75% of the
+songs Opus kept and its reasons read as well, for a third of the price ($0.13 an edition against $0.39). Haiku cost
+$0.02 but kept only half of them and mixed Chinese into English reasons, so it isn't used for picking.
+
 ## 7. Last touches
 
 - A music video is swapped for the same recording's audio track when YouTube Music has one: no skits or long intros,

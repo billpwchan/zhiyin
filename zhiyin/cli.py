@@ -31,6 +31,8 @@ def main():
     p.add_argument("--owner", action="store_true")
     p.add_argument("--mine", action="store_true", help="another account of yours: it runs on your Claude")
     sub.add_parser("users", help="who has joined")
+    p = sub.add_parser("waitlist", help="who asked to join while the seats were full (ZHIYIN_SEATS)")
+    p.add_argument("--admit", metavar="EMAIL", help="let this person in on their next Google sign-in, seats or not")
     p = sub.add_parser("about", help="tell the editor who you are (languages, where you grew up); shown in its prompts")
     p.add_argument("text", nargs="?")
     sub.add_parser("worker", help="on the Mac: hear the songs the server asks for, and run the owner's Claude calls if the server has no login")
@@ -88,6 +90,16 @@ def main():
             seen = __import__("time").strftime("%m-%d %H:%M", __import__("time").localtime(u["last_seen"])) if u["last_seen"] else "-"
             print(f"{u['id']:10} {u['name'] or '-':12} {u['status']:9} {u.get('email') or '-':28} last seen {seen}  "
                   f"claude {llm.source(u['id']) or 'none'}, ${llm.spent(u['id']):.2f} in 7 days")
+    elif a.cmd == "waitlist":
+        import time
+        con = store.db()
+        if a.admit:
+            n = con.execute("update waitlist set admitted=? where lower(email)=lower(?)", (time.time(), a.admit)).rowcount
+            con.commit()
+            print(f"admitted {a.admit}: they get in on their next 'Join with Google'" if n else f"{a.admit} is not on the waitlist")
+        for r in con.execute("select email, name, ts, lang, admitted from waitlist order by ts"):
+            print(f"{time.strftime('%m-%d %H:%M', time.localtime(r['ts']))}  {r['email']:32} {r['name'] or '-':16} "
+                  f"{r['lang'] or '-':8} {'admitted' if r['admitted'] else 'waiting'}")
     elif a.cmd == "about":
         from . import accounts
         if a.text is not None:

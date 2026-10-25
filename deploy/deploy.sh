@@ -17,7 +17,7 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 
 ssh -i "$KEY" "$HOST" 'mkdir -p ~/zhiyin-upload/src'
 rsync -az --delete --exclude __pycache__ -e "ssh -i $KEY" \
-  zhiyin web pyproject.toml uv.lock README.md LICENSE Dockerfile .dockerignore "$HOST:zhiyin-upload/src/"
+  zhiyin web demo pyproject.toml uv.lock README.md LICENSE Dockerfile .dockerignore "$HOST:zhiyin-upload/src/"
 rsync -az -e "ssh -i $KEY" deploy/compose.yaml "$HOST:zhiyin-upload/"
 ssh -i "$KEY" "$HOST" "STAMP=$STAMP SITE=$SITE GATEWAY_NETWORK=$GATEWAY_NETWORK YT_LANGUAGE=${YT_LANGUAGE:-en} bash -s" <<'REMOTE'
 set -euo pipefail

@@ -1,3 +1,5 @@
+import contextlib
+import contextvars
 import datetime as dt
 import json
 import os
@@ -8,8 +10,10 @@ import time
 
 from . import i18n, store
 
-# Through the Claude Code CLI, so the same call runs on a Claude login or an API key.
-# --tools "" and --setting-sources "" keep each call to ~600 tokens of overhead instead of ~35k.
+# A Claude login (the owner's, here or on the Mac worker) is reached through the Claude Code CLI. An API key goes to
+# the Messages API directly: plan-included API credits don't cover Claude Code, the SDK reports exact usage, and a
+# call is a socket instead of a ~255 MB process.
+# --tools "" and --setting-sources "" keep each CLI call to ~600 tokens of overhead instead of ~35k.
 BASE = ["claude", "-p", "--tools", "", "--setting-sources", "", "--strict-mcp-config",
         "--no-session-persistence", "--output-format", "json"]
 
@@ -19,7 +23,14 @@ HOSTED = os.environ.get("ZHIYIN_AUTH") == "1"
 OAUTH = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
 API_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
 WORKER = bool(os.environ.get("ZHIYIN_WORKER_TOKEN"))
-DAILY_USD = float(os.environ.get("ZHIYIN_LISTENER_DAILY_USD", 3))   # per invited listener on the operator's key
+# The operator's key is one pool for everyone (a plan's monthly API credit, say): POOL_USD over any 30 days, spent no
+# faster than twice the even pace on any one day, and at most DAILY_USD a day for one listener.
+POOL_USD = float(os.environ.get("ZHIYIN_KEY_MONTHLY_USD", 100))
+DAILY_USD = float(os.environ.get("ZHIYIN_LISTENER_DAILY_USD", 0.5))
+# What runs on the key for listeners when code asks for a model; the owner's own accounts keep what they asked for.
+# Measured on the same shortlists (2026-10-25): see docs/how-it-works.md.
+KEY_MODEL = {"opus": os.environ.get("ZHIYIN_KEY_OPUS", "sonnet"), "sonnet": os.environ.get("ZHIYIN_KEY_SONNET", "sonnet"),
+             "haiku": "haiku"}
 # The owner's own ceiling, far above a normal day (~$1-2), so a runaway loop or a stolen session can't drain the plan.
 OWNER_DAILY_USD = float(os.environ.get("ZHIYIN_OWNER_DAILY_USD", 10))
 WORKER_GONE_S = 120   # the worker long-polls every 25 s, so this much silence means the Mac is asleep or off
@@ -27,9 +38,29 @@ PICKUP_S = 60
 
 # Each call is a ~255 MB process. A 2 GB host has well under 1 GB to spare: it allows two, and starts the
 # second only while the machine still has room.
+_background = contextvars.ContextVar("llm_background", default=False)
+
+
+@contextlib.contextmanager
+def background():
+    """Work nobody is waiting for (the scheduled morning edition): the owner's waits for the Mac rather than spending
+    the shared key, and anyone's waits a day rather than run ahead of the pool's pace."""
+    t = _background.set(True)
+    try:
+        yield
+    finally:
+        _background.reset(t)
+
+
 _slots = threading.BoundedSemaphore(int(os.environ.get("ZHIYIN_LLM_CONCURRENCY", 4)))
 _active = [0]
 _count = threading.Lock()
+
+
+MODELS = {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5"}
+# $ per million tokens: input, output, cache write (5 min), cache read. Haiku's are for prompts up to 100K tokens.
+PRICES = {"opus": (4, 20, 5, 0.2), "sonnet": (2, 10, 2.5, 0.1), "haiku": (0.1, 0.5, 0.125, 0.01)}
+_UNSUPPORTED = ("minimum", "maximum", "minItems", "maxItems", "minLength", "maxLength", "pattern")
 
 
 class LLMError(RuntimeError):
@@ -43,10 +74,16 @@ class NoClaude(LLMError):
 def source(uid: str | None = None) -> str | None:
     """'here' (this machine's own `claude` login), 'subscription', 'worker', 'key', or None."""
     uid = uid or store.uid()
+    if store.is_sample(uid):
+        return None   # the sample listener never spends anyone's Claude
     if not HOSTED:
         return "here"
     if store.is_owners(uid):
-        return "subscription" if OAUTH else "worker" if WORKER else "key" if API_KEY else None
+        if OAUTH:
+            return "subscription"
+        if WORKER and (worker_online() or not API_KEY or _background.get()):
+            return "worker"
+        return "key" if API_KEY else None
     return "key" if API_KEY else None
 
 
@@ -59,9 +96,15 @@ def unavailable(uid: str | None = None) -> str | None:
         return i18n.tr("服务器上还没有配置 Claude" if mine else "主人还没有为其他听众配置 Claude API key", i18n.of(uid))
     if src == "worker" and not worker_online():
         return i18n.tr("Mac 不在线（睡着或关机了）", i18n.of(uid))
-    cap = OWNER_DAILY_USD if mine else DAILY_USD
-    if HOSTED and spent(uid, days=1) >= cap:
-        return i18n.tr("今天的 Claude 额度（${cap}）用完了，明天再来", i18n.of(uid), cap=f"{cap:g}")
+    if src == "key":
+        if pool_spent(30) >= POOL_USD:
+            return i18n.tr("这个月大家共用的 Claude 额度用完了，过几天会恢复", i18n.of(uid))
+        if _background.get() and pool_spent(1) >= 2 * POOL_USD / 30:
+            return i18n.tr("今天大家共用的 Claude 额度到了上限，明天再挑", i18n.of(uid))
+        if not mine and spent(uid, days=1, source="key") >= DAILY_USD:
+            return i18n.tr("你今天的 Claude 额度用完了，明天再来", i18n.of(uid))
+    if HOSTED and mine and spent(uid, days=1) >= OWNER_DAILY_USD:
+        return i18n.tr("今天的 Claude 额度（${cap}）用完了，明天再来", i18n.of(uid), cap=f"{OWNER_DAILY_USD:g}")
     return None
 
 
@@ -80,11 +123,17 @@ def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout:
     uid = store.uid()
     require(uid)
     src = source(uid)
+    if src == "key" and not store.is_owners(uid):
+        model = KEY_MODEL[model]
     try:
         if src == "worker":
             req = {"prompt": prompt, "system": system, "schema": schema, "model": model, "timeout": timeout,
                    "retries": retries}
             out = _via_worker(req, wait=timeout * (retries + 1) + PICKUP_S)
+        elif src == "key" and _background.get():
+            out = run_batch(prompt, system, schema, model)
+        elif src == "key":
+            out = run_api(prompt, system, schema, model, timeout, retries)
         else:
             out = run_here(prompt, system, schema, model, timeout, retries, env=_env(src))
     except NoClaude:
@@ -147,6 +196,96 @@ def run_here(prompt: str, system: str, schema: dict, model: str, timeout: int, r
     raise err
 
 
+def strict(schema):
+    """The CLI's schemas, as structured outputs accept them: closed objects, range limits moved into the text."""
+    if isinstance(schema, list):
+        return [strict(x) for x in schema]
+    if not isinstance(schema, dict):
+        return schema
+    out = {k: strict(v) for k, v in schema.items() if k not in _UNSUPPORTED}
+    limits = [f"{k} {schema[k]}" for k in _UNSUPPORTED if k in schema]
+    if limits:
+        out["description"] = "; ".join(filter(None, [schema.get("description"), *limits]))
+    if out.get("type") == "object":
+        out["additionalProperties"] = False
+    return out
+
+
+_client = []
+
+
+def _api():
+    if not _client:
+        import anthropic
+        _client.append(anthropic.Anthropic(max_retries=0))
+    return _client[0]
+
+
+def cost(model: str, u) -> float:
+    i, o, w, r = PRICES[model]
+    return ((u.input_tokens or 0) * i + (u.output_tokens or 0) * o + (u.cache_creation_input_tokens or 0) * w
+            + (u.cache_read_input_tokens or 0) * r) / 1e6
+
+
+def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, retries: int) -> dict:
+    import anthropic
+    last, usd = None, 0.0
+    for attempt in range(retries + 1):
+        try:
+            # the system prompt repeats across a listener's stations and songs, so it is the part worth caching
+            with _api().messages.stream(
+                    model=MODELS[model], max_tokens=32000, timeout=timeout,
+                    system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+                    messages=[{"role": "user", "content": prompt}],
+                    output_config={"effort": "medium", "format": {"type": "json_schema", "schema": strict(schema)}}) as st:
+                msg = st.get_final_message()
+            usd += cost(model, msg.usage)
+            if msg.stop_reason in ("refusal", "max_tokens"):
+                raise LLMError(f"stopped: {msg.stop_reason}")
+            text = next(b.text for b in msg.content if b.type == "text")
+            return {"data": json.loads(text), "usd": usd}
+        except anthropic.APIStatusError as e:
+            last = e
+            if e.status_code in (400, 401, 403, 404):
+                break   # a bad request or a bad key won't get better by asking again
+            time.sleep(3 * (attempt + 1))
+        except (anthropic.APIConnectionError, json.JSONDecodeError, LLMError, StopIteration) as e:
+            last = e
+            time.sleep(3 * (attempt + 1))
+    err = LLMError(f"Claude API failed after {attempt + 1} attempts: {last}")
+    err.usd = usd
+    raise err
+
+
+BATCH_WAIT_S = 6 * 3600
+
+
+def run_batch(prompt: str, system: str, schema: dict, model: str) -> dict:
+    """Half price for work nobody is waiting on; most batches come back within the hour."""
+    api = _api()
+    b = api.messages.batches.create(requests=[{"custom_id": "1", "params": {
+        "model": MODELS[model], "max_tokens": 32000,
+        "system": [{"type": "text", "text": system}],
+        "messages": [{"role": "user", "content": prompt}],
+        "output_config": {"effort": "medium", "format": {"type": "json_schema", "schema": strict(schema)}}}}])
+    deadline = time.time() + BATCH_WAIT_S
+    while api.messages.batches.retrieve(b.id).processing_status != "ended":
+        if time.time() > deadline:
+            api.messages.batches.cancel(b.id)
+            raise LLMError("the batch didn't come back in time")
+        time.sleep(30)
+    r = next(iter(api.messages.batches.results(b.id))).result
+    if r.type != "succeeded":
+        raise LLMError(f"batch request {r.type}")
+    msg = r.message
+    usd = cost(model, msg.usage) / 2
+    if msg.stop_reason in ("refusal", "max_tokens"):
+        err = LLMError(f"stopped: {msg.stop_reason}")
+        err.usd = usd
+        raise err
+    return {"data": json.loads(next(x.text for x in msg.content if x.type == "text")), "usd": usd}
+
+
 def _record(uid: str, src: str, usd: float) -> None:
     con = store.db()
     con.execute("insert into usage values (?, ?, ?, 1, ?) on conflict(uid, day, source) do update "
@@ -154,10 +293,16 @@ def _record(uid: str, src: str, usd: float) -> None:
     con.commit()
 
 
-def spent(uid: str, days: int = 7) -> float:
+def spent(uid: str, days: int = 7, source: str | None = None) -> float:
     since = (dt.date.today() - dt.timedelta(days=days - 1)).isoformat()
-    r = store.db().execute("select coalesce(sum(usd), 0) from usage where uid=? and day>=?", (uid, since)).fetchone()
-    return round(r[0], 2)
+    r = store.db().execute("select coalesce(sum(usd), 0) from usage where uid=? and day>=? and source=coalesce(?, source)",
+                           (uid, since, source)).fetchone()
+    return round(r[0], 4)
+
+
+def pool_spent(days: int) -> float:
+    since = (dt.date.today() - dt.timedelta(days=days - 1)).isoformat()
+    return store.db().execute("select coalesce(sum(usd), 0) from usage where source='key' and day>=?", (since,)).fetchone()[0]
 
 
 # ---------- calls handed to the Mac worker ----------

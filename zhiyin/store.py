@@ -13,6 +13,8 @@ CACHE = DATA / "cache"       # shared by everyone: YouTube Music lookups, covers
 USERS = DATA / "users"
 DB = DATA / "zhiyin.db"
 OWNER = "owner"              # the first listener; their data predates accounts
+# A made-up listener anyone can try before signing in, read-only, in English or Chinese (demo/ in the repo).
+SAMPLE, SAMPLE_ZH = "sample", "sample-zh"
 
 for d in (DATA, CACHE, USERS):
     d.mkdir(parents=True, exist_ok=True)
@@ -126,6 +128,7 @@ def _migrate(con: sqlite3.Connection) -> None:
         created real, done real, error text);
     create table if not exists usage(uid text, day text, source text, calls integer, usd real,
         primary key(uid, day, source));
+    create table if not exists waitlist(sub text primary key, email text, name text, ts real, lang text, admitted real);
     create index if not exists feedback_vid on feedback(vid);
     create index if not exists shown_vid on shown(vid);
     """)
@@ -143,6 +146,10 @@ def _migrate(con: sqlite3.Connection) -> None:
             con.execute(f"create index if not exists {t}_uid on {t}(uid)")
     con.execute("insert or ignore into users(id, name, created, status) values (?, ?, ?, 'ready')", (OWNER, "", time.time()))
     con.commit()
+
+
+def is_sample(uid: str | None = None) -> bool:
+    return (uid or globals()["uid"]()) in (SAMPLE, SAMPLE_ZH)
 
 
 def is_owners(uid: str) -> bool:

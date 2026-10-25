@@ -13,25 +13,27 @@
   <a class="mark" href="/" aria-label="知音" data-i18n-label="知音"><svg class="lg" viewBox="8 26 84 52" aria-hidden="true"><path d="M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33"/><circle cx="69" cy="52" r="7"/></svg><span class="wm-t" data-i18n="知音">知音</span></a>
 <!--lang:zh-Hans-->
   <h1>知音怎么用你的数据</h1>
-  <p>知音是一个私人的推荐电台，由邀请你的人运营在自己的服务器上，只给认识的几个人用。项目作者收不到任何数据，网站也没有任何统计或广告。</p>
+  <p>知音是一个私人的推荐电台，由一个人运营在自己的服务器上，给他邀请的人，以及在他开放名额时自己加入的人用。项目作者收不到任何数据，网站也没有任何统计或广告。</p>
 
   <h2>从 Google 读什么</h2>
-  <p>你用 Google 登录时，知音拿到你的账号 id、邮箱和名字。你连接 YouTube Music 时，它读取你点过的喜欢，并在你在知音里点喜欢时，替你在 YouTube Music 上点同一个喜欢（可以在设置里关掉）。「不要这首」只留在知音，不会写到 YouTube。</p>
+  <p>你用 Google 登录时，知音拿到你的账号 id、邮箱和名字。你连接 YouTube Music 时，它只读取你点过的喜欢。如果你在设置里打开「同步喜欢」（Google 会再请你同意一次），你在知音里点的喜欢也会出现在 YouTube Music 上，随时可以关掉。「不要这首」只留在知音，不会写到 YouTube。</p>
   <p>这些数据只用来给你推荐歌和同步喜欢：不出售，不用于广告，也不拿去做别的事。</p>
 
   <h2>存了什么</h2>
   <ul>
     <li>你喜欢的歌，以及由它们生成的口味画像、电台和每天的推荐；</li>
     <li>你在知音里的操作：播放、跳过、喜欢、不要、点歌时输入的话；</li>
-    <li>你的 Google 账号 id、邮箱和访问凭证，凭证在服务器上加密保存；</li>
-    <li>每天为你调用了多少次 Claude、大约花了多少钱。</li>
+    <li>你的 Google 账号 id、邮箱、名字和访问凭证，凭证在服务器上加密保存；</li>
+    <li>每天为你调用了多少次 Claude、大约花了多少钱；</li>
+    <li>名额满时用 Google 登记的人：账号 id、邮箱、名字、语言和登记时间，进来或被移除后就删掉。</li>
   </ul>
+  <p>没有登录时听的示例电台，不会记下任何关于你的东西。</p>
   <p>这些都存在运营者的服务器上，运营者能看到。每个账号的数据彼此分开，一个账号看不到另一个账号的喜欢和反馈。歌曲的声音特征是所有人共用的，试听音频只在内存里解码，不保存。</p>
 
   <h2>发给了谁</h2>
   <ul>
     <li><b>Anthropic（Claude）</b>：你喜欢的歌名和歌手、候选歌、你拒绝的歌和原因、点歌时输入的话、需要翻译的歌词，以及在中英文之间切换语言时它之前写的画像和理由，用来生成电台、挑歌和改写；</li>
-    <li><b>YouTube</b>：读取你的喜欢、写回你的喜欢，以及网页里的播放器；</li>
+    <li><b>YouTube</b>：读取你的喜欢，你打开同步后写回你的喜欢，以及网页里的播放器；</li>
     <li><b>Deezer、Apple iTunes</b>：歌名和歌手，用来找 30 秒试听；</li>
     <li><b>网易云音乐、LRCLIB、YouTube Music</b>：歌名、歌手和时长，用来找歌词。</li>
   </ul>
@@ -44,25 +46,27 @@
 <!--/lang-->
 <!--lang:zh-Hant-->
   <h1>知音怎麼用你的資料</h1>
-  <p>知音是一個私人的推薦電台，由邀請你的人架在自己的伺服器上，只給認識的幾個人用。專案作者收不到任何資料，網站也沒有任何統計或廣告。</p>
+  <p>知音是一個私人的推薦電台，由一個人架在自己的伺服器上，給他邀請的人，以及在他開放名額時自己加入的人用。專案作者收不到任何資料，網站也沒有任何統計或廣告。</p>
 
   <h2>從 Google 讀取什麼</h2>
-  <p>你用 Google 登入時，知音拿到你的帳戶 ID、電子郵件和名字。你連接 YouTube Music 時，它讀取你按過的喜歡，並在你在知音裡按喜歡時，替你在 YouTube Music 上按同一個喜歡（可以在設定裡關掉）。「不要這首」只留在知音，不會寫到 YouTube。</p>
+  <p>你用 Google 登入時，知音拿到你的帳戶 ID、電子郵件和名字。你連接 YouTube Music 時，它只讀取你按過的喜歡。如果你在設定裡開啟「同步喜歡」（Google 會再請你同意一次），你在知音裡按的喜歡也會出現在 YouTube Music 上，隨時可以關掉。「不要這首」只留在知音，不會寫到 YouTube。</p>
   <p>這些資料只用來給你推薦歌和同步喜歡：不出售，不用於廣告，也不拿去做別的事。</p>
 
   <h2>存了什麼</h2>
   <ul>
     <li>你喜歡的歌，以及由它們產生的口味畫像、電台和每天的推薦；</li>
     <li>你在知音裡的操作：播放、跳過、喜歡、不要、點歌時輸入的話；</li>
-    <li>你的 Google 帳戶 ID、電子郵件和存取憑證，憑證在伺服器上加密保存；</li>
-    <li>每天為你呼叫了多少次 Claude、大約花了多少錢。</li>
+    <li>你的 Google 帳戶 ID、電子郵件、名字和存取憑證，憑證在伺服器上加密保存；</li>
+    <li>每天為你呼叫了多少次 Claude、大約花了多少錢；</li>
+    <li>名額滿時用 Google 登記的人：帳戶 ID、電子郵件、名字、語言和登記時間，進來或被移除後就刪掉。</li>
   </ul>
+  <p>沒有登入時聽的範例電台，不會記下任何關於你的東西。</p>
   <p>這些都存在營運者的伺服器上，營運者看得到。每個帳戶的資料彼此分開，一個帳戶看不到另一個帳戶的喜歡和回饋。歌曲的聲音特徵是所有人共用的，試聽音訊只在記憶體裡解碼，不保存。</p>
 
   <h2>傳給了誰</h2>
   <ul>
     <li><b>Anthropic（Claude）</b>：你喜歡的歌名和歌手、候選歌、你拒絕的歌和原因、點歌時輸入的話、需要翻譯的歌詞，以及在中英文之間切換語言時它之前寫的畫像和理由，用來產生電台、挑歌和改寫；</li>
-    <li><b>YouTube</b>：讀取你的喜歡、寫回你的喜歡，以及網頁裡的播放器；</li>
+    <li><b>YouTube</b>：讀取你的喜歡，你開啟同步後寫回你的喜歡，以及網頁裡的播放器；</li>
     <li><b>Deezer、Apple iTunes</b>：歌名和歌手，用來找 30 秒試聽；</li>
     <li><b>網易雲音樂、LRCLIB、YouTube Music</b>：歌名、歌手和長度，用來找歌詞。</li>
   </ul>
@@ -75,25 +79,27 @@
 <!--/lang-->
 <!--lang:en-->
   <h1>How Zhiyin uses your data</h1>
-  <p>Zhiyin is a private recommender. The person who invited you runs it on their own server for a few people they know. The project's author receives nothing, and the site has no analytics or ads.</p>
+  <p>Zhiyin is a private recommender. One person runs it on their own server, for people they invite and, when they open seats, people who join on their own. The project's author receives nothing, and the site has no analytics or ads.</p>
 
   <h2>What it reads from Google</h2>
-  <p>When you sign in with Google, Zhiyin gets your account ID, email address and name. When you connect YouTube Music, it reads the songs you've liked, and when you like a song in Zhiyin it likes the same song on YouTube Music for you (you can turn this off in Settings). "Not for me" stays in Zhiyin and is never written to YouTube.</p>
+  <p>When you sign in with Google, Zhiyin gets your account ID, email address and name. When you connect YouTube Music, it only reads the songs you've liked. If you turn on syncing likes in Settings (Google asks you once more), songs you like in Zhiyin are liked on YouTube Music too, until you turn it off. "Not for me" stays in Zhiyin and is never written to YouTube.</p>
   <p>This data is used only to recommend songs to you and to keep your likes in sync. It is not sold, not used for ads, and not used for anything else.</p>
 
   <h2>What is stored</h2>
   <ul>
     <li>The songs you like, and the taste portrait, stations and daily picks made from them;</li>
     <li>What you do in Zhiyin: plays, skips, likes, "not for me", and what you type when you ask for music;</li>
-    <li>Your Google account ID, email address and access token, the token encrypted on the server;</li>
-    <li>How many times Claude was called for you each day, and roughly what it cost.</li>
+    <li>Your Google account ID, email address, name and access token, the token encrypted on the server;</li>
+    <li>How many times Claude was called for you each day, and roughly what it cost;</li>
+    <li>For people who signed up with Google while there was no free place: their account ID, email address, name, language and when they signed up, deleted once they are let in or removed.</li>
   </ul>
+  <p>Listening to the sample stations without signing in records nothing about you.</p>
   <p>All of this sits on the operator's server, and the operator can see it. Each account's data is kept apart: one account can't see another's likes or feedback. The sound features of songs are shared by everyone; preview audio is decoded in memory and never saved.</p>
 
   <h2>Who it is sent to</h2>
   <ul>
     <li><b>Anthropic (Claude)</b>: titles and artists of the songs you like, candidate songs, songs you turned down and why, what you type when you ask, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier, to build your stations, pick songs and rewrite that text;</li>
-    <li><b>YouTube</b>: to read and write your likes, and for the player on the page;</li>
+    <li><b>YouTube</b>: to read your likes, to write them back once you turn that on, and for the player on the page;</li>
     <li><b>Deezer, Apple iTunes</b>: titles and artists, to find 30-second previews;</li>
     <li><b>NetEase Cloud Music, LRCLIB, YouTube Music</b>: titles, artists and lengths, to find lyrics.</li>
   </ul>

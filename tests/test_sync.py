@@ -3,7 +3,12 @@ import pytest
 from zhiyin import server, store
 
 
-def test_likes_made_before_connecting_go_across_once():
+def test_likes_made_before_connecting_go_across_once(monkeypatch):
+    from zhiyin import google
+    monkeypatch.setattr(google, "writes_back", lambda uid=None: False)
+    with store.as_user("u9"):
+        assert server._backfill_likes() == 0     # joined read-only: nothing goes across until they allow writing
+    monkeypatch.setattr(google, "writes_back", lambda uid=None: True)
     con = store.db()
     for vid in ("a", "b", "c"):
         con.execute("insert into feedback (vid, action, ts, uid) values (?, ?, 1, 'u9')", (vid, "dislike" if vid == "c" else "like"))
@@ -138,3 +143,98 @@ def test_lyrics_with_nothing_to_translate_are_not_sent_again(monkeypatch):
     monkeypatch.setattr(threading, "Thread", lambda target, args, daemon: type("T", (), {"start": lambda s: target(*args)})())
     assert lyrics.translate_later("same0000001", "en")
     assert not lyrics.translate_later("same0000001", "en") and calls == [1]
+
+
+def test_someone_not_signed_in_hears_the_sample_in_their_language_and_changes_nothing(monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(server, "SAMPLE_ON", [server._install_sample()])
+    c = TestClient(server.app)
+    en = c.get("/api/state", headers={"accept-language": "en-US"}).json()
+    assert en["me"]["sample"] and en["me"]["uid"] == store.SAMPLE and en["edition"]["lanes"]
+    tw = c.get("/api/state", headers={"accept-language": "zh-TW"}).json()
+    assert tw["me"]["uid"] == store.SAMPLE_ZH and tw["me"]["lang"] == "zh-Hant" and not tw["stale_lang"]
+    assert c.get("/", headers={"accept-language": "zh-TW"}).status_code == 200
+    assert c.post("/api/feedback", json={"vid": "hp0KiJs0S5g", "action": "like"}).status_code == 401
+    assert c.post("/api/refresh", json={}).status_code == 401
+    assert c.get("/api/users").status_code == 401
+    assert not (store.USERS / store.SAMPLE / "edition.json").read_text() == ""
+    assert server._jobs.get((store.SAMPLE, "refresh")) is None     # looking never starts a build
+    assert en["owner_name"] == ""
+
+    # what signed-out visitors make the server fetch from YouTube is capped, for all of them together
+    from zhiyin import ytm
+    monkeypatch.setattr(ytm, "radio", lambda vid, limit=50: {"tracks": []})
+    monkeypatch.setattr(server, "SAMPLE_FETCHES", {**server.SAMPLE_FETCHES, "more": 2})
+    monkeypatch.setattr(server, "_sample_fetched", {k: [] for k in server.SAMPLE_FETCHES})
+    assert [c.get("/api/more?vid=hp0KiJs0S5g").status_code for _ in range(3)] == [200, 200, 429]
+
+
+def _join(c, monkeypatch, who, mode="join", scope=None):
+    from urllib.parse import parse_qs, urlparse
+    from zhiyin import google
+    scope = scope or f"openid {google.YT_READ}"
+    monkeypatch.setattr(google, "exchange", lambda code, v: {"id_token": who, "scope": scope,
+                                                              "access_token": "a", "refresh_token": "r"})
+    monkeypatch.setattr(google, "claims", lambda tok: {"sub": tok, "email": f"{tok}@example.com", "name": tok.title()})
+    c.cookies.clear()                     # a stranger's browser
+    r = c.get(f"/auth/google/start?mode={mode}", follow_redirects=False)
+    loc = r.headers["location"]
+    if mode == "join":
+        assert "youtube.readonly" in loc and "%2Fyoutube+" not in loc and "%2Fyoutube&" not in loc   # read only
+    state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
+    c.cookies.clear()
+    c.cookies.set("zy_o", state)
+    return c.get(f"/auth/google/callback?state={state}&code=x", follow_redirects=False)
+
+
+def test_strangers_join_with_google_until_the_seats_run_out_then_wait(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, google, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "HOSTED", True)
+    monkeypatch.setattr(llm, "API_KEY", True)
+    monkeypatch.setattr(google, "client", lambda: {"id": "x", "secret": "y"})
+    started = []
+    monkeypatch.setattr(server, "_start", lambda kind, fn: started.append(kind))
+    monkeypatch.setattr(server, "SEATS", accounts.joined() + 1)
+    c = TestClient(server.app)
+
+    r = _join(c, monkeypatch, "ann")
+    assert r.status_code == 303 and r.headers["location"] == "/" and accounts.COOKIE in r.cookies
+    uid = accounts.by_google("ann")
+    assert accounts.prefs(uid)["joined"] and started == ["setup"]
+    with store.as_user(uid):
+        assert not google.writes_back() and server._queue_rate("hp0KiJs0S5g", "LIKE") == "read-only"
+        assert server._me()["sync_likes"] is False
+
+    n = accounts.joined()                   # unticking YouTube on Google's page makes no account and takes no seat
+    assert [_join(c, monkeypatch, "eve", scope="openid email").headers["location"] for _ in range(2)] == ["/login?e=noscope"] * 2
+    assert accounts.by_google("eve") is None and accounts.joined() == n
+
+    r = _join(c, monkeypatch, "bo")          # the last seat is taken: Bo goes on the waitlist, no account
+    assert r.headers["location"] == "/login?e=full" and accounts.by_google("bo") is None
+    assert store.db().execute("select count(*) from waitlist where sub='bo'").fetchone()[0] == 1
+
+    con = store.db()
+    con.execute("update waitlist set admitted=1 where sub='bo'")
+    con.commit()
+    assert _join(c, monkeypatch, "bo", mode="login").headers["location"] == "/auth/google/start?mode=join"   # signing in joins
+    assert _join(c, monkeypatch, "bo").headers["location"] == "/" and accounts.by_google("bo")
+    assert store.db().execute("select count(*) from waitlist where sub='bo'").fetchone()[0] == 0
+
+    n = len(accounts.users())
+    assert _join(c, monkeypatch, "ann").headers["location"] == "/" and len(accounts.users()) == n   # back in, not twice
+
+
+def test_no_one_can_join_a_server_without_an_api_key(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import google, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "HOSTED", True)
+    monkeypatch.setattr(llm, "API_KEY", False)
+    monkeypatch.setattr(google, "client", lambda: {"id": "x", "secret": "y"})
+    monkeypatch.setattr(server, "SEATS", 50)
+    assert server._join_state() == "invite"
+    r = TestClient(server.app).get("/auth/google/start?mode=join", follow_redirects=False)
+    assert "youtube" not in r.headers["location"]      # quietly a plain sign-in

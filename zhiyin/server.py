@@ -26,11 +26,53 @@ AUTH = os.environ.get("ZHIYIN_AUTH") == "1"
 WORKER_TOKEN = os.environ.get("ZHIYIN_WORKER_TOKEN", "")
 MIN_LIKES = 20          # fewer liked songs than this can't define listening lanes yet
 LIKE_SYNC_H = 6
+# Open seats: people who may join with Google without an invite, so the shared Claude pool and the YouTube project's
+# user cap (100 while Google hasn't verified the app) hold. 0 keeps the server invite-only.
+SEATS = int(os.environ.get("ZHIYIN_SEATS", 0))
+SAMPLE_DIR = store.ROOT / "demo"
+SAMPLE_GETS = ("/api/state", "/api/ear", "/api/jobs", "/api/img", "/api/more", "/api/lyrics")
+# Signed-out visitors reach YouTube and the lyrics sites through the server's one address, which every listener shares,
+# so what they make it fetch is capped per ten minutes, all of them together. Anything already cached is free.
+SAMPLE_FETCHES = {"img": 400, "lyrics": 60, "more": 30}
+_sample_fetched: dict[str, list[float]] = {k: [] for k in SAMPLE_FETCHES}
+
+
+def _sample_may_fetch(path: str, q) -> bool:
+    kind = path.rsplit("/", 1)[1]
+    if kind not in SAMPLE_FETCHES:
+        return True
+    if kind == "img" and ytm.cover_cached(q.get("u", "")):
+        return True
+    if kind == "lyrics" and q.get("t") and re.fullmatch(VID, q.get("vid", "")) and lyrics.cached(q["vid"]):
+        return True
+    now = time.time()
+    seen = _sample_fetched[kind] = [t for t in _sample_fetched[kind] if now - t < 600]
+    if len(seen) >= SAMPLE_FETCHES[kind]:
+        return False
+    seen.append(now)
+    return True
+
+
+def _install_sample() -> bool:
+    """The sample listener ships in demo/: English at the top, its Chinese rewrite in demo/zh-Hans."""
+    if not (SAMPLE_DIR / "profile.json").exists():
+        return False
+    for uid, src in ((store.SAMPLE, SAMPLE_DIR), (store.SAMPLE_ZH, SAMPLE_DIR / "zh-Hans")):
+        d = store.USERS / uid
+        d.mkdir(parents=True, exist_ok=True)
+        for f in ("library.json", "tags.json", "profile.json", "edition.json"):
+            p = src / f if (src / f).exists() else SAMPLE_DIR / f
+            (d / f).write_bytes(p.read_bytes())
+    return True
+
+
+SAMPLE_ON = [False]
 
 
 @asynccontextmanager
 async def _lifespan(_app):
     i18n.migrate()
+    SAMPLE_ON[0] = AUTH and _install_sample()
     for fn in (_scheduler, _outbox_loop):
         threading.Thread(target=fn, daemon=True).start()
     yield
@@ -58,6 +100,19 @@ async def _who(request: Request, call_next):
     if uid is None:
         if request.url.path.startswith(OPEN):
             return await call_next(request)
+        path = request.url.path
+        if SAMPLE_ON[0] and request.method == "GET" and (path == "/" or path in SAMPLE_GETS):
+            # Someone not signed in tries the app as the sample listener, read-only, in their browser's language.
+            if not _sample_may_fetch(path, request.query_params):
+                return JSONResponse({"detail": "busy"}, 429)
+            lang = i18n.from_request(request)
+            tu = store._uid.set(store.SAMPLE if lang == "en" else store.SAMPLE_ZH)
+            tl = i18n.reader.set(lang)
+            try:
+                return await call_next(request)
+            finally:
+                store._uid.reset(tu)
+                i18n.reader.reset(tl)
         if request.url.path.startswith("/api/"):
             return JSONResponse({"detail": i18n.tr("需要重新登录", i18n.from_request(request))}, 401)
         return RedirectResponse("/login", 303)
@@ -84,9 +139,13 @@ def healthz():
 # listeners, because each holds Claude processes and the server has little memory.
 _jobs: dict[tuple[str, str], dict] = {}
 _job_lock = threading.Lock()
-_heavy = threading.Lock()
-HEAVY = {"refresh", "setup"}
+# Listeners' stations are built side by side, a few at a time; the editor calls themselves are rationed in llm.
+HEAVY_AT_ONCE = int(os.environ.get("ZHIYIN_HEAVY", 2))
+_heavy = threading.BoundedSemaphore(HEAVY_AT_ONCE)
+_heavy_busy = [0]
+HEAVY = {"setup"}   # a first run; editions ration their own gathering in edition.GATHER
 STALE_AFTER_H = 20
+ACTIVE_DAYS = 3   # a listener away longer gets the next edition when they come back, not every morning meanwhile
 FRESH_HOUR = 5
 
 
@@ -107,10 +166,14 @@ def _start(kind: str, fn):
     def run():
         try:
             if kind in HEAVY:
-                if _heavy.locked():
+                if _heavy_busy[0] >= HEAVY_AT_ONCE:
                     log(i18n.tr("排队中：另一位听众的电台正在准备"))
                 with _heavy:
-                    j["result"] = fn(log)
+                    _heavy_busy[0] += 1
+                    try:
+                        j["result"] = fn(log)
+                    finally:
+                        _heavy_busy[0] -= 1
             else:
                 j["result"] = fn(log)
         except Exception as e:
@@ -144,7 +207,7 @@ def _quota_reset() -> str:
 def _edition_stale(ed: dict | None) -> bool:
     if not ed:
         return True
-    created = dt.datetime.fromtimestamp(ed["created"])
+    created = dt.datetime.fromtimestamp(max(ed["created"], ed.get("checked", 0)))
     now = dt.datetime.now()
     today_fresh = now.replace(hour=FRESH_HOUR, minute=0, second=0, microsecond=0)
     return (now - created).total_seconds() > STALE_AFTER_H * 3600 or (now >= today_fresh > created)
@@ -156,8 +219,17 @@ def _auto_refresh(ed: dict | None):
     j = _jobs.get((store.uid(), "refresh"))
     if j and (j["running"] or time.time() - j.get("ended", 0) < 1800):
         return
+    # Only the stations played from get new songs: the others still hold songs not yet heard, and rebuilding them
+    # would spend the editor on picks nobody listens to.
+    only = None
+    if ed and ed.get("lang", "zh-Hans") == i18n.of() and {l["key"] for l in ed["lanes"]} >= {
+            l["key"] for l in (store.read_json(store.PROFILE) or {}).get("lanes", []) if settings.lane_view(l)["enabled"]}:
+        only = edition.played_since(ed)
+        if not only:
+            store.write_json(store.EDITION, {**ed, "checked": store.now()})
+            return
     try:
-        _start("refresh", lambda log: edition.build(log=log) and None)
+        _start("refresh", lambda log: edition.build(log=log, only=only) and None)
     except HTTPException:
         pass
 
@@ -200,8 +272,9 @@ def _scheduler():
                           and google.connected(u["id"]) and not llm.unavailable(u["id"])
                           and not (j and (j["running"] or time.time() - j.get("ended", 0) < 1800))):
                         _start("setup", _setup)   # a first run that failed, e.g. while Claude was out
-                    if u["status"] == "ready":
-                        _auto_refresh(store.read_json(store.EDITION))
+                    if u["status"] == "ready" and time.time() - (u["last_seen"] or 0) < ACTIVE_DAYS * 86400:
+                        with llm.background():
+                            _auto_refresh(store.read_json(store.EDITION))
                         _auto_sync()
             except Exception:
                 traceback.print_exc()
@@ -246,6 +319,8 @@ def _queue_rate(vid: str, rating: str) -> str:
     uid = store.uid()
     if not (google.configured() and google.connected(uid)):
         return "none"
+    if not google.writes_back(uid):
+        return "read-only"
     if accounts.prefs(uid).get("sync_likes") is False:
         return "off"
     con = store.db()
@@ -259,7 +334,7 @@ def _queue_rate(vid: str, rating: str) -> str:
 def _backfill_likes() -> int:
     """Likes made in Zhiyin before YouTube Music was connected go across once it is."""
     uid = store.uid()
-    if accounts.prefs(uid).get("sync_likes") is False:
+    if accounts.prefs(uid).get("sync_likes") is False or not google.writes_back(uid):
         return 0
     con = store.db()
     sent = {r["vid"] for r in con.execute("select vid from outbox where uid=? and op='rate'", (uid,))}
@@ -310,14 +385,31 @@ def _sync_view(uid: str) -> dict:
     return {"pending": pending["n"], "error": pending["e"], "done": synced["n"]}
 
 
+def _seats_left() -> int:
+    return max(0, SEATS - accounts.joined())
+
+
+def _join_state() -> str:
+    """open: anyone may join with Google; full: they go on the waitlist; invite: only invite links make accounts."""
+    if not (AUTH and SEATS and google.configured()) or (llm.HOSTED and not llm.API_KEY):
+        return "invite"   # listeners who join run on the operator's API key, so there is nothing to join without one
+    return "open" if _seats_left() else "full"
+
+
 def _me() -> dict:
+    if store.is_sample():
+        return {"uid": store.uid(), "sample": True, "name": "", "owner": False, "mine": False, "status": "ready",
+                "auth": AUTH, "lang": i18n.of(), "google": {"configured": google.configured(), "connected": False,
+                                                           "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1"},
+                "join": _join_state(), "sync": {}, "claude": None}
     u = accounts.get() or {"id": store.uid(), "name": "", "status": "ready", "prefs": {}, "email": None}
     ok = google.configured() and google.connected(u["id"])
     return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "mine": store.is_owners(u["id"]), "status": u["status"], "auth": AUTH,
             "lang": i18n.of(u["id"]),
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
                        "error": u["prefs"].get("google_error")},
-            "sync_likes": u["prefs"].get("sync_likes", True), "sync": _sync_view(u["id"]),
+            "sync_likes": u["prefs"].get("sync_likes", True) and (not ok or google.writes_back(u["id"])),
+            "writes_back": ok and google.writes_back(u["id"]), "sync": _sync_view(u["id"]),
             "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"),
             "worker": audio.worker_online() if audio.REMOTE else None,
             "claude": llm.view(u["id"]) if AUTH else None}
@@ -335,7 +427,8 @@ def _page(name: str, lang: str) -> str:
 
 def _gate(mode: str, request: Request, **ctx) -> HTMLResponse:
     html = _page("gate.html", i18n.from_request(request))
-    data = {"mode": mode, "google": google.configured(), **ctx}
+    data = {"mode": mode, "google": google.configured(), "join": _join_state(), "sample": SAMPLE_ON[0],
+            "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1", **ctx}
     import json
     html = html.replace("__GATE__", json.dumps(data, ensure_ascii=False).replace("<", "\\u003c"))
     return HTMLResponse(html, headers={"Cache-Control": "no-store", "Referrer-Policy": "same-origin"})
@@ -400,24 +493,32 @@ def logout(request: Request):
 
 
 @app.get("/auth/google/start")
-def google_start(request: Request, mode: str = "connect",
+def google_start(request: Request, mode: str = "connect", write: int = 0,
                  as_: Annotated[str, Query(alias="as", max_length=254)] = ""):
-    """mode=login&as=<email> is a bookmark that goes straight back into that listener's account."""
+    """mode=login&as=<email> is a bookmark that goes straight back into that listener's account. mode=join is
+    signing up with Google in one step (no invite), asking only to read YouTube; write=1 adds writing likes back."""
     if not google.configured():
         raise HTTPException(503, i18n.tr("Google 登录还没配置", i18n.from_request(request)))
-    connect = mode == "connect"
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
-    if connect and not uid:
+    join = mode == "join" and AUTH and not uid and _join_state() != "invite"
+    if mode == "join" and not join and not uid:
+        mode = "login"
+    connect = mode == "connect" or join
+    if connect and not uid and not join:
         return RedirectResponse("/login", 303)
+    asked_write = bool(write)
+    # Someone who already reads and writes keeps both: include_granted_scopes only adds.
+    write = asked_write or (uid is not None and google.writes_back(uid)) or not AUTH
     state = secrets.token_urlsafe(24)
     verifier, challenge = google.pkce()
     con = store.db()
     con.execute("delete from kv where k like 'oauth:%' and json_extract(v, '$.t') < ?", (time.time() - 900,))
     con.commit()
-    store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "uid": uid, "t": time.time()})
+    store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "join": join, "uid": uid, "t": time.time(),
+                                    "lang": i18n.from_request(request), "write_on": asked_write})
     named = "" if connect else as_
     hint = named or ((accounts.get(uid) or {}).get("email") if uid else None)
-    r = RedirectResponse(google.auth_url(state, challenge, connect, hint, pick=not named), 303)
+    r = RedirectResponse(google.auth_url(state, challenge, connect, hint, pick=not named, write=write), 303)
     r.set_cookie("zy_o", state, max_age=900, httponly=True, samesite="lax", secure=google.public_url().startswith("https"))
     return r
 
@@ -431,12 +532,30 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     con.execute("delete from kv where k=?", (f"oauth:{state}",))
     con.commit()
     if error or not code:
-        return RedirectResponse("/?google=cancelled" if st["connect"] else "/login?e=cancelled", 303)
+        return RedirectResponse("/?google=cancelled" if st["connect"] and not st.get("join") else "/login?e=cancelled", 303)
     tok = google.exchange(code, st["v"])
     c = google.claims(tok["id_token"])
+    if st.get("join"):
+        st["uid"] = accounts.by_google(c["sub"])
+        if not st["uid"]:
+            if not google.has_youtube(tok):
+                return RedirectResponse("/login?e=noscope", 303)   # no account is made without likes to read
+            w = con.execute("select admitted from waitlist where sub=?", (c["sub"],)).fetchone()
+            if not _seats_left() and not (w and w["admitted"]):
+                con.execute("insert or ignore into waitlist values (?, ?, ?, ?, ?, null)",
+                            (c["sub"], c.get("email", ""), c.get("name", ""), time.time(), st.get("lang")))
+                con.commit()
+                return RedirectResponse("/login?e=full", 303)
+            st["uid"] = accounts.create(c.get("name", ""))
+            accounts.set_prefs(st["uid"], joined=True, lang=st.get("lang"), sync_likes=False)
+            con.execute("delete from waitlist where sub=?", (c["sub"],))
+            con.commit()
     if not st["connect"]:
         uid = accounts.by_google(c["sub"])
         if not uid:
+            w = con.execute("select admitted from waitlist where sub=?", (c["sub"],)).fetchone()
+            if w and w["admitted"] and _join_state() != "invite":
+                return RedirectResponse("/auth/google/start?mode=join", 303)   # let in from the waitlist: joins now
             return RedirectResponse("/login?e=unknown", 303)
         return _signed_in(RedirectResponse("/", 303), uid, request)
     uid = st["uid"]
@@ -444,7 +563,8 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     if other and other != uid:
         return RedirectResponse("/?google=taken", 303)
     if not google.has_youtube(tok):
-        return RedirectResponse("/?google=noscope", 303)
+        r = RedirectResponse("/?google=noscope", 303)
+        return _signed_in(r, uid, request) if st.get("join") else r
     accounts.link_google(uid, c["sub"], c.get("email", ""), c.get("name", ""))
     google.save_tokens(uid, tok)
     accounts.set_prefs(uid, google_error=None)
@@ -461,12 +581,15 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
                 _start("sync", _sync_likes)
         except HTTPException:
             pass
-    return RedirectResponse("/", 303)
+    if google.writes_back(uid) and st.get("write_on"):
+        accounts.set_prefs(uid, sync_likes=True)
+    r = RedirectResponse("/", 303)
+    return _signed_in(r, uid, request) if st.get("join") else r
 
 
 @app.get("/")
 def index(request: Request):
-    if not accounts.prefs(store.uid()).get("lang"):
+    if not store.is_sample() and not accounts.prefs(store.uid()).get("lang"):
         accounts.set_prefs(store.uid(), lang=i18n.from_request(request))   # a new listener starts in their browser's language
     # YouTube's embed player rejects requests without a Referer (error 153); keep the default
     # strict-origin-when-cross-origin policy and never send no-referrer.
@@ -500,7 +623,7 @@ def state():
         timeline.append([t["rank"], (t.get("liked_est") or "")[:7], lane, t["title"],
                          t["artists"][0]["name"] if t["artists"] else ""])
     ed = store.read_json(store.EDITION)
-    if accounts.get() is None or accounts.get()["status"] == "ready":
+    if not store.is_sample() and (accounts.get() is None or accounts.get()["status"] == "ready"):
         _auto_refresh(ed)
         _auto_sync()
     out = {
@@ -510,7 +633,7 @@ def state():
         "asks": store.read_json(store.ASKS) or [], "feedback": fb, "timeline": timeline,
         "library": {"songs": sum(1 for t in tracks if not t["long"]), "mixes": sum(1 for t in tracks if t["long"]),
                     "synced": lib.get("synced"), "source": tracks[0]["source"] if tracks else None},
-        "me": _me(), "jobs": jobs(), "owner_name": (accounts.get(store.OWNER) or {}).get("name") or "",
+        "me": _me(), "jobs": jobs(), "owner_name": "" if store.is_sample() else (accounts.get(store.OWNER) or {}).get("name") or "",
         "stale_lang": i18n.stale(),
     }
     rl = i18n.of()
@@ -729,7 +852,11 @@ def account_retell():
 
 @app.post("/api/account/sync-likes")
 def account_sync_likes(t: Toggle):
+    if t.on and google.connected() and not google.writes_back():
+        return {**_me(), "grant": "/auth/google/start?mode=connect&write=1"}   # Google asks once more, for writing
     accounts.set_prefs(store.uid(), sync_likes=t.on)
+    if t.on:
+        _backfill_likes()
     return _me()
 
 

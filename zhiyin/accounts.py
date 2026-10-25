@@ -62,6 +62,20 @@ def link_google(uid: str, sub: str, email: str, name: str) -> None:
     con.commit()
 
 
+def create(name: str) -> str:
+    """Someone who joined on their own with Google, without an invite."""
+    uid = "u" + secrets.token_hex(4)
+    con = store.db()
+    con.execute("insert into users(id, name, created, status) values (?, ?, ?, 'new')", (uid, name.strip(), time.time()))
+    con.commit()
+    return uid
+
+
+def joined() -> int:
+    """Listeners who took an open seat (not the owner's own accounts, not invited friends)."""
+    return store.db().execute("select count(*) from users where json_extract(prefs, '$.joined') = 1").fetchone()[0]
+
+
 def invite(name: str, uid: str | None = None, mine: bool = False) -> str:
     """A new listener (or a sign-in link for an existing one, e.g. the owner on a new server). `mine` is another
     account of the owner's own, which runs on the owner's Claude."""

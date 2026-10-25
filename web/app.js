@@ -33,6 +33,7 @@ const I = {
   out: '<svg viewBox="0 0 24 24"><path d="M14 5H6.5v14H14M10 12h10M17 8.5 20.5 12 17 15.5"/></svg>',
   keyb: '<svg viewBox="0 0 24 24"><rect x="3.5" y="6.5" width="17" height="11" rx="2"/><path d="M7 10h.01M10.5 10h.01M14 10h.01M17 10h.01M8 14h8"/></svg>',
   down: '<svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>',
+  go: '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   close: '<svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
   swap: '<svg viewBox="0 0 24 24"><path d="M7 8h12M15.5 4.5 19 8l-3.5 3.5M17 16H5M8.5 12.5 5 16l3.5 3.5"/></svg>',
 };
@@ -45,6 +46,11 @@ let pendingAsk = null;
 let WARM = null;       // radios from the newest likes, while a new listener's stations are being made
 const queues = new Map();
 const ready = () => !S.me || S.me.status === 'ready';
+// Not signed in: the page plays a made-up listener's stations, read-only. Anything that needs an account opens the
+// join sheet instead.
+const SAMPLE = () => !!S?.me?.sample;
+const NEEDS_ACCOUNT = new Set(['like', 'nope', 'refresh', 'setup', 'resync', 'synclikes', 'device', 'mine', 'delete',
+  'settings', 'save', 'stmenu', 'logout']);
 const fb = new Map();
 const prefs = { lyr: store.get('lyr') ?? true, lyrNarrow: true, imm: false };
 
@@ -53,6 +59,7 @@ async function api(path, body) {
   const headers = S?.me?.uid ? { 'X-Zhiyin-Uid': S.me.uid } : {};
   const r = await fetch(path, body === undefined ? { headers } : { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await r.json().catch(() => ({}));
+  if (r.status === 401 && SAMPLE()) { openJoin(); throw new Error(t('需要先加入')); }
   if (r.status === 401) { location.href = '/login'; throw new Error(data.detail || t('需要重新登录')); }
   if (r.status === 409 && data.detail === 'account-changed') { location.reload(); throw new Error(t('这个浏览器已经换了账号')); }
   if (r.status === 409 && data.detail === 'busy') throw Object.assign(new Error(t('上一次还没做完，稍等一下')), { code: 'busy' });
@@ -102,7 +109,9 @@ function toast(msg, actions = [], ms) {
   const t = $('#toast');
   t.innerHTML = `<span>${esc(msg)}</span>${actions.length ? `<div class="acts">${actions.map(([l], i) => `<button data-i="${i}">${esc(l)}</button>`).join('')}</div>` : ''}`;
   $$('button', t).forEach((b) => { b.onclick = () => { t.classList.remove('show'); actions[+b.dataset.i][1](); }; });
+  t.style.left = t.style.bottom = '';
   t.classList.add('show');
+  clearOf(t);
   clearTimeout(t._h);
   t._h = setTimeout(() => t.classList.remove('show'), ms || (actions.length ? 6000 : 2800));
 }
@@ -118,7 +127,13 @@ function buildStations() {
   (S.asks || []).slice(0, 4).forEach((a) => out.push({
     key: `ask:${a.created}`, group: 'ask', name: a.intent, sub: artistLine(a.picks), when: t('你说：{q}', { q: a.q }), tracks: a.picks, reserve: [],
   }));
-  for (const l of ed?.lanes || []) out.push({ key: l.key, group: 'lane', name: l.name, sub: artistLine(l.picks), when: l.when, tracks: l.picks, reserve: l.reserve || [] });
+  // Each morning only the stations someone played from get new songs; mark those until they are opened.
+  const partial = (ed?.lanes || []).some((l) => l.fresh === false);
+  const seen = store.get(acct('seen')) || {};
+  for (const l of ed?.lanes || []) {
+    const fresh = partial && l.fresh === ed.id && seen[ed.id]?.[l.key] !== 1;
+    out.push({ key: l.key, group: 'lane', name: l.name, sub: artistLine(l.picks), when: l.when, tracks: l.picks, reserve: l.reserve || [], fresh });
+  }
   if (ed?.focus?.picks?.length) out.push({ key: 'focus', group: 'lane', name: t('专注'), sub: t('一小时左右的长歌单'), when: ed.focus.when, tracks: ed.focus.picks, reserve: [] });
   ST = out;
 }
@@ -127,7 +142,7 @@ function stHTML(s) {
   const imgs = s.tracks.slice(0, s.tracks.length >= 4 ? 4 : 1).map((p) => imgTag(p, 120)).join('');
   return `<button class="st ${s.pending ? 'pending' : ''}" data-st="${esc(s.key)}" ${Q?.key === s.key ? 'aria-current="true"' : ''} title="${esc(s.when || '')}">
     <span class="mosaic ${s.pending ? 'wait' : ''} ${s.tracks.length < 4 ? 'one' : ''}">${s.pending ? '' : imgs}</span>
-    <span class="txt"><span class="nm">${esc(s.name)}</span><span class="sb">${esc(s.sub)}</span></span><span class="eqs"><i></i><i></i><i></i></span></button>`;
+    <span class="txt"><span class="nm">${esc(s.name)}${s.fresh ? `<i class="new" title="${t('今天换了新歌')}"></i>` : ''}</span><span class="sb">${esc(s.sub)}</span></span><span class="eqs"><i></i><i></i><i></i></span></button>`;
 }
 
 const STEPS = () => [t('读取你的喜欢'), t('了解你的口味'), t('挑第一批电台')];
@@ -139,7 +154,7 @@ function prepHTML() {
     const j = S.jobs?.setup, step = Math.max(1, j?.step || (me.status === 'building' ? 2 : 1));
     return `<div class="prep"><b>${t('正在准备你的电台 · {n}/3', { n: step })}</b><p>${esc(STEPS()[step - 1])}${t('。')}${step === 1 ? t('要几分钟，可以先听着，好了会告诉你。') : t('大约一刻钟，可以先听着，好了会告诉你。')}</p></div>`;
   }
-  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${t('你在 YouTube 只点过 {n} 首歌的喜欢，至少要 20 首才分得出你的几种口味。先听「先听着」，喜欢的点 ♥，会同步回你的 YouTube Music。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('攒够了，重新读取')}</button></div>`;
+  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${t('你在 YouTube 只点过 {n} 首歌的喜欢，至少要 20 首才分得出你的几种口味。先听「先听着」；在 YouTube Music 里多点几首喜欢，攒够了再读一次。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('攒够了，重新读取')}</button></div>`;
   if (me.status === 'error') return `<div class="prep"><b>${t('准备电台时出了问题')}</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">${t('再试一次')}</button></div>`;
   return '';
 }
@@ -147,7 +162,7 @@ function prepHTML() {
 function renderStations() {
   const asks = ST.filter((s) => s.group === 'ask'), lanes = ST.filter((s) => s.group === 'lane'), warm = ST.filter((s) => s.group === 'warm');
   const busy = S.jobs?.refresh?.running;
-  const label = busy ? t('正在挑新的一批…') : S.edition ? t('电台 · {when} 更新', { when: when(S.edition.created) }) : '';
+  const label = SAMPLE() ? t('示例听众的电台') : busy ? t('正在挑新的一批…') : S.edition ? t('电台 · {when} 更新', { when: when(S.edition.created) }) : '';
   renderMe();
   if (!ready() || !lanes.length) {
     $('#stations').innerHTML = `${prepHTML()}${warm.length ? `<div class="st-h"><span>${t('先听着')}</span></div>` : ''}${warm.map(stHTML).join('')}${lanes.map(stHTML).join('')}`;
@@ -155,7 +170,7 @@ function renderStations() {
   }
   $('#stations').innerHTML = `${prepHTML()}
     ${asks.length ? `<div class="st-h"><span>${t('你点的')}</span></div>${asks.map(stHTML).join('')}` : ''}
-    <div class="st-h"><span>${label}</span><button class="${busy ? 'busy' : ''}" data-k="refresh" title="${t('现在重新挑一批')}" ${busy ? 'disabled' : ''}>${I.refresh}</button></div>
+    <div class="st-h"><span>${label}</span>${SAMPLE() ? '' : `<button class="${busy ? 'busy' : ''}" data-k="refresh" title="${t('现在重新挑一批')}" ${busy ? 'disabled' : ''}>${I.refresh}</button>`}</div>
     ${lanes.map(stHTML).join('')}
     ${warm.length ? `<div class="st-h"><span>${t('先听着')}</span></div>${warm.map(stHTML).join('')}` : ''}`;
 }
@@ -177,6 +192,11 @@ function selectStation(key, play = true) {
   const same = Q?.key === key;
   Q = queueOf(st);
   store.set(acct('last'), key);
+  if (st.fresh && S.edition) {
+    st.fresh = false;
+    store.set(acct('seen'), { [S.edition.id]: { ...(store.get(acct('seen')) || {})[S.edition.id], [key]: 1 } });
+    renderStations();
+  }
   if (view !== 'listen') { location.hash = ''; return loadTrack(play); }
   renderStations();
   renderQueue();
@@ -199,6 +219,7 @@ function trackChanged() {
   const p = cur();
   if (!p) return;
   store.set(acct('pos'), { ed: S.edition?.id, key: Q.key, vid: p.vid });
+  placeCard();
   paintNow();
   ambient(p);
   Lyr.load(p);
@@ -214,10 +235,10 @@ function loadTrack(play) {
 }
 
 function logPlay(p, ev, pos = 0) {
-  if (p) api('/api/play', { vid: p.vid, lane: Q?.key, ev, pos: Math.round(pos) }).catch(() => {});
+  if (p && !SAMPLE()) api('/api/play', { vid: p.vid, lane: Q?.key, ev, pos: Math.round(pos) }).catch(() => {});
 }
 
-async function next() {
+async function next(play = true) {
   if (!Q) return;
   const p = cur();
   if (p) {
@@ -227,7 +248,7 @@ async function next() {
     if (Player.playing && t < Math.min(30, d / 2)) { logPlay(p, 'skip', t); adapt('neg', p); }
   }
   if (Q.i >= Q.tracks.length - 1) await extend(true);
-  if (Q.i < Q.tracks.length - 1) { Q.i++; loadTrack(true); }
+  if (Q.i < Q.tracks.length - 1) { Q.i++; loadTrack(play); }
 }
 function prev() {
   if (!Q) return;
@@ -345,141 +366,107 @@ function paintSteer() {
   if (n) n.textContent = s.note || '';
 }
 
-/* ---------- player: two YouTube decks so one song can run into the next ---------- */
-const XF = 3;   // seconds the outgoing and incoming songs overlap at a natural ending
+/* ---------- player: one YouTube player ---------- */
+// YouTube allows one playing player per page, with nothing drawn over it, so songs don't overlap: the last seconds
+// of a song fall away, the song ends, and the next one starts.
+const FADE = 2.5;   // seconds a song fades out over at a natural ending
 
 const Player = {
-  decks: [], a: 0, want: null, playing: false, logged: null, timer: null, fade: null, clock: { raw: -1, at: 0 },
-  get on() { return this.decks[this.a]; },
-  get ready() { return this.decks.length === 2 && this.decks.every((d) => d.ready); },
+  yt: null, ready: false, vid: null, want: null, cued: false, playing: false, shown: false, used: false, logged: null, timer: null, ramp: 0, ending: false,
+  clock: { raw: -1, at: 0 },
   init() {
     window.onYouTubeIframeAPIReady = () => {
-      this.decks = ['ytA', 'ytB'].map((id, k) => {
-        const d = { k, ready: false, vid: null, yt: null, duck: 0 };
-        d.yt = new YT.Player(id, {
-          width: '100%', height: '100%',
-          playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, playsinline: 1, rel: 0, origin: location.origin },
-          events: {
-            onReady: () => {
-              d.ready = true;
-              if (this.ready && this.want) { const w = this.want; this.want = null; this.load(w.p, w.play); }
-            },
-            onStateChange: (e) => this.onState(d, e.data),
-            onError: () => this.onError(d),
+      this.yt = new YT.Player('ytA', {
+        width: '100%', height: '100%',
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, playsinline: 1, rel: 0, origin: location.origin },
+        events: {
+          onReady: () => {
+            this.ready = true;
+            if (this.want) { const w = this.want; this.want = null; this.load(w.p, w.play); }
           },
-        });
-        return d;
+          onStateChange: (e) => this.onState(e.data),
+          onError: () => this.onError(),
+        },
       });
     };
     const s = document.createElement('script');
     s.src = 'https://www.youtube.com/iframe_api';
     document.head.append(s);
   },
-  paintDecks() { $$('.yt-crop').forEach((el, k) => el.classList.toggle('on', k === this.a)); },
-  start(d, vid, vol, play = true) {
-    clearInterval(d.duck);
-    d.vid = vid;
-    d.yt.setVolume(vol);
-    d.yt.unMute();
-    play ? d.yt.loadVideoById(vid) : d.yt.cueVideoById(vid);
-  },
-  silence(d, ms) {
-    const t0 = performance.now();
-    clearInterval(d.duck);
-    d.duck = setInterval(() => {
+  fadeTo(vol, ms, then) {
+    clearInterval(this.ramp);
+    const from = this.yt.getVolume?.() ?? 100, t0 = performance.now();
+    this.ramp = setInterval(() => {
       const x = clamp((performance.now() - t0) / ms);
-      d.yt.setVolume(Math.round(100 * (1 - x)));
-      if (x >= 1) { clearInterval(d.duck); d.yt.pauseVideo(); }
+      this.yt.setVolume(Math.round(from + (vol - from) * x));
+      if (x >= 1) { clearInterval(this.ramp); then?.(); }
     }, 30);
   },
+  // back to full volume: a seek, pause or skip during the closing fade keeps the song audible
+  steady() { clearInterval(this.ramp); this.ending = false; if (this.ready) this.yt.setVolume(100); },
+  start(vid, play) {
+    this.steady();
+    this.vid = vid;
+    this.cued = !play;
+    this.yt.unMute();
+    play ? this.yt.loadVideoById(vid) : this.yt.cueVideoById(vid);
+  },
+  // the rail's YouTube window opens with the first song played, and is in place before that song starts
+  use() { if (!this.used) { this.used = true; placeCard(); placeHost(); } },
   load(p, play) {
-    $('#ytHost').classList.remove('live');
+    if (play) this.use();
     if (!this.ready) { this.want = { p, play }; return; }
-    this.endFade();
-    const from = this.on;
-    if (play && this.playing && from.vid !== p.vid) {
-      // Start the new song on the other deck and let the old one fall away, so a skip never leaves silence.
-      this.a = 1 - this.a;
-      this.start(this.on, p.vid, 100);
-      this.silence(from, 260);
-    } else {
-      this.start(from, p.vid, 100, play);
-    }
-    this.paintDecks();
+    // a skip lets the old song drop away for a moment instead of cutting it mid-note
+    if (play && this.playing && this.vid !== p.vid) this.fadeTo(0, 180, () => this.start(p.vid, true));
+    else this.start(p.vid, play);
   },
-  crossfade() {
-    const nx = Q?.tracks[Q.i + 1];
-    if (!nx) return;
-    const from = this.on, p = cur();
-    Q.played.add(p.vid);
-    logPlay(p, 'done', this.time()[0]);
-    this.a = 1 - this.a;
-    this.fade = { from, to: this.on, t0: 0, h: 0 };
-    this.start(this.on, nx.vid, 0);
-    this.paintDecks();
-    Q.i++;
-    $('#ytHost').classList.remove('live');
-    trackChanged();
-    adapt('pos', p);   // only after the incoming song is fixed, or the queue could move under it
+  closing(t, d) {
+    if (this.ending || !this.playing || d <= 60 || d - t > FADE) return;
+    this.ending = true;
+    this.fadeTo(0, Math.max(400, (d - t) * 1000));
   },
-  runFade() {
-    const f = this.fade;
-    f.t0 = performance.now();
-    f.h = setInterval(() => {
-      const x = clamp((performance.now() - f.t0) / (XF * 1000));
-      f.to.yt.setVolume(Math.round(100 * Math.sin((x * Math.PI) / 2)));
-      f.from.yt.setVolume(Math.round(100 * Math.cos((x * Math.PI) / 2)));
-      if (x >= 1) this.endFade();
-    }, 40);
-  },
-  endFade() {
-    const f = this.fade;
-    if (!f) return;
-    clearInterval(f.h);
-    this.fade = null;
-    f.to.yt.setVolume(100);
-    f.from.yt.pauseVideo();
-  },
-  onError(d) {
-    if (d !== this.on) return;
-    this.endFade();
+  onError() {
+    this.steady();
     toast(t('〈{s}〉不允许在网页里播放，已跳过', { s: cur()?.title || '' }));
-    setTimeout(next, 400);
+    setTimeout(() => next(!this.cued), 400);   // a song only loaded, not started, is replaced by one only loaded
   },
-  onState(d, s) {
-    if (d !== this.on) return;  // the outgoing deck playing out its last bars
-    if (this.fade && s === 1 && !this.fade.t0) this.runFade();
+  onState(s) {
     this.playing = s === 1 || s === 3;
+    // YouTube's player shows from the moment a song plays until it stops; paused, cued or between songs, the frame shows
+    // the song's own cover instead of YouTube's thumbnail, title bar and play button
+    if (s === 1) { this.shown = true; this.cued = false; this.use(); }   // a seek also starts a cued song, so any start opens the window
+    else if (s !== 3) this.shown = false;
+    placeHost();
     document.body.classList.toggle('playing', this.playing);
     Pip.w?.document.body.classList.toggle('playing', this.playing);
     MS.state(this.playing);
-    // YouTube draws its title bar and play bezel over the first seconds of playback; keep the cover up until they fade.
-    clearTimeout(this.liveT);
-    if (s === 1) { const vid = d.vid; this.liveT = setTimeout(() => { if (this.playing && this.on.vid === vid) $('#ytHost').classList.add('live'); }, 3500); }
-    else $('#ytHost').classList.remove('live');
     clearInterval(this.timer);
     if (this.playing) this.timer = setInterval(tick, 250);
     tick();
     Lyr.run();
     const p = cur();
     if (s === 1 && p && this.logged !== p.vid) { this.logged = p.vid; logPlay(p, 'start'); Lyr.prefetch(); }
-    if (s === 0) { logPlay(p, 'done', this.time()[1]); next(); }
+    if (s === 0 && p) {
+      logPlay(p, 'done', this.time()[1]);
+      Q.played.add(p.vid);
+      next().then(() => adapt('pos', p));   // only after the next song is fixed, or the queue could move under it
+    }
   },
   toggle() {
     if (!cur()) return;
     MS.arm();
+    if (!this.playing) this.use();
     if (!this.ready) { this.want = { p: cur(), play: true }; return; }
-    this.endFade();
-    this.playing ? this.on.yt.pauseVideo() : this.on.yt.playVideo();
+    this.steady();
+    this.playing ? this.yt.pauseVideo() : this.yt.playVideo();
   },
   play() { if (!this.playing) this.toggle(); },
-  pause() { if (this.ready && this.playing) { this.endFade(); this.on.yt.pauseVideo(); } },
-  seekTo(sec) { if (!this.ready) return; this.endFade(); this.on.yt.seekTo(Math.max(0, sec), true); this.clock.raw = -1; },
+  pause() { if (this.ready && this.playing) { this.steady(); this.yt.pauseVideo(); } },
+  seekTo(sec) { if (!this.ready) return; this.steady(); this.yt.seekTo(Math.max(0, sec), true); this.clock.raw = -1; },
   seek(frac) { const d = this.time()[1]; if (d) this.seekTo(d * frac); },
   time() {
-    const d = this.on;
-    if (!this.ready || !d) return [0, cur()?.dur || 0];
-    return [d.yt.getCurrentTime?.() || 0, d.yt.getDuration?.() || cur()?.dur || 0];
+    if (!this.ready) return [0, cur()?.dur || 0];
+    return [this.yt.getCurrentTime?.() || 0, this.yt.getDuration?.() || cur()?.dur || 0];
   },
   // YouTube reports the position in coarse steps; extrapolate between them so lyrics can move with the voice.
   now() {
@@ -498,8 +485,8 @@ function tick() {
   const c = $('#tCur'), e = $('#tDur');
   if (c) c.textContent = fmt(t);
   if (e) e.textContent = fmt(d);
-  if (Player.playing && !Player.fade && d > 60 && d - t <= XF + 0.4 && Q?.tracks[Q.i + 1]) Player.crossfade();
-  else if (Player.playing && d - t < 20 && Q && Q.i >= Q.tracks.length - 1 && !extend.busy) {
+  Player.closing(t, d);
+  if (Player.playing && d - t < 20 && Q && Q.i >= Q.tracks.length - 1 && !extend.busy) {
     extend.busy = true;
     extend(true).finally(() => { extend.busy = false; });
   }
@@ -610,7 +597,7 @@ const Lyr = {
     this.paintPip(true);
   },
   hosts() { return $$('.lyr'); },
-  visible() { return !!this.data && (Pip.w || $$('.stage.lyr-on').length > 0); },
+  visible() { return !!this.data && (Pip.w || !!$('.room.lyr-on')); },
   run() {
     cancelAnimationFrame(this.raf);
     if (!this.visible()) return;
@@ -685,39 +672,39 @@ function paintCredits() {
   el.textContent = c.map(([r, n]) => `${t(r)} ${n}`).join(' · ');
 }
 
-/* ---------- stage layout: lyrics beside the cover when there is room ---------- */
-const LYR_SIDE = 560;   // stage content width from which lyrics sit beside the cover; matches the container query in CSS
-function stageWidth(st) {
-  const cs = getComputedStyle(st);
-  return st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-}
+/* ---------- the room: lyrics or the programme beside the song ---------- */
 function layoutStage() {
-  const st = $('.stage');
-  if (!st) return;
-  const wide = stageWidth(st) >= LYR_SIDE || prefs.imm;
+  const room = $('.room');
+  if (!room) return;
   const has = !!Lyr.data;
-  const on = has && (prefs.imm || (wide ? prefs.lyr : prefs.lyrNarrow));
-  st.classList.toggle('lyr-on', on);
+  const on = has && (prefs.imm || (PHONE.matches ? prefs.lyrNarrow : prefs.lyr));
+  room.classList.toggle('lyr-on', on);
+  room.classList.toggle('no-lyr', !has);
+  const why = has ? t('歌词（G）') : t('这首没有找到歌词');
+  $$('[data-k="tab-lyr"]').forEach((b) => { b.setAttribute('aria-selected', on); b.toggleAttribute('aria-disabled', !has); b.title = why; });
+  $$('[data-k="tab-q"]').forEach((b) => b.setAttribute('aria-selected', !on));
+  $$('[data-k="lyrics"]').forEach((b) => { b.classList.toggle('on', on); b.toggleAttribute('aria-disabled', !has); b.title = why; });
   // a phone scrolls the page under the station strip and the tab bar: size the cover so play is on the first screen
-  const fr = $('.frame', st), meta = $('.meta', st);
+  const fr = $('.frame', room), meta = $('.meta', room);
   if (PHONE.matches && fr && meta) {
-    const room = innerHeight - $('#tabs').offsetHeight - (fr.getBoundingClientRect().top + scrollY) - meta.offsetHeight - 32;
-    st.style.setProperty('--fit', `${Math.max(120, Math.round(room))}px`);
-  } else st.style.removeProperty('--fit');
-  $$('[data-k="lyrics"]').forEach((b) => { b.classList.toggle('on', on); b.toggleAttribute('aria-disabled', !has); b.title = has ? t('歌词（G）') : t('这首没有找到歌词'); });
+    const fit = innerHeight - $('#tabs').offsetHeight - (fr.getBoundingClientRect().top + scrollY) - meta.offsetHeight - 32;
+    room.style.setProperty('--fit', `${Math.max(120, Math.round(fit))}px`);
+  } else room.style.removeProperty('--fit');
   placeHost();
   if (on) { Lyr.sync(true); Lyr.run(); }
 }
-function toggleLyrics() {
-  const st = $('.stage');
-  if (!st || !Lyr.data) { if (st) toast(t('这首没有找到歌词')); return; }
-  const wide = stageWidth(st) >= LYR_SIDE || prefs.imm;
-  if (prefs.imm) return;
-  if (wide) { prefs.lyr = !st.classList.contains('lyr-on'); store.set('lyr', prefs.lyr); } else prefs.lyrNarrow = !st.classList.contains('lyr-on');
+function toggleLyrics(want) {
+  const room = $('.room');
+  if (!room || prefs.imm) return;
+  if (!Lyr.data) { toast(t('这首没有找到歌词')); return; }
+  const on = want ?? !room.classList.contains('lyr-on');
+  if (PHONE.matches) prefs.lyrNarrow = on;
+  else { prefs.lyr = on; store.set('lyr', on); }
   layoutStage();
 }
 const stageRO = new ResizeObserver(() => layoutStage());
 const PHONE = matchMedia('(max-width: 899px)');
+PHONE.addEventListener('change', () => { if (view === 'listen') { watchFrame(); placeCard(); placeHost(); } });
 
 /* ---------- immersive: just the song, the cover and the words ---------- */
 function immersive(on = !prefs.imm) {
@@ -726,6 +713,7 @@ function immersive(on = !prefs.imm) {
   document.body.classList.toggle('imm', on);
   $$('[data-k="imm"]').forEach((b) => { b.innerHTML = on ? I.shrink : I.full; b.title = on ? t('退出沉浸（F / Esc）') : t('沉浸（F）'); });
   paintBackdrop();
+  placeCard();
   requestAnimationFrame(() => { layoutStage(); placeHost(); });
 }
 let idleT = 0;
@@ -843,17 +831,6 @@ async function ambient(p) {
 function paintNow() {
   const p = cur();
   if (!p) return;
-  const big = cover(p, 1200);
-  const img = $('#ytCover');
-  if (img.dataset.src !== big) {
-    img.dataset.src = big;
-    img.className = `yt-cover ${lb(big)}`;
-    const fallback = () => { if (big.includes('maxresdefault')) { img.onerror = null; img.src = px(big.replace('maxresdefault', 'hqdefault')); img.className = 'yt-cover lb'; } };
-    // maxresdefault is missing for videos without an HD thumbnail
-    img.onerror = fallback;
-    img.onload = () => { if (img.naturalWidth <= 120) fallback(); };
-    img.src = px(big);
-  }
   const set = (id, v, doc = document) => { const el = $(id, doc); if (el) el.textContent = v; };
   set('#nTitle', p.title);
   set('#nArtist', names(p.artists));
@@ -861,11 +838,8 @@ function paintNow() {
   set('#nWhy', reasonOf(p));
   set('#dTitle', p.title);
   set('#dArtist', names(p.artists));
-  set('#mTitle', p.title);
-  set('#mArtist', names(p.artists));
+  paintArt(p);
   paintCredits();
-  const mi = $('#mImg');
-  if (mi) mi.src = px(cover(p, 120));
   if (Pip.w) {
     const d = Pip.w.document;
     set('#pTitle', p.title, d);
@@ -888,39 +862,54 @@ function paintNow() {
   placeHost();
 }
 
-// Scroll only the programme's own row; on phones the list is part of the page and must not drag the page along.
-function keepCurrentRowVisible() {
-  const list = $('#qList'), row = $('.tr.cur');
-  if (!list || !row || list.scrollWidth <= list.clientWidth + 2) return;
-  const a = list.getBoundingClientRect(), b = row.getBoundingClientRect();
-  if (b.left < a.left + 24 || b.right > a.right - 48) list.scrollBy({ left: b.left - a.left - 36, behavior: document.hidden ? 'auto' : 'smooth' });
+// The cover in the room and in the player card. A music video keeps its own shape, as its player shows it.
+function paintArt(p) {
+  const big = cover(p, 1200);
+  for (const [id, u] of [['#nArt', big], ['#dArt', cover(p, 480)]]) {
+    const el = $(id);
+    if (!el) continue;
+    if (el.getAttribute('src') !== px(u)) el.src = px(u);
+    el.classList.toggle('mv', !isGoogleArt(u));
+  }
+  const nx = Q?.tracks[Q.i + 1];
+  if (nx) new Image().src = px(cover(nx, 1200));   // so the next cover is there the moment the song changes
 }
 
-// One player, two homes: the stage while listening, the card in the rail (or above the tabs) everywhere else.
-// When it changes home it flies there, so the song you hear never looks like it vanished and came back.
+// Scroll only the programme's own list; on phones the list is part of the page and must not drag the page along.
+function keepCurrentRowVisible() {
+  const list = $('#qList'), row = $('.tr.cur');
+  if (!list || !row || list.scrollHeight <= list.clientHeight + 2) return;
+  const a = list.getBoundingClientRect(), b = row.getBoundingClientRect();
+  if (b.top < a.top + 4 || b.bottom > a.bottom - 40) list.scrollBy({ top: b.top - a.top - row.offsetHeight, behavior: document.hidden ? 'auto' : 'smooth' });
+}
+
+// One player, two homes. YouTube draws its own title bar, buttons and logo over a playing player whenever it is touched
+// and may not be covered, so on a wide screen the big cover stays the song's own art and the player sits in the card at
+// the foot of the rail. A phone has no room for both: there the cover is the player, and it moves to the card above the
+// tabs once it scrolls away. When it changes home it flies there, so the song never looks like it vanished.
+const onHero = () => view === 'listen' && (prefs.imm || (PHONE.matches && !frameAway));
 let hostAt = null;
 function placeHost() {
   const host = $('#ytHost');
-  const docked = view !== 'listen';
+  const docked = !onHero();
   const target = docked ? $('#pcFrame') : $('#frame');
   if (!target || !cur() || !target.offsetParent) { host.hidden = true; hostAt = null; return; }
   const was = host.hidden ? null : host.getBoundingClientRect();
   host.hidden = false;
+  host.classList.toggle('off', !Player.shown);
   const r = target.getBoundingClientRect();
-  // YouTube's embed won't play below 200×200, so a smaller home (the phone's player card) gets it scaled down
-  const k = Math.min(1, r.width / 200), end = k < 1 ? `scale(${k})` : 'none';
   host.classList.toggle('docked', docked);
   Object.assign(host.style, {
-    top: `${docked ? r.top : r.top + scrollY}px`, left: `${docked ? r.left : r.left + scrollX}px`,
-    width: `${r.width / k}px`, height: `${r.height / k}px`, transformOrigin: '0 0', transform: k < 1 ? end : '',
+    top: `${docked ? r.top : r.top + scrollY}px`, left: `${docked ? r.left : r.left + scrollX}px`, width: `${target.offsetWidth}px`, height: `${target.offsetHeight}px`,
   });
+  for (const d of $$('dialog[open]')) spare(d);
+  if ($('#toast').classList.contains('show')) clearOf($('#toast'));   // a note shown before the player appeared
   const moved = hostAt && hostAt !== target.id;
   hostAt = target.id;
   if (moved && was && was.width && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const s = was.width / (r.width / k);
     host.animate([
-      { transformOrigin: '0 0', transform: `translate(${was.left - r.left}px, ${was.top - r.top}px) scale(${s})` },
-      { transformOrigin: '0 0', transform: end },
+      { transformOrigin: '0 0', transform: `translate(${was.left - r.left}px, ${was.top - r.top}px) scale(${was.width / r.width}, ${was.height / r.height})` },
+      { transformOrigin: '0 0', transform: 'none' },
     ], { duration: 420, easing: 'cubic-bezier(.32, .72, 0, 1)' });
   }
 }
@@ -934,6 +923,7 @@ addEventListener('resize', () => (PHONE.matches ? layoutStage() : placeHost()));
 function track(p) { return { vid: p.vid, lane: Q?.key, title: p.title, artist: p.artists?.[0]?.name, artist_id: p.artists?.[0]?.id }; }
 
 async function like(p) {
+  if (SAMPLE()) return openJoin('like');
   const on = fb.get(p.vid) === 'like';
   on ? fb.delete(p.vid) : fb.set(p.vid, 'like');
   paintLikes();
@@ -943,6 +933,9 @@ async function like(p) {
     if (!on && r.sync === 'queued' && !store.get(acct('syncHint'))) {
       store.set(acct('syncHint'), true);
       toast(t('喜欢会同步到你的 YouTube Music'), [[t('在哪里关'), openSettings]]);
+    } else if (!on && r.sync === 'read-only' && !store.get(acct('syncHint'))) {
+      store.set(acct('syncHint'), true);
+      toast(t('这首记在知音了。也想让 ♥ 出现在 YouTube Music 里，可以在设置里打开'), [[t('去设置'), openSettings]], 7000);
     }
   } catch {
     on ? fb.set(p.vid, 'like') : fb.delete(p.vid);
@@ -959,6 +952,7 @@ function paintLikes() {
 }
 
 function nope(p) {
+  if (SAMPLE()) return openJoin('nope');
   const idx = Q.tracks.indexOf(p);
   if (idx < 0) return;
   const wasCur = idx === Q.i, wasPlaying = Player.playing;
@@ -1017,7 +1011,7 @@ function welcomeHTML() {
     <a class="btn" href="/auth/google/start">${t('连接 YouTube Music')}</a>
     <dl class="scope">
       <dt>${t('会读取')}</dt><dd>${t('你点过喜欢的歌和视频，只用来给你算推荐')}</dd>
-      <dt>${t('会写回')}</dt><dd>${t('你在这里点的喜欢，会成为 YouTube Music 里的喜欢；可以随时关掉')}</dd>
+      <dt>${t('可以写回')}</dt><dd>${t('你在这里点的喜欢。要你在设置里打开，Google 会再问一次')}</dd>
       <dt>${t('不会')}</dt><dd>${t('发布、评论、删除，或碰你的其他 Google 数据')}</dd>
     </dl>
     <p class="fine">${t('Google 会提示「Google 尚未验证此应用」。这是{owner}自己做的小工具，没有拿去申请审核。点「高级」，再点「前往 {host}」就能继续。你的喜欢和反馈存在{owner}的服务器上，随时可以在设置里断开并全部删除。', { owner: esc(owner), host: esc(location.host) })}</p>
@@ -1041,6 +1035,7 @@ function renderListen() {
   }
   $('#view').innerHTML = `
   <div class="listen">
+    ${SAMPLE() ? `<button class="s-bar" data-k="join"><span>${t('示例听众的电台')}</span><b>${t('用你自己的收藏开始')}</b>${I.go}</button>` : ''}
     <header class="l-head">
       <div class="ttl"><h2 id="qName"></h2><p id="qWhen"></p></div>
       <div class="views">
@@ -1050,14 +1045,13 @@ function renderListen() {
         <button class="ib sm" data-k="stmenu" title="${t('更多')}" aria-haspopup="menu">${I.more}</button>
       </div>
     </header>
-    <section class="stage">
-      <div class="stage-in">
-        <div class="frame" id="frame"></div>
+    <section class="room"><div class="room-in">
+      <div class="now">
+        <div class="frame" id="frame" data-k="toggle" role="button" aria-label="${t('播放 / 暂停（空格）')}"><img class="art" id="nArt" alt=""></div>
         <div class="meta">
           <h1 class="t-title" id="nTitle"></h1>
           <div class="t-artist" id="nArtist"></div>
-          <div class="t-album" id="nAlbum"></div>
-          <div class="t-cred" id="nCred"></div>
+          <div class="t-fine"><span id="nAlbum"></span><span id="nCred"></span></div>
           <p class="t-why" id="nWhy"></p>
           <div class="prog"><span class="num" id="tCur">0:00</span><div class="bar" id="bar"><i></i></div><span class="num" id="tDur"></span></div>
           <div class="ctl">
@@ -1072,24 +1066,29 @@ function renderListen() {
             <a class="ib" id="nOpen" target="_blank" rel="noopener" title="${t('在 YouTube Music 打开')}">${I.ext}</a>
           </div>
         </div>
-        <div class="lyr" id="lyrStage"></div>
       </div>
-    </section>
-    <section class="strip" aria-label="${t('接下来')}">
-      <div class="s-head">
-        <h3>${t('接下来')}</h3>
-        <button class="tb" data-k="calm" title="${t('接下来放安静一点的')}">${t('更安静')}</button><button class="tb" data-k="up" title="${t('接下来放带劲一点的')}">${t('更带劲')}</button><button class="tb" data-k="fresh" title="${t('多放你没收藏过的歌手')}">${t('多些新歌手')}</button>
-        <span class="s-note" id="sNote"></span>
+      <div class="side">
+        <div class="side-tabs" role="tablist">
+          <button role="tab" data-k="tab-lyr">${t('歌词')}</button><button role="tab" data-k="tab-q">${t('接下来')}</button>
+        </div>
+        <div class="lyr" id="lyrStage" role="tabpanel"></div>
+        <section class="queue" role="tabpanel" aria-label="${t('接下来')}">
+          <div class="s-head">
+            <h3>${t('接下来')}</h3>
+            <button class="tb" data-k="calm" title="${t('接下来放安静一点的')}">${t('更安静')}</button><button class="tb" data-k="up" title="${t('接下来放带劲一点的')}">${t('更带劲')}</button><button class="tb" data-k="fresh" title="${t('多放你没收藏过的歌手')}">${t('多些新歌手')}</button>
+            <span class="s-note" id="sNote"></span>
+          </div>
+          <ol class="s-list" id="qList"></ol>
+        </section>
       </div>
-      <ol class="s-list" id="qList"></ol>
-    </section>
+    </div></section>
   </div>`;
   renderQueue();
   paintNow();
   Lyr.render();
   stageRO.disconnect();
-  stageRO.observe($('.stage'));
-  stageRO.observe($('.meta'));   // the cover moves when the words under it change height, though the stage keeps its size
+  stageRO.observe($('.room'));
+  stageRO.observe($('.meta'));   // the cover moves when the words under it change height, though the room keeps its size
   layoutStage();
   if (Pip.w) $$('[data-k="pip"]').forEach((b) => b.classList.add('on'));
   watchFrame();
@@ -1104,19 +1103,33 @@ function renderQueue() {
     <li class="tr ${i === Q.i ? 'cur' : ''} ${i !== Q.i && Q.played.has(p.vid) ? 'done' : ''}" data-i="${i}" title="${esc(p.title)} · ${esc(names(p.artists))}${p.dur ? ` · ${fmt(p.dur)}` : ''}">
       <div class="cv">${imgTag(p, 226)}<span class="eq"><i></i><i></i><i></i></span></div>
       <div class="mid"><div class="tt">${esc(p.title)}</div><div class="ar">${esc(names(p.artists))}</div></div>
-      <div class="acts"><button class="ib like ${fb.get(p.vid) === 'like' ? 'on' : ''}" data-a="like" aria-label="${t('喜欢')}">${I.heart}</button><button class="ib" data-a="nope" aria-label="${t('不要')}">${I.x}</button></div>
-    </li>`).join('') + `<li class="tile more"><button class="cv" data-k="extend" aria-label="${t('再来几首')}">${I.plus}</button><div class="tt">${t('再来几首')}</div></li>`;
+      <div class="end"><span class="d num">${p.dur ? fmt(p.dur) : ''}</span><span class="acts"><button class="ib like ${fb.get(p.vid) === 'like' ? 'on' : ''}" data-a="like" aria-label="${t('喜欢')}">${I.heart}</button><button class="ib" data-a="nope" aria-label="${t('不要')}">${I.x}</button></span></div>
+    </li>`).join('') + `<li class="tile more"><button data-k="extend"><span class="cv">${I.plus}</span><span class="tt">${t('再来几首')}</span></button></li>`;
   $$('.st').forEach((b) => b.toggleAttribute('aria-current', b.dataset.st === Q.key));
   keepCurrentRowVisible();
 }
 
-let frameIO = null;
+// A phone scrolls the stage away under the station strip. Nothing may cover YouTube's player and it must stay in
+// sight while it plays, so as soon as any of the cover slips under the strip or the tabs it moves into the card.
+let frameIO = null, frameAway = false;
 function watchFrame() {
   frameIO?.disconnect();
   const f = $('#frame');
-  if (!f) return;
-  frameIO = new IntersectionObserver(([e]) => { $('#mini').hidden = e.isIntersecting || view !== 'listen' || !cur(); });
+  if (!f || !PHONE.matches) { if (frameAway) { frameAway = false; placeCard(); } return; }
+  frameIO = new IntersectionObserver(([e]) => {
+    const away = e.intersectionRatio < 0.99;
+    if (away === frameAway) return;
+    frameAway = away;
+    placeCard();
+    placeHost();
+  }, { threshold: [0.99], rootMargin: `-${getComputedStyle($('#rail')).position === 'sticky' ? $('#rail').offsetHeight : 0}px 0px -${$('#tabs').offsetHeight}px 0px` });
   frameIO.observe(f);
+}
+function placeCard() {
+  const c = $('#pcard');
+  const bare = view === 'listen' && !PHONE.matches;   // the room already shows the song and its controls
+  c.hidden = !cur() || onHero() || (bare && !Player.used);
+  c.classList.toggle('bare', bare);
 }
 
 /* ---------- account ---------- */
@@ -1140,11 +1153,11 @@ function accountHTML() {
   } else if (g.error === 'revoked') {
     rows.push(`<li><span>YouTube Music<small>${t('连接失效了：可能在 Google 账号里移除了授权。重新连接一下。')}</small></span><a class="tb" href="/auth/google/start">${t('重新连接')}</a></li>`);
   } else if (!g.connected) {
-    rows.push(`<li><span>YouTube Music<small>${t('还没连接。连接之后，你在这里点的喜欢会同步到账号，你在 YouTube Music 里新点的喜欢也会自动进来。')}</small></span><a class="tb" href="/auth/google/start">${t('连接')}</a></li>`);
+    rows.push(`<li><span>YouTube Music<small>${t('还没连接。连接之后，知音读你在 YouTube Music 点过的喜欢，之后新点的也会自动进来。')}</small></span><a class="tb" href="/auth/google/start">${t('连接')}</a></li>`);
   } else {
     const busy = S.jobs?.sync?.running;
     rows.push(`<li><span>YouTube Music<small>${esc(g.email || t('已连接'))}${me.synced ? ` · ${ls?.added ? t('{when} 读过一次，新增 {n} 首', { when: ago(me.synced), n: ls.added }) : t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
-    const state = sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
+    const state = !me.writes_back ? t('现在只读你的喜欢。打开时 Google 会再问一次，允许知音把这里的 ♥ 写回 YouTube Music') : sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
     rows.push(`<li><span>${t('把这里的喜欢同步到 YouTube Music')}<small>${esc(state)}${t('。「不要」只记在知音，不会变成 YouTube 上的踩。')}</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="${t('同步喜欢')}"></button></li>`);
   }
   if (me.mine && me.claude) {
@@ -1186,6 +1199,7 @@ function langHTML() {
 
 async function setLang(lang) {
   if (lang === LANG) return;
+  if (SAMPLE()) { location.href = `/lang?to=${lang}&back=${encodeURIComponent(location.pathname + location.hash)}`; return; }
   try {
     await api('/api/account/lang', { lang });
     location.reload();
@@ -1215,12 +1229,49 @@ function openSettings() {
   const d = $('#sheet');
   if (!d.open) d.showModal();
   renderSheet();
+  spare(d);
 }
 $('#sheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+/* ---------- joining, from the sample listener ---------- */
+const G_LOGO = '<svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.2z"/><path fill="#FBBC05" d="M10.5 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.8-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>';
+function openJoin(why) {
+  closeMenu();
+  const me = S.me, d = $('#join');
+  const full = me.join === 'full', invite = me.join === 'invite' || !me.google?.configured;
+  const title = full ? t('名额暂时满了') : invite ? t('现在要有邀请才能加入')
+    : { like: t('点一下喜欢，它就更懂你一点'), nope: t('说「不要」，它就更懂你一点'), ask: t('用自己的话点歌，要先有你自己的知音') }[why] || t('用你自己的收藏开始');
+  const steps = full ? [t('每个人的电台都由 Claude 来挑，名额跟着额度走。先用 Google 登记，空出位置之后，再来就能直接进。')]
+    : invite ? [t('已经加入的话，用 Google 登录就能回到你的电台。')]
+    : [t('连上你的 YouTube Music：知音只读取你点过的喜欢，不改动任何东西。'), t('几分钟后出第一批电台，等的时候可以先听着。'), t('不用安装，也不用你自己的 Claude。')];
+  d.innerHTML = `<div class="j-in" tabindex="-1" autofocus>
+    <button class="ib sm j-x" data-k="closejoin" aria-label="${t('关闭')}">${I.close}</button>
+    <svg class="j-mark" viewBox="8 26 84 52" aria-hidden="true"><path d="M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33"/><circle cx="69" cy="52" r="7"/></svg>
+    <h2>${title}</h2>
+    <ol class="${steps.length > 1 ? 'steps' : ''}">${steps.map((x) => `<li>${x}</li>`).join('')}</ol>
+    ${invite ? `<a class="btn j-go" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`
+      : `<a class="btn j-go" href="/auth/google/start?mode=join">${G_LOGO}${full ? t('用 Google 登记') : t('用 Google 继续')}</a>`}
+    ${!invite && !me.google?.verified ? `<p class="j-fine">${t('Google 会提示「Google 尚未验证此应用」。点「高级」，再点「前往 {host}」就能继续。', { host: esc(location.host) })}</p>` : ''}
+    <div class="j-alt">${invite ? '<span></span>' : `<a href="/auth/google/start?mode=login">${t('已经加入过？登录')}</a>`}<a href="/privacy">${t('知音怎么用你的数据')}</a></div>
+    <div class="j-lang">${Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" ${k === LANG ? 'aria-current="true"' : ''}>${v}</button>`).join('')}</div>
+  </div>`;
+  if (!d.open) d.showModal();
+  spare(d);
+}
+$('#join').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget || e.target.closest('[data-k="closejoin"]')) e.currentTarget.close();
+});
 
 /* ---------- the account button and its menu ---------- */
 const initial = (s) => esc(([...(s || '').trim()][0] || t('你')).toUpperCase());
 function renderMe() {
+  if (SAMPLE()) {
+    $('#meBtn').classList.add('cta');
+    $('#meBtn').innerHTML = `<span class="who"><b>${t('用你自己的收藏开始')}</b><span>${t('现在听的是一位示例听众')}</span></span>${I.go}`;
+    $('.me-mini').classList.add('cta');
+    $('.me-mini').textContent = t('开始');
+    return;
+  }
   const me = S.me, g = me?.google || {};
   const name = me?.name || (g.email ? g.email.split('@')[0] : t('你'));
   const sub = g.email && g.email.split('@')[0] !== name ? g.email : me?.owner ? t('主人') : '';
@@ -1228,21 +1279,73 @@ function renderMe() {
   $('.me-mini').innerHTML = `<span class="av">${initial(name)}</span>`;
 }
 function closeMenu() { const m = $('#menu'); if (m.matches(':popover-open')) m.hidePopover(); }
-// A small popover placed against whatever opened it: above the account button, below the station's ⋯.
+// A small popover placed against whatever opened it: above the account button, below the station's ⋯. Where that
+// would cover YouTube's player it opens beside the button instead, or above the tabs.
 function openMenu(anchor, html) {
   const m = $('#menu');
   if (m.matches(':popover-open') && m.dataset.for === anchor.dataset.k) { closeMenu(); return; }
   m.innerHTML = html;
   m.dataset.for = anchor.dataset.k;
   m.showPopover();
-  const a = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
-  const left = clamp(a.left, 8, innerWidth - w - 8);
-  const top = a.top - h - 8 > 8 && a.top > innerHeight / 2 ? a.top - h - 6 : a.bottom + 6;
-  Object.assign(m.style, { left: `${left}px`, top: `${Math.min(top, innerHeight - h - 8)}px` });
+  const a = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight, yt = playerRect();
+  const at = (left, top) => ({ left: clamp(left, 8, innerWidth - w - 8), top: clamp(top, 8, innerHeight - h - 8) });
+  const spots = [
+    at(a.left, a.top - h - 8 > 8 && a.top > innerHeight / 2 ? a.top - h - 6 : a.bottom + 6),
+    a.right + 8 + w < innerWidth - 8 && at(a.right + 8, a.bottom - h),
+    at(innerWidth - w - 8, innerHeight - $('#tabs').offsetHeight - h - 8),
+  ].filter(Boolean);
+  const p = spots.find((r) => !yt || !overlaps({ ...r, right: r.left + w, bottom: r.top + h }, yt)) || spots[0];
+  Object.assign(m.style, { left: `${p.left}px`, top: `${p.top}px` });
+  spare(m);
   anchor.setAttribute('aria-expanded', 'true');
-  m.addEventListener('toggle', (e) => { if (e.newState === 'closed') anchor.setAttribute('aria-expanded', 'false'); }, { once: true });
+  onClosed(m, () => anchor.setAttribute('aria-expanded', 'false'));
+}
+// a popover's opening also fires 'toggle', after this point, so wait for the one that closes it
+function onClosed(el, fn) {
+  if (el.tagName === 'DIALOG') return el.addEventListener('close', fn, { once: true });
+  const h = (e) => { if (e.newState === 'closed') { el.removeEventListener('toggle', h); fn(); } };
+  el.addEventListener('toggle', h);
+}
+
+// A note goes above the player, else below it, else beside it: it is never drawn on YouTube's player.
+function clearOf(t) {
+  const yt = playerRect();
+  if (!yt) return;
+  const w = t.offsetWidth, h = t.offsetHeight, x = t.offsetLeft - w / 2, y = t.offsetTop;   // centred by translate(-50%)
+  if (!overlaps({ left: x, top: y, right: x + w, bottom: y + h }, yt)) return;
+  if (yt.top - h - 8 >= 4) t.style.bottom = `${innerHeight - yt.top + 8}px`;
+  else if (yt.bottom + h + 8 <= innerHeight - 4) t.style.bottom = `${innerHeight - yt.bottom - h - 8}px`;
+  else if (yt.right + 8 + w <= innerWidth - 4) t.style.left = `${yt.right + 8 + w / 2}px`;
+  else if (yt.left - 8 - w >= 4) t.style.left = `${yt.left - 8 - w / 2}px`;
+  else t.classList.remove('show');   // no room anywhere: the note gives way
+}
+
+// Nothing may be drawn over YouTube's player while it shows. A dialog that leaves the player clear cuts a window for
+// it in its dimmed backdrop; one that would cover it pauses the song, which hides the player, until it closes.
+function playerRect() {
+  const h = $('#ytHost');
+  return h.hidden || h.classList.contains('off') ? null : h.getBoundingClientRect();
+}
+const respare = () => { for (const d of $$('dialog[open]')) spare(d); };
+addEventListener('scroll', respare, { passive: true });
+visualViewport?.addEventListener('resize', respare);
+function overlaps(a, b) { return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom; }
+function spare(el) {
+  const yt = playerRect();
+  el.style.removeProperty('--hole');
+  if (!yt) return;
+  // laid-out position, not mid-animation
+  const box = { left: el.offsetLeft, top: el.offsetTop, right: el.offsetLeft + el.offsetWidth, bottom: el.offsetTop + el.offsetHeight };
+  if (overlaps(box, yt)) {
+    Player.pause();
+    onClosed(el, () => Player.play());
+    return;
+  }
+  const { left: l, top: t, right: r, bottom: b } = yt;
+  el.style.setProperty('--hole', `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${l}px ${t}px, ${r}px ${t}px, ${r}px ${b}px, ${l}px ${b}px, ${l}px ${t}px)`);
 }
 function accountMenu(anchor) {
+  if (SAMPLE()) return openJoin();
   const me = S.me, g = me?.google || {};
   const name = me?.name || (g.email ? g.email.split('@')[0] : t('你'));
   // Switching is a fresh Google sign-in: accounts never list or reach each other.
@@ -1270,6 +1373,7 @@ function openKeys() {
   const d = $('#keysD');
   d.innerHTML = `<h2>${t('快捷键')}</h2><dl>${KEYS().map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
   d.showModal();
+  spare(d);
 }
 $('#keysD').addEventListener('click', (e) => e.currentTarget.close());
 
@@ -1293,6 +1397,7 @@ function openAsk() {
   if (input.disabled) { toast(t('电台准备好之后，就能在这里点歌了')); return; }
   $('#cBody').innerHTML = composerHTML();
   if (!d.open) d.showModal();
+  spare(d);
   input.focus();
 }
 $('#composer').addEventListener('click', (e) => {
@@ -1402,7 +1507,7 @@ function renderEar() {
       <div class="hero-t">
         <h1>${esc(head)}</h1>
         ${lede ? `<p class="lede">${esc(lede)}</p>` : ''}
-        <p class="meta-line num">${t('{n} 首喜欢 · {y} 年至今 · {k} 种口味', { n: S.library.songs, y: first, k: S.lanes.length })}</p>
+        <p class="meta-line num">${SAMPLE() ? `${t('示例听众')} · ` : ''}${t('{n} 首喜欢 · {y} 年至今 · {k} 种口味', { n: S.library.songs, y: first, k: S.lanes.length })}</p>
         <div class="facts" id="facts">${EAR ? factsHTML() : earFailed ? '' : skeleton}</div>
       </div>
       ${earFailed ? '' : `<div class="rec-l">
@@ -1705,10 +1810,6 @@ function playFromDisc(p) {
   const sec = EAR.sectors.find((s) => s.key === p.s.lane);
   const st = { key: 'ear', group: 'ear', name: t('{lane} · 从〈{s}〉放起', { lane: sec?.name || t('你的喜欢'), s: p.s.title }), sub: t('你自己的喜欢'), when: t('在「你的耳朵」里点的，接着放它附近的喜欢'), tracks, reserve: [] };
   Q = { key: 'ear', st, tracks, reserve: [], i: 0, played: new Set() };
-  if (!$('.dock')) {
-    $('#view').insertAdjacentHTML('beforeend', dockHTML());
-    document.body.classList.add('has-dock');
-  }
   placeHost();
   loadTrack(true);
   hoverDot(null);
@@ -1782,8 +1883,8 @@ function route() {
   if (view === 'ear' && prefs.imm) immersive(false);
   $('#earLink').toggleAttribute('aria-current', view === 'ear');
   $$('#tabs [data-tab]').forEach((t) => t.toggleAttribute('aria-current', t.dataset.tab === view));
-  $('#mini').hidden = true;
-  $('#pcard').hidden = view === 'listen' || !cur();
+  frameAway = false;
+  placeCard();
   if (view === 'ear') renderEar(); else renderListen();
   renderStations();
   scrollTo(0, 0);
@@ -1793,6 +1894,7 @@ addEventListener('hashchange', route);
 /* ---------- actions ---------- */
 async function act(k, btn) {
   const p = cur();
+  if (k === 'join' || (SAMPLE() && NEEDS_ACCOUNT.has(k))) return openJoin(k);
   if (k === 'toggle') Player.toggle();
   else if (k === 'next') next();
   else if (k === 'prev') prev();
@@ -1800,6 +1902,8 @@ async function act(k, btn) {
   else if (k === 'nope' && p) nope(p);
   else if (k === 'radio') { closeMenu(); continueFrom(null); }
   else if (k === 'lyrics') toggleLyrics();
+  else if (k === 'tab-lyr') toggleLyrics(true);
+  else if (k === 'tab-q') { if (Lyr.data) toggleLyrics(false); }
   else if (k === 'calm' || k === 'up' || k === 'fresh') steer(k);
   else if (k === 'pip') Pip.toggle().catch(() => toast(t('小窗打不开')));
   else if (k === 'imm') immersive();
@@ -1816,7 +1920,9 @@ async function act(k, btn) {
   else if (k === 'synclikes') {
     const on = btn.getAttribute('aria-checked') !== 'true';
     btn.setAttribute('aria-checked', on);
-    S.me = await api('/api/account/sync-likes', { on });
+    const r = await api('/api/account/sync-likes', { on });
+    if (r.grant) { location.href = r.grant; return; }
+    S.me = r;
     toast(on ? t('之后的喜欢会同步到 YouTube Music') : t('喜欢只记在知音，不再同步'));
   } else if (k === 'device') { const r = await api('/api/account/device', {}); shownLink = { kind: 'device', url: r.url }; renderSheet(); }
   else if (k === 'mine') { const r = await api('/api/invite', { mine: true }); shownLink = { kind: 'mine', url: r.url }; friends = null; renderSheet(); }
@@ -1876,7 +1982,6 @@ document.addEventListener('click', async (e) => {
     Q.i = +tr.dataset.i;
     return loadTrack(true);
   }
-  if (e.target.closest('#ytHost')) return Player.toggle();
   const pl = e.target.closest('[data-play]');
   if (pl) { e.preventDefault(); return playVid(pl.dataset.play); }
   const bar = e.target.closest('.bar');
@@ -1962,6 +2067,7 @@ document.addEventListener('submit', async (e) => {
 });
 
 async function submitAsk() {
+  if (SAMPLE()) { $('#composer').close(); return openJoin('ask'); }
   const input = $('#askInput'), q = input.value.trim();
   if (!q) return;
   try {
@@ -2083,8 +2189,6 @@ async function reload() {
 
 function buildMini() {
   $('.pc-ctl').innerHTML = `<button class="ib" data-k="prev" aria-label="${t('上一首')}">${I.prev}</button><button class="ib play" data-k="toggle" aria-label="${t('播放 / 暂停')}">${I.play}${I.pause}</button><button class="ib" data-k="next" aria-label="${t('下一首')}">${I.next}</button><span class="push"></span><button class="ib like" data-k="like" aria-label="${t('喜欢')}">${I.heart}</button>`;
-  $('#mini').innerHTML = `<img id="mImg" alt=""><div style="min-width:0"><div class="tt" id="mTitle"></div><div class="ar" id="mArtist"></div></div>
-    <button class="ib play" data-k="toggle" aria-label="${t('播放 / 暂停')}">${I.play}${I.pause}</button><button class="ib" data-k="next" aria-label="${t('下一首')}">${I.next}</button>`;
 }
 
 async function boot() {

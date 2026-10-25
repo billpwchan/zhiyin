@@ -4,42 +4,50 @@ There are two setups. Start with the first; move to the second when a friend wan
 
 | | On your Mac | On a server, for you and a few friends |
 |---|---|---|
-| Listeners | you | you plus whoever you invite |
+| Listeners | you | you, whoever you invite, and as many others as you open seats for |
 | Likes come from | `zhiyin sync` with YouTube Music headers | each listener's Google sign-in |
-| Likes you make in Zhiyin | stay in Zhiyin | are written back to YouTube Music |
+| Likes you make in Zhiyin | stay in Zhiyin | can be written back to YouTube Music, once each listener allows it |
 | Audio model | runs locally | runs on a Mac worker; the server only asks |
-| Claude | your own `claude` login | your subscription for you; an API key for anyone you invite |
+| Claude | your own `claude` login | your subscription for you; an API key for everyone else |
 | Needs | macOS or Linux, Python 3.13, [uv](https://docs.astral.sh/uv/), Claude | Docker, a domain, a Google Cloud project, a Mac for the worker |
 
 ## Whose Claude
 
-Zhiyin calls Claude through the [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude -p`), and
-every call is billed to someone. Anthropic's [legal and compliance
+Every Claude call is billed to someone. Anthropic's [legal and compliance
 page](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use) sets who that can be.
 A Claude subscription (Pro, Max) is for ordinary use by its owner, and an app may not route requests through it on
 behalf of other people. An API key from the [Claude Console](https://platform.claude.com/) is different: the same
 page allows configuring your own key for use by your own authorized users, as long as the usage is billed to you
-and not resold. That fits a few people you know. Opening Zhiyin to the public is another matter: the page's section
-on offering Claude Code in products expects each end user to bring their own credentials.
+and not resold. Calls on your subscription go through the [Claude Code](https://docs.claude.com/en/docs/claude-code)
+CLI (`claude -p`); calls on an API key go straight to the Messages API, the way any app built on Claude serves its
+own users.
 
 | Who is listening | Whose Claude runs their calls |
 |---|---|
 | you, on your Mac | your `claude` login there, a subscription or an API key |
 | you, on your server | your subscription: a token on the server if you added one, otherwise the Mac worker |
 | another account of yours (a second YouTube library) | the same as you: it is still you listening |
-| anyone you invite | your API key on the server, billed to you per use |
+| anyone you invite, or who joins on an open seat | your API key on the server, billed to you per use |
 
 The server holds to this. Your subscription only ever runs your own calls, and inviting someone stays closed until
 the server has an API key. Without a token on the server, your calls go to the Mac worker, which runs them on the
 `claude` login there, even when the server has an API key (that key is for the people you invite). While the Mac
 sleeps, the morning edition waits for it. With no worker either, your calls use the API key.
 
-On an API key, for a library of about 800 likes: a daily edition costs about $0.50 (measured: eight Opus calls),
-a first setup about $2 (tagging every like, finding the stations and the first edition; estimated from its prompt
-sizes), and an ask about $0.10 (estimated: one Opus pick plus a small plan).
-Each invited listener can spend up to $3 a day (`ZHIYIN_LISTENER_DAILY_USD`); past that, asks and rebuilds wait
-for the next day. `zhiyin users` and the 朋友 panel show what each listener used over the last seven days, priced
-as on an API key.
+Listeners on the API key get Sonnet where you get Opus. On the same shortlists Sonnet kept 75% of Opus's picks and
+wrote reasons as good, at a third of the price: an edition of eight stations cost $0.13 against $0.39 (Haiku, at
+$0.02, kept half and slipped into the wrong language). Each morning only the stations a listener played from are
+rebuilt, and those builds go through the Batch API at half price; a listener who hasn't opened Zhiyin for three days
+gets no new edition until they come back. A first setup for a library of about 800 likes costs about $2.
+
+Three limits keep the key's bill where you set it:
+
+- the key's monthly budget (`ZHIYIN_KEY_MONTHLY_USD`, default 100), counted over the last 30 days;
+- morning rebuilds may run at no more than twice the even daily pace of that budget;
+- each listener's own day (`ZHIYIN_LISTENER_DAILY_USD`, default 0.5); past that, their asks and rebuilds wait for
+  the next day.
+
+`zhiyin users` and the 朋友 panel show what each listener used over the last seven days, priced as on an API key.
 
 ## On your Mac
 
@@ -92,8 +100,13 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 |---|---|
 | `ZHIYIN_PUBLIC_URL` | the site's address; set by the deploy scripts from `SITE` |
 | `CLAUDE_CODE_OAUTH_TOKEN` | optional: your subscription on the server, for your own calls (`deploy/claude-token.sh`) |
-| `ANTHROPIC_API_KEY` | optional: an API key for invited listeners (`deploy/claude-token.sh --api-key`) |
-| `ZHIYIN_LISTENER_DAILY_USD` | what each invited listener may spend on your API key per day (default 3) |
+| `ANTHROPIC_API_KEY` | optional: an API key for everyone but you (`deploy/claude-token.sh --api-key`) |
+| `ZHIYIN_KEY_MONTHLY_USD` | the API key's budget over 30 days (default 100) |
+| `ZHIYIN_LISTENER_DAILY_USD` | what each listener may spend on the API key per day (default 0.5) |
+| `ZHIYIN_KEY_OPUS`, `ZHIYIN_KEY_SONNET` | the model listeners get where you get Opus or Sonnet (defaults `sonnet`, `sonnet`) |
+| `ZHIYIN_SEATS` | how many people may join with Google without an invite (default 0: invites only) |
+| `ZHIYIN_GOOGLE_VERIFIED` | `1` once Google has verified the app; drops the "unverified app" note from the join sheet |
+| `ZHIYIN_HEAVY`, `ZHIYIN_GATHER` | how many first setups, and how many candidate gatherings, run at once (default 2 each) |
 | `ZHIYIN_OWNER_DAILY_USD` | a ceiling on your own calls per day, priced as on an API key (default 10); a normal day is $1–2 |
 | `ZHIYIN_WORKER_TOKEN` | shared with the worker; `deploy/worker-setup.sh` creates both ends |
 | `ZHIYIN_LLM_CONCURRENCY` | parallel `claude -p` calls (the image sets 2) |
@@ -114,23 +127,26 @@ server, which then checks that Claude answers.
 
 ### 3. Google sign-in
 
-Each listener signs in with Google, and Zhiyin reads their liked songs through the YouTube Data API. Liking a song
-in Zhiyin likes it on YouTube Music too; "not for me" stays in Zhiyin.
+Each listener signs in with Google, and Zhiyin reads their liked songs through the YouTube Data API. A like in
+Zhiyin becomes a like on YouTube Music only for listeners who turn that on; "not for me" always stays in Zhiyin.
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable **YouTube Data API v3**.
 2. Under **OAuth consent screen**, choose *External*. On **Branding**, set the home page to your site and the privacy
    policy to `https://<your site>/privacy` (Zhiyin serves it; Google won't publish an app without both), and add
    your domain under authorized domains. Then publish the app on **Audience**. You don't need verification for a
-   handful of people: Google shows them an "unverified app" notice first, and allows up to 100 users.
+   handful of people: Google shows them an "unverified app" notice first, and allows up to 100 users. Past that,
+   Google has to verify the app (the YouTube scopes are sensitive): it reviews the home page, the privacy policy, a
+   short video of the sign-in, and how the app uses YouTube.
 3. Under **Credentials**, create an **OAuth client ID** of type *Web application*. Add
    `https://<your site>/auth/google/callback` as an authorized redirect URI, and download the JSON.
 4. Run `deploy/google-client.sh ~/Downloads/client_secret_….json`. It checks the client and installs it as
    `data/google_client.json`. No restart is needed.
 
-The scopes are `openid email profile` to sign in, plus `youtube` to read likes and rate videos. Tokens are encrypted
-at rest with a key in `data/secret.key`.
+The scopes are `openid email profile` to sign in and `youtube.readonly` to read likes. Writing likes back needs
+`youtube`, which Zhiyin asks for only when a listener turns it on in Settings. Tokens are encrypted at rest with a
+key in `data/secret.key`.
 
-### 4. Invite people
+### 4. Let people in
 
 ```sh
 docker exec zhiyin zhiyin invite --owner      # a sign-in link for yourself
@@ -141,6 +157,19 @@ docker exec zhiyin zhiyin users
 A friend opens the link and connects Google. Their first edition takes about ten minutes; the page says when it's
 ready. Invites need an API key on the server (step 2). Once a listener has connected Google, links no longer sign
 them in: on another device they sign in with the same Google account, so a forwarded link opens nothing.
+
+To let people in without inviting each one, set `ZHIYIN_SEATS` (say `20`) and restart. Anyone who opens the
+site without signing in hears a sample listener's stations (the files in `demo/`), read-only, in their browser's
+language. Liking, asking or opening Settings there offers "Continue with Google", which makes an account, connects
+YouTube Music read-only and starts their setup in one step. Joining needs an API key on the server. When the seats
+are taken, people who try go on a waitlist instead:
+
+```sh
+docker exec zhiyin zhiyin waitlist                          # who is waiting
+docker exec zhiyin zhiyin waitlist --admit ann@example.com  # lets Ann in on her next "Continue with Google"
+```
+
+Raising `ZHIYIN_SEATS` lets the next people in on their own. A seat is a joined account, so deleting one frees it.
 
 Have a second YouTube Music account of your own? In Settings, under Friends, "Add another account of yours" (or
 `zhiyin invite --mine`) makes a link for it. It is a separate account with its own Google sign-in, likes, stations
@@ -163,7 +192,7 @@ separate copy with its own history, and builds its own, different edition every 
 
 | Where | What |
 |---|---|
-| `data/zhiyin.db` | SQLite: listeners, sessions, feedback, plays, editions shown, sound vectors |
+| `data/zhiyin.db` | SQLite: listeners, sessions, feedback, plays, editions shown, sound vectors, the waitlist |
 | `data/users/<id>/` | each listener's likes, profile, current edition and settings (JSON) |
 | `data/cache/` | YouTube Music responses, lyrics and cover art |
 | `data/secret.key`, `data/google_client.json`, `data/worker.json` | secrets; back them up, never commit them |

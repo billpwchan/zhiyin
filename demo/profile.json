@@ -1,0 +1,1579 @@
+{
+ "portrait": {
+  "headline": "Soft voices over a warm, swaying groove, from Rio to Tokyo to Taipei, always closer to dusk than to noon.",
+  "paragraphs": [
+   "Your newest saves start with Fujii Kaze. “Shinunoga E-Wa”, “Kirari”, “Matsuri” and “Nan-Nan” sit at the top, followed by Vaundy’s “odoriko” and four Hoshino Gen songs. It’s all J-pop built on piano and bass, with gospel and funk underneath. Scroll down and you reach KIRINJI’s “Aliens”, Suchmos and Lamp. That softer stretch links straight back to your earliest saves, classic city pop: Anri, Yamashita Tatsuro’s “Sparkle” and Matsubara Miki’s “真夜中のドア〜stay with me - Mayonaka no Door~stay with me”. Living in Tokyo seems to have blended old records and new songs into one sound.",
+   "Beneath the groove runs a very quiet thread. Laufey, Norah Jones, Chet Baker’s “Almost Blue” and Bill Evans’s “Peace Piece” lead on to Ryuichi Sakamoto and Joe Hisaishi. “Summer” is the only song you saved twice. You lean toward hushed voices, or solo piano with plenty of empty space around it. Bossa nova has the same calm: João Gilberto softly sings “Saudade Fez um Samba”, and Nara Leão barely raises her voice. Even your indie leans quiet, like Men I Trust, Clairo’s “Bags” and Sufjan Stevens’s “Mystery of Love”.",
+   "What the Taipei years left behind are singer-songwriters and bands, not big pop stars: Cheer Chen’s “旅行的意义 (Travel is Meaningful)”, Sunset Rollercoaster, deca joins, Accusefive and Wu Guang-zhong. There is one stinging song, No Party for Cao Dong’s “爛泥”, and a run of Eason Chan ballads that stand for Cantonese heartbreak. Khalil Fong and David Tao matter most. They are the soul singers of Mandopop, and they explain why Zion.T, Crush and DEAN sit comfortably next to D’Angelo, Erykah Badu and Frank Ocean.",
+   "Language is rarely what decides it. Groove, falsetto and chord color are. “Week End”, “Yanghwa BRDG”, “Take Me” and “Japanese Denim” come from four countries but share one mood."
+  ],
+  "eras": [
+   {
+    "from_rank": 0,
+    "to_rank": 14,
+    "years": "2025–2026",
+    "label": "Tokyo Soul Pop",
+    "text": "Fujii Kaze, Hoshino Gen and Vaundy lead, while KIRINJI, Suchmos and Lamp supply the softer nights."
+   },
+   {
+    "from_rank": 15,
+    "to_rank": 50,
+    "years": "2023–2025",
+    "label": "Quiet Piano",
+    "text": "Dream pop, jazz pop, classic jazz vocals, Bill Evans, and piano by Ryuichi Sakamoto and Joe Hisaishi, including the one song you saved twice."
+   },
+   {
+    "from_rank": 51,
+    "to_rank": 82,
+    "years": "2021–2022",
+    "label": "Taipei and Hong Kong",
+    "text": "Taiwanese indie folk and dream pop, Mandopop R&B from Khalil Fong and David Tao, and Eason Chan ballads."
+   },
+   {
+    "from_rank": 83,
+    "to_rank": 108,
+    "years": "2019–2021",
+    "label": "Seoul Indie and R&B",
+    "text": "HYUKOH, JANNABI and IU, alongside Korean R&B from Zion.T, Crush, DEAN and Heize."
+   },
+   {
+    "from_rank": 109,
+    "to_rank": 135,
+    "years": "2017–2019",
+    "label": "Neo-Soul Roots",
+    "text": "Frank Ocean, Daniel Caesar, and the classics by D’Angelo and Erykah Badu, the grammar behind every groove that followed."
+   },
+   {
+    "from_rank": 136,
+    "to_rank": 162,
+    "years": "2015–2017",
+    "label": "Bossa and City Pop",
+    "text": "Whispered bossa nova from João Gilberto and Jobim, paired with 80s Japanese city pop from Anri and Yamashita Tatsuro."
+   }
+  ],
+  "threads": [
+   "Bass-led swaying grooves, paced like a stroll and never pushing too hard",
+   "Soft or falsetto lead vocals that sound close to the mic",
+   "Jazz chords under pop melodies, from Jobim to KIRINJI to Khalil Fong",
+   "Nostalgia for nights and late summer",
+   "Real players and warm keyboard tones (Rhodes, piano, nylon-string guitar) rather than stiff electronic production"
+  ]
+ },
+ "lanes": [
+  {
+   "key": "japan_groove",
+   "name": "Tokyo Groove",
+   "english": "Japanese soul and city pop",
+   "blurb": "Japanese pop with piano and funk bass, gospel lift and city-pop gloss, both new and old.",
+   "when": "Tokyo daily life: commuting, cooking, evening walks",
+   "sound": "funk bass, piano grooves, falsetto, glossy 80s synths and clean guitars",
+   "langs": [
+    "ja"
+   ],
+   "energy": [
+    2,
+    4
+   ],
+   "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    9,
+    10,
+    11,
+    14,
+    160,
+    161,
+    162,
+    155,
+    150
+   ],
+   "core_artists": [
+    "Fujii Kaze",
+    "Gen Hoshino",
+    "Vaundy",
+    "KIRINJI",
+    "Suchmos",
+    "Yogee New Waves",
+    "Lamp",
+    "Tatsuro Yamashita",
+    "Anri",
+    "Miki Matsubara",
+    "Taeko Onuki",
+    "Junko Ohashi"
+   ],
+   "explore_artists": [
+    {
+     "name": "Mariya Takeuchi",
+     "why": "The city-pop touchstone that sits between Anri and Tatsuro",
+     "song": "Plastic Love"
+    },
+    {
+     "name": "Takako Mamiya",
+     "why": "Breezy, disco-tinged city pop in the Meiko Nakahara mould",
+     "song": "Love Trip"
+    },
+    {
+     "name": "Original Love",
+     "why": "90s Shibuya-kei soul, a bridge between city pop and Gen Hoshino",
+     "song": "接吻"
+    },
+    {
+     "name": "cero",
+     "why": "Tokyo indie that plays jazzy, polyrhythmic soul, a natural next step from Suchmos",
+     "song": "Orphans"
+    },
+    {
+     "name": "never young beach",
+     "why": "Sunny revival band in the same circle as Yogee New Waves",
+     "song": "明るい未来"
+    },
+    {
+     "name": "Nulbarich",
+     "why": "Smooth acid-jazz J-pop next to Suchmos",
+     "song": "NEW ERA"
+    },
+    {
+     "name": "Kroi",
+     "why": "Funk-rock grooves with the swagger of Fujii Kaze’s funkier songs",
+     "song": "Fire Brain"
+    },
+    {
+     "name": "LUCKY TAPES",
+     "why": "Sleek modern city pop with horns and falsetto",
+     "song": "Gravity"
+    },
+    {
+     "name": "Lucky Kilimanjaro",
+     "why": "Danceable synth-funk with Gen Hoshino-style warmth",
+     "song": "Burning Friday Night"
+    },
+    {
+     "name": "King Gnu",
+     "why": "Big piano-led hooks for the dramatic side of Fujii Kaze",
+     "song": "白日"
+    },
+    {
+     "name": "Omoinotake",
+     "why": "Piano-driven soul-pop close to Vaundy and Fujii Kaze",
+     "song": "幾億光年"
+    },
+    {
+     "name": "Fishmans",
+     "why": "Dubby, dreamy grooves that run ahead of KIRINJI’s night moods",
+     "song": "いかれたBaby"
+    },
+    {
+     "name": "iri",
+     "why": "Husky Japanese R&B-pop with a laid-back groove",
+     "song": "Wonderland"
+    },
+    {
+     "name": "Awesome City Club",
+     "why": "Polished city-pop-flavoured J-pop with soft vocals",
+     "song": "勿忘"
+    }
+   ],
+   "avoid": [
+    "anime-opening rock",
+    "idol pop",
+    "Vocaloid and hyperpop",
+    "heavy EDM drops",
+    "shouty J-rock"
+   ],
+   "discovery": 0.4
+  },
+  {
+   "key": "dream_indie",
+   "name": "Hazy Indie",
+   "english": "Dream pop and soft indie",
+   "blurb": "Hazy dream pop and whispered indie folk, with melodic bass and breathy vocals close to the ear.",
+   "when": "Slow afternoons, riding a train alone, easing into rest",
+   "sound": "chorus-soaked guitars, warm melodic bass, airy synths, fingerpicking, soft vocals",
+   "langs": [
+    "en",
+    "cmn"
+   ],
+   "energy": [
+    1,
+    3
+   ],
+   "seeds": [
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    53,
+    54,
+    55,
+    56,
+    49,
+    46,
+    47,
+    48,
+    50,
+    58
+   ],
+   "core_artists": [
+    "Men I Trust",
+    "Clairo",
+    "beabadoobee",
+    "Sunset Rollercoaster",
+    "Mac DeMarco",
+    "Bon Iver",
+    "Sufjan Stevens",
+    "Big Thief",
+    "Phoebe Bridgers",
+    "deca Joins"
+   ],
+   "explore_artists": [
+    {
+     "name": "Faye Webster",
+     "why": "Laid-back, pedal-steel indie with a sleepy R&B lilt",
+     "song": "Kingston"
+    },
+    {
+     "name": "Mild High Club",
+     "why": "Jazzy psychedelic soft rock between Mac DeMarco and Sunset Rollercoaster",
+     "song": "Homage"
+    },
+    {
+     "name": "Crumb",
+     "why": "Woozy, bass-led dream pop like Men I Trust",
+     "song": "Locket"
+    },
+    {
+     "name": "Japanese Breakfast",
+     "why": "A Korean-American dream pop bridge with bright melodies",
+     "song": "Be Sweet"
+    },
+    {
+     "name": "Mitski",
+     "why": "Confessional indie close to Phoebe Bridgers",
+     "song": "Nobody"
+    },
+    {
+     "name": "Alvvays",
+     "why": "Jangly, sweet indie pop in Clairo’s territory",
+     "song": "Archie, Marry Me"
+    },
+    {
+     "name": "Phum Viphurit",
+     "why": "Thai artist making breezy English-language indie pop, a Southeast Asian bridge",
+     "song": "Lover Boy"
+    },
+    {
+     "name": "boy pablo",
+     "why": "Bedroom indie with jangly guitars and a goofy-tender tone",
+     "song": "Everytime"
+    },
+    {
+     "name": "The Marías",
+     "why": "Silky, hazy indie pop with soft female vocals",
+     "song": "I Don't Know You"
+    },
+    {
+     "name": "Cigarettes After Sex",
+     "why": "Slow-motion dream pop for late nights",
+     "song": "Apocalypse"
+    },
+    {
+     "name": "Lucy Dacus",
+     "why": "Quietly devastating indie rock close to Phoebe Bridgers",
+     "song": "Night Shift"
+    },
+    {
+     "name": "Ginger Root",
+     "why": "City-pop-obsessed indie that connects to the Tokyo lane",
+     "song": "Loretta"
+    },
+    {
+     "name": "Hitsujibungaku",
+     "why": "Japanese shoegaze-tinged indie that sits beside Sunset Rollercoaster",
+     "song": "more than words"
+    }
+   ],
+   "avoid": [
+    "loud pop-punk",
+    "stadium indie anthems",
+    "TikTok-sped-up versions",
+    "harsh shoegaze noise walls"
+   ],
+   "discovery": 0.55
+  },
+  {
+   "key": "late_jazz",
+   "name": "Late-Night Jazz",
+   "english": "Vocal jazz and trio",
+   "blurb": "Intimate vocal jazz, piano trios and jazz-pop love songs, plus Nujabes’s jazz hip-hop.",
+   "when": "Evenings at home, a quiet drink, rainy nights",
+   "sound": "brushed drums, piano trio, muted trumpet, warm contralto, strings, mellow Rhodes loops",
+   "langs": [
+    "en",
+    "instrumental"
+   ],
+   "energy": [
+    1,
+    3
+   ],
+   "seeds": [
+    21,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    40,
+    41
+   ],
+   "core_artists": [
+    "Laufey",
+    "Samara Joy",
+    "Norah Jones",
+    "Chet Baker",
+    "Bill Evans",
+    "Bill Evans Trio",
+    "Ella Fitzgerald",
+    "Nina Simone",
+    "Keith Jarrett",
+    "Nujabes"
+   ],
+   "explore_artists": [
+    {
+     "name": "Melody Gardot",
+     "why": "Smoky, hushed jazz-pop with bossa touches",
+     "song": "Baby I'm a Fool"
+    },
+    {
+     "name": "Gregory Porter",
+     "why": "Warm, modern vocal jazz with soul",
+     "song": "Hey Laura"
+    },
+    {
+     "name": "Diana Krall",
+     "why": "Piano-and-voice ballads in the Norah Jones mood",
+     "song": "The Look of Love"
+    },
+    {
+     "name": "Blossom Dearie",
+     "why": "Featherlight vintage vocal jazz, Laufey’s clear ancestor",
+     "song": "Peel Me a Grape"
+    },
+    {
+     "name": "Julie London",
+     "why": "Close-mic torch singing with sparse backing",
+     "song": "Cry Me a River"
+    },
+    {
+     "name": "Cécile McLorin Salvant",
+     "why": "A contemporary jazz singer with the depth of Samara Joy",
+     "song": "Ghost Song"
+    },
+    {
+     "name": "Esperanza Spalding",
+     "why": "Airy jazz vocals with a soulful bass groove",
+     "song": "I Know You Know"
+    },
+    {
+     "name": "Brad Mehldau",
+     "why": "Lyrical piano trio carrying Bill Evans’ line forward",
+     "song": "Exit Music (For a Film)"
+    },
+    {
+     "name": "Tsuyoshi Yamamoto",
+     "why": "A Japanese pianist whose blues-ballad trio fits Bill Evans’ night mood",
+     "song": "Midnight Sugar"
+    },
+    {
+     "name": "DJ Okawari",
+     "why": "Japanese jazz hip-hop in Nujabes’ wake",
+     "song": "Flower Dance"
+    },
+    {
+     "name": "Gretchen Parlato",
+     "why": "Whispered modern jazz vocals with bossa phrasing",
+     "song": "Holding Back the Years"
+    },
+    {
+     "name": "Lady Blackbird",
+     "why": "Spare, dramatic jazz-soul in the Nina Simone vein",
+     "song": "Blackbird"
+    }
+   ],
+   "avoid": [
+    "smooth-jazz saxophone muzak",
+    "big-band swing at full blast",
+    "free jazz and avant-garde skronk",
+    "jazz covers of pop hits in cafe-playlist style"
+   ],
+   "discovery": 0.5
+  },
+  {
+   "key": "piano_score",
+   "name": "Quiet Piano",
+   "english": "Piano and film score",
+   "blurb": "Solo piano, neoclassical pieces and Japanese film scores, with lots of empty space and a touch of melancholy.",
+   "when": "Reading, reflecting, falling asleep, or any time you need quiet",
+   "sound": "felt or solo piano, gentle strings, slow swells, minimal motifs",
+   "langs": [
+    "instrumental"
+   ],
+   "energy": [
+    1,
+    2
+   ],
+   "seeds": [
+    39,
+    37,
+    38,
+    43,
+    44,
+    45,
+    29,
+    30,
+    31,
+    41
+   ],
+   "core_artists": [
+    "Joe Hisaishi",
+    "Ryuichi Sakamoto",
+    "Nils Frahm",
+    "Olafur Arnalds",
+    "Bill Evans",
+    "Keith Jarrett"
+   ],
+   "explore_artists": [
+    {
+     "name": "Max Richter",
+     "why": "Slow-building strings and piano in Olafur Arnalds’ world",
+     "song": "On the Nature of Daylight"
+    },
+    {
+     "name": "Ludovico Einaudi",
+     "why": "Simple, melodic piano pieces close to “Aqua”",
+     "song": "Nuvole Bianche"
+    },
+    {
+     "name": "Yann Tiersen",
+     "why": "Nostalgic film piano in the spirit of Hisaishi’s “Summer”",
+     "song": "Comptine d'un autre été, l'après-midi"
+    },
+    {
+     "name": "Joep Beving",
+     "why": "Felt-piano minimalism next to Nils Frahm",
+     "song": "Hanging D"
+    },
+    {
+     "name": "Shigeru Umebayashi",
+     "why": "Wistful Asian film-score strings from In the Mood for Love",
+     "song": "Yumeji's Theme"
+    },
+    {
+     "name": "Michael Nyman",
+     "why": "Rolling, romantic film piano",
+     "song": "The Heart Asks Pleasure First"
+    },
+    {
+     "name": "Jóhann Jóhannsson",
+     "why": "Icelandic string melancholy like Arnalds",
+     "song": "Flight from the City"
+    },
+    {
+     "name": "Hildur Guðnadóttir",
+     "why": "Dark, intimate cello score",
+     "song": "Bathroom Dance"
+    },
+    {
+     "name": "Yiruma",
+     "why": "Korean piano miniatures with a gentle pop melody",
+     "song": "River Flows in You"
+    },
+    {
+     "name": "Kiasmos",
+     "why": "Arnalds’ own electronic duo, for a pulse under the piano",
+     "song": "Blurred"
+    },
+    {
+     "name": "Goldmund",
+     "why": "Hushed, close-mic piano you can almost hear breathing",
+     "song": "Threnody"
+    },
+    {
+     "name": "Erik Satie",
+     "why": "The source of Sakamoto’s spacious stillness",
+     "song": "Gymnopédie No. 1"
+    }
+   ],
+   "avoid": [
+    "epic trailer music",
+    "bombastic orchestral hybrid",
+    "new-age synth pads",
+    "piano covers of pop songs"
+   ],
+   "discovery": 0.5
+  },
+  {
+   "key": "mando_canto",
+   "name": "Taipei Songbook",
+   "english": "Mandarin and Cantonese indie",
+   "blurb": "Taiwanese indie folk and band pop plus Cantonese ballads, mostly singer-songwriters, sincere and honest.",
+   "when": "Homesick nights, missing Taipei, singing along softly",
+   "sound": "acoustic guitar, jangly bands, airy or husky vocals, piano-and-string ballads",
+   "langs": [
+    "cmn",
+    "yue"
+   ],
+   "energy": [
+    2,
+    4
+   ],
+   "seeds": [
+    60,
+    61,
+    62,
+    52,
+    57,
+    58,
+    59,
+    63,
+    64,
+    66,
+    76,
+    77,
+    78,
+    80,
+    81,
+    82
+   ],
+   "core_artists": [
+    "陳綺貞 (Cheer Chen)",
+    "Accusefive",
+    "告五人",
+    "盧廣仲 (Crowd Lu)",
+    "waa wei",
+    "deca Joins",
+    "草東沒有派對",
+    "Joanna Wang",
+    "The Chairs",
+    "吳青峰",
+    "Eason Chan",
+    "Gareth.T",
+    "Deserts Xuan"
+   ],
+   "explore_artists": [
+    {
+     "name": "宋冬野",
+     "why": "Mainland folk storytelling in the Cheer Chen vein",
+     "song": "董小姐"
+    },
+    {
+     "name": "陳粒",
+     "why": "Quirky, airy Mandarin folk-pop by a female songwriter",
+     "song": "奇妙能力歌"
+    },
+    {
+     "name": "毛不易",
+     "why": "Plain-spoken Mandarin ballads with real ache",
+     "song": "消愁"
+    },
+    {
+     "name": "房東的貓",
+     "why": "Soft acoustic duo close to Deserts Xuan’s intimacy",
+     "song": "云烟成雨"
+    },
+    {
+     "name": "老王樂隊",
+     "why": "Taiwanese indie band with youthful wistfulness, next to 告五人",
+     "song": "我還年輕 我還年輕"
+    },
+    {
+     "name": "美秀集團",
+     "why": "Playful Taiwanese band energy for the brighter days",
+     "song": "電火王"
+    },
+    {
+     "name": "韋禮安",
+     "why": "Warm Taiwanese singer-songwriter pop near Crowd Lu",
+     "song": "如果可以"
+    },
+    {
+     "name": "林宥嘉",
+     "why": "Expressive Mandopop vocals like 吳青峰’s emotional peaks",
+     "song": "說謊"
+    },
+    {
+     "name": "李榮浩",
+     "why": "Understated, well-crafted Mandopop songwriting",
+     "song": "年少有為"
+    },
+    {
+     "name": "林家謙",
+     "why": "New Cantopop songwriter with Eason-like depth",
+     "song": "一人之境"
+    },
+    {
+     "name": "Dear Jane",
+     "why": "Hong Kong band ballads between indie and Cantopop",
+     "song": "銀河修理員"
+    },
+    {
+     "name": "張敬軒",
+     "why": "Lush Cantopop balladry close to “富士山下”",
+     "song": "櫻花樹下"
+    },
+    {
+     "name": "MC 張天賦",
+     "why": "Current Cantopop heartbreak with a soft delivery",
+     "song": "記憶棉"
+    }
+   ],
+   "avoid": [
+    "KTV power ballads with big synth strings",
+    "C-pop idol dance tracks",
+    "Douyin viral remixes",
+    "mandopop EDM"
+   ],
+   "discovery": 0.45
+  },
+  {
+   "key": "seoul_indie",
+   "name": "Seoul Indie",
+   "english": "Korean indie and ballads",
+   "blurb": "Korean indie bands with vintage warmth, and gentle acoustic pop ballads.",
+   "when": "Easygoing weekends and nostalgic summer nights",
+   "sound": "jangly or retro band guitars, soft acoustic pop, piano ballads",
+   "langs": [
+    "ko"
+   ],
+   "energy": [
+    1,
+    3
+   ],
+   "seeds": [
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    95,
+    93
+   ],
+   "core_artists": [
+    "HYUKOH",
+    "JANNABI",
+    "IU",
+    "AKMU",
+    "Car, the Garden",
+    "LeeHi"
+   ],
+   "explore_artists": [
+    {
+     "name": "검정치마 The Black Skirts",
+     "why": "Romantic, lo-fi Korean indie rock",
+     "song": "EVERYTHING"
+    },
+    {
+     "name": "새소년 SE SO NEON",
+     "why": "Groovy, guitar-led indie from the same scene as HYUKOH",
+     "song": "난춘"
+    },
+    {
+     "name": "백예린 Yerin Baek",
+     "why": "Soft, dreamy vocals that bridge indie and R&B",
+     "song": "Square (2017)"
+    },
+    {
+     "name": "10cm",
+     "why": "Wry, acoustic Korean indie pop",
+     "song": "봄이 좋냐??"
+    },
+    {
+     "name": "wave to earth",
+     "why": "Mellow, jazzy indie, the Korean cousin of Men I Trust",
+     "song": "seasons"
+    },
+    {
+     "name": "ADOY",
+     "why": "Synth-tinged dream pop with summer nostalgia",
+     "song": "Grace"
+    },
+    {
+     "name": "Silica Gel",
+     "why": "Inventive indie rock for when the mood is restless, like “TOMBOY”",
+     "song": "NO PAIN"
+    },
+    {
+     "name": "선우정아 Sunwoojunga",
+     "why": "Jazzy, intimate songwriter pop",
+     "song": "도망가자"
+    },
+    {
+     "name": "장범준 Jang Beom June",
+     "why": "Acoustic Korean pop with a busker feel",
+     "song": "흔들리는 꽃들 속에서 네 샴푸향이 느껴진거야"
+    },
+    {
+     "name": "DAY6",
+     "why": "Band-led pop with emotive, nostalgic hooks like JANNABI",
+     "song": "예뻤어"
+    },
+    {
+     "name": "너드커넥션 Nerd Connection",
+     "why": "Retro band balladry close to JANNABI",
+     "song": "좋은 밤 좋은 꿈"
+    },
+    {
+     "name": "볼빨간사춘기 BOL4",
+     "why": "Sweet acoustic pop in the “Blueming” vein",
+     "song": "우주를 줄게"
+    }
+   ],
+   "avoid": [
+    "K-pop idol dance tracks",
+    "EDM-heavy girl/boy group singles",
+    "meme dance songs",
+    "aggressive K-hip-hop"
+   ],
+   "discovery": 0.5
+  },
+  {
+   "key": "soul_rnb",
+   "name": "Soft Soul",
+   "english": "Neo-soul and R&B",
+   "blurb": "Warm neo-soul and alternative R&B sung in English, Korean and Mandarin, with falsetto and Rhodes.",
+   "when": "Late-night unwinding, cooking dinner, slow intimate moods",
+   "sound": "Rhodes and warm keys, live bass grooves, falsetto layers, soft drums, jazzy chords",
+   "langs": [
+    "en",
+    "ko",
+    "cmn"
+   ],
+   "energy": [
+    2,
+    3
+   ],
+   "seeds": [
+    67,
+    68,
+    70,
+    72,
+    74,
+    98,
+    99,
+    107,
+    104,
+    96,
+    113,
+    115,
+    119,
+    132,
+    133,
+    110
+   ],
+   "core_artists": [
+    "Khalil Fong",
+    "David Tao",
+    "Zion.T",
+    "Crush",
+    "DEAN",
+    "Heize",
+    "Colde",
+    "Frank Ocean",
+    "Daniel Caesar",
+    "D'Angelo",
+    "Erykah Badu",
+    "Hiatus Kaiyote",
+    "Tom Misch",
+    "Steve Lacy"
+   ],
+   "explore_artists": [
+    {
+     "name": "Giveon",
+     "why": "Deep, warm R&B balladry",
+     "song": "Heartbreak Anniversary"
+    },
+    {
+     "name": "Lucky Daye",
+     "why": "Modern neo-soul with D'Angelo-style looseness",
+     "song": "Roll Some Mo"
+    },
+    {
+     "name": "Mac Ayres",
+     "why": "Soft falsetto soul in the Daniel Caesar mould",
+     "song": "Easy"
+    },
+    {
+     "name": "Cleo Sol",
+     "why": "Gentle, spiritual UK soul close to Erykah Badu",
+     "song": "Why Don't You"
+    },
+    {
+     "name": "Free Nationals",
+     "why": "Anderson .Paak’s band; live, warm grooves",
+     "song": "Beauty & Essex"
+    },
+    {
+     "name": "Ravyn Lenae",
+     "why": "Airy, playful alt-R&B vocals",
+     "song": "Love Me Not"
+    },
+    {
+     "name": "Raveena",
+     "why": "Dreamy, soft-focus neo-soul",
+     "song": "Honey"
+    },
+    {
+     "name": "NIKI",
+     "why": "Indonesian singer-songwriter who bridges Asian and Western R&B",
+     "song": "Every Summertime"
+    },
+    {
+     "name": "SIRUP",
+     "why": "Japanese R&B-pop with smooth groove, a Tokyo bridge",
+     "song": "Do Well"
+    },
+    {
+     "name": "Jay Park",
+     "why": "Korean-American R&B in the Crush/DEAN orbit",
+     "song": "All I Wanna Do"
+    },
+    {
+     "name": "george",
+     "why": "Mellow Korean R&B with indie softness",
+     "song": "boat"
+    },
+    {
+     "name": "Thundercat",
+     "why": "Jazz-funk bass and falsetto, a Hiatus Kaiyote neighbour",
+     "song": "Them Changes"
+    },
+    {
+     "name": "Leon Bridges",
+     "why": "Warm, retro soul vocals",
+     "song": "Coming Home"
+    }
+   ],
+   "avoid": [
+    "trap-heavy R&B with Auto-Tune",
+    "club R&B and EDM-R&B",
+    "overproduced Mandopop R&B ballads",
+    "explicit drill crossovers"
+   ],
+   "discovery": 0.45
+  },
+  {
+   "key": "bossa",
+   "name": "Bossa Nova",
+   "english": "Bossa nova and MPB",
+   "blurb": "Whispered bossa nova and gentle MPB, with nylon-string guitar, soft percussion and jazz piano.",
+   "when": "Slow sunny mornings, weekend cafés, warm evenings",
+   "sound": "nylon guitar, hushed vocals, brushed samba rhythms, piano, light strings",
+   "langs": [
+    "pt",
+    "instrumental",
+    "ja"
+   ],
+   "energy": [
+    1,
+    3
+   ],
+   "seeds": [
+    145,
+    144,
+    139,
+    137,
+    138,
+    141,
+    142,
+    143,
+    146,
+    147,
+    136
+   ],
+   "core_artists": [
+    "Joao Gilberto",
+    "Antonio Carlos Jobim",
+    "Caetano Veloso",
+    "Gal Costa",
+    "Elis Regina",
+    "Nara Leão",
+    "Marcos Valle",
+    "Stan Getz",
+    "Astrud Gilberto",
+    "Lisa Ono"
+   ],
+   "explore_artists": [
+    {
+     "name": "Bebel Gilberto",
+     "why": "João’s daughter; modern bossa with a soft electronic touch",
+     "song": "Tanto Tempo"
+    },
+    {
+     "name": "Céu",
+     "why": "Contemporary Brazilian voice with a laid-back groove",
+     "song": "Malemolência"
+    },
+    {
+     "name": "Tim Bernardes",
+     "why": "Delicate modern MPB songwriting",
+     "song": "Recomeçar"
+    },
+    {
+     "name": "Rubel",
+     "why": "Gentle new-generation MPB with acoustic warmth",
+     "song": "Partilhar"
+    },
+    {
+     "name": "Marisa Monte",
+     "why": "Warm, melodic MPB at the heart of the tradition",
+     "song": "Ainda Bem"
+    },
+    {
+     "name": "Chico Buarque",
+     "why": "Classic MPB songwriting next to Caetano",
+     "song": "Construção"
+    },
+    {
+     "name": "Jorge Ben Jor",
+     "why": "Samba-soul groove for the sunnier side",
+     "song": "Chove Chuva"
+    },
+    {
+     "name": "Milton Nascimento",
+     "why": "Soaring, spiritual MPB",
+     "song": "Cais"
+    },
+    {
+     "name": "Seu Jorge",
+     "why": "Relaxed samba-pop with a warm baritone",
+     "song": "Burguesinha"
+    },
+    {
+     "name": "Ana Frango Elétrico",
+     "why": "Playful modern Brazilian pop with retro jazz chords",
+     "song": "Insista em Mim"
+    },
+    {
+     "name": "Toquinho",
+     "why": "Classic acoustic bossa guitar songs",
+     "song": "Aquarela"
+    },
+    {
+     "name": "Joyce",
+     "why": "Breezy jazz-samba vocals, a Marcos Valle peer",
+     "song": "Feminina"
+    },
+    {
+     "name": "Gilberto Gil",
+     "why": "Tropicália warmth alongside Caetano and Gal",
+     "song": "Aquele Abraço"
+    }
+   ],
+   "avoid": [
+    "bossa covers of pop hits",
+    "lounge cafe compilations",
+    "hip-hop remixes of standards",
+    "loud carnival samba"
+   ],
+   "discovery": 0.45
+  }
+ ],
+ "focus": {
+  "blurb": "You have no saved mix for long focus yet. Based on your saves, good background picks are light jazz piano, bossa guitar, Nujabes-style jazz hip-hop and quiet Japanese piano.",
+  "when": "Long stretches of work or study that need warmth without distraction",
+  "queries": [
+   "bill evans style jazz piano trio playlist 2 hours",
+   "nujabes inspired jazz hip hop mix for study",
+   "ジャズピアノ 作業用BGM 夜",
+   "bossa nova instrumental guitar mix for work",
+   "ghibli piano relaxing music 2 hours",
+   "ryuichi sakamoto style ambient piano mix",
+   "japanese city pop instrumental mix",
+   "rainy night jazz cafe piano mix",
+   "neo soul instrumental rhodes mix study",
+   "modern classical felt piano focus playlist"
+  ],
+  "avoid": [
+   "fake AI-generated lofi with no real instruments",
+   "heavy beats or EDM drops",
+   "vocal-heavy pop",
+   "cheesy smooth-jazz sax",
+   "coffee shop ambience with loud chatter"
+  ]
+ },
+ "set_aside": [
+  {
+   "what": "Rick Astley, “Never Gonna Give You Up”",
+   "ranks": [
+    51
+   ],
+   "why": "Almost certainly a meme save, not your real taste"
+  },
+  {
+   "what": "PSY, “Gangnam Style”",
+   "ranks": [
+    108
+   ],
+   "why": "A viral party song that doesn’t fit your soft Korean indie and R&B taste"
+  },
+  {
+   "what": "Sergio Mendes with The Black Eyed Peas, “Mas Que Nada”",
+   "ranks": [
+    140
+   ],
+   "why": "A loud hip-hop cover of a bossa classic, at odds with the whispered bossa nova you love"
+  }
+ ],
+ "built": 1792920369.014233,
+ "model": "opus",
+ "lang": "en",
+ "assign": {
+  "3zh9Wb1KuW8": [
+   "japan_groove",
+   "soul_rnb"
+  ],
+  "IFCDLIKSArs": [
+   "japan_groove"
+  ],
+  "HMqhXxH5-RQ": [
+   "japan_groove",
+   "soul_rnb"
+  ],
+  "V8KLgLrU280": [
+   "japan_groove",
+   "soul_rnb"
+  ],
+  "CnlMTBwsBHs": [
+   "japan_groove"
+  ],
+  "KMdTrqzEI0I": [
+   "japan_groove"
+  ],
+  "92pdJyzIGbw": [
+   "japan_groove"
+  ],
+  "1GQ07JcqH48": [
+   "japan_groove"
+  ],
+  "cYWYGUDIQvo": [
+   "japan_groove"
+  ],
+  "UiW93Thic7I": [
+   "japan_groove",
+   "dream_indie"
+  ],
+  "txG3E5fafs4": [
+   "japan_groove",
+   "dream_indie"
+  ],
+  "EgFVHXzmlvU": [
+   "japan_groove",
+   "soul_rnb"
+  ],
+  "yUcIaHh4HEA": [
+   "bossa",
+   "dream_indie"
+  ],
+  "AJdTBPuZkHU": [
+   "bossa",
+   "japan_groove"
+  ],
+  "cm23w1DGxgM": [
+   "japan_groove"
+  ],
+  "DJCB1ZlseJ8": [
+   "dream_indie"
+  ],
+  "uC6wKP_RVqU": [
+   "dream_indie"
+  ],
+  "9cQFKDpL-rI": [
+   "dream_indie"
+  ],
+  "xF1Yu-amFfk": [
+   "dream_indie"
+  ],
+  "l78stHRr2Ps": [
+   "dream_indie",
+   "soul_rnb"
+  ],
+  "CSo0rfnWUQM": [
+   "dream_indie"
+  ],
+  "h8DeZSB2o-c": [
+   "late_jazz"
+  ],
+  "Ejvz4EdcXM0": [
+   "late_jazz",
+   "bossa"
+  ],
+  "h1ZhKoSNwjI": [
+   "late_jazz"
+  ],
+  "xlfT2DasD0g": [
+   "late_jazz"
+  ],
+  "-LpJ81Yy4Qs": [
+   "late_jazz"
+  ],
+  "GtOcxj3NDBI": [
+   "late_jazz"
+  ],
+  "mvLDrx3YQ4Q": [
+   "late_jazz"
+  ],
+  "Az4SnX521pI": [
+   "late_jazz",
+   "piano_score"
+  ],
+  "-49G2-0GBSA": [
+   "piano_score",
+   "late_jazz"
+  ],
+  "kXDnu6WVdqE": [
+   "late_jazz",
+   "piano_score"
+  ],
+  "IMLoCIzwg4g": [
+   "late_jazz",
+   "piano_score"
+  ],
+  "QuMzUXPEPRM": [
+   "late_jazz"
+  ],
+  "y6qfgwy77ms": [
+   "late_jazz"
+  ],
+  "I5l0jkC71Yk": [
+   "late_jazz"
+  ],
+  "vAd1lt5ANoA": [
+   "late_jazz"
+  ],
+  "BNMKGYiJpvg": [
+   "late_jazz",
+   "soul_rnb"
+  ],
+  "af9B2NH2Wvs": [
+   "piano_score"
+  ],
+  "IHhJURATDQI": [
+   "piano_score"
+  ],
+  "rI6KKXJ1TUg": [
+   "piano_score"
+  ],
+  "0_M2JX-Olv8": [
+   "late_jazz"
+  ],
+  "qYcoJpqCha4": [
+   "late_jazz",
+   "piano_score"
+  ],
+  "dcYJg5gGHC0": [
+   "late_jazz"
+  ],
+  "-ZleCZAeINY": [
+   "piano_score"
+  ],
+  "luXZuPTJ3f8": [
+   "piano_score"
+  ],
+  "IuLTPjjHezw": [
+   "piano_score"
+  ],
+  "pvC5YD-IjL0": [
+   "dream_indie"
+  ],
+  "8ECPu3iumnE": [
+   "dream_indie"
+  ],
+  "KxPL-0zhcbM": [
+   "dream_indie"
+  ],
+  "MJoSyNdffGo": [
+   "dream_indie"
+  ],
+  "iMr69JihnP4": [
+   "dream_indie"
+  ],
+  "CPONUbyJ3YM": [
+   "mando_canto"
+  ],
+  "hcKgBcAdasg": [
+   "dream_indie"
+  ],
+  "c0_HccCxvXo": [
+   "dream_indie"
+  ],
+  "QBC72S6lL64": [
+   "dream_indie"
+  ],
+  "k_vqP0QdNHQ": [
+   "dream_indie"
+  ],
+  "2fQ5es-qLaY": [
+   "mando_canto"
+  ],
+  "MAsTXqkfw4s": [
+   "mando_canto",
+   "dream_indie"
+  ],
+  "IiGaqPIE6ok": [
+   "mando_canto",
+   "dream_indie"
+  ],
+  "KTQGxaSY-AE": [
+   "mando_canto"
+  ],
+  "vU4j1d5dW4Q": [
+   "mando_canto"
+  ],
+  "XJSbQZUTR-Q": [
+   "mando_canto"
+  ],
+  "L1L7auIXVRM": [
+   "mando_canto"
+  ],
+  "oDUKf2NONG8": [
+   "mando_canto"
+  ],
+  "m-9eOlsaEgo": [
+   "mando_canto"
+  ],
+  "dgPgnevER98": [
+   "mando_canto"
+  ],
+  "Ac5X2vkgOy4": [
+   "mando_canto",
+   "soul_rnb"
+  ],
+  "uTII_zM1emw": [
+   "soul_rnb",
+   "mando_canto"
+  ],
+  "qUUBDOL-09k": [
+   "soul_rnb"
+  ],
+  "4-7vdA-T-Ik": [
+   "soul_rnb",
+   "mando_canto"
+  ],
+  "1hY-dcBLIWk": [
+   "mando_canto",
+   "soul_rnb"
+  ],
+  "5tTaFx9OkLI": [
+   "soul_rnb",
+   "mando_canto"
+  ],
+  "xG0waEXWUKk": [
+   "mando_canto",
+   "soul_rnb"
+  ],
+  "Tp-7Lnt7xH4": [
+   "soul_rnb",
+   "mando_canto"
+  ],
+  "jYvm5g2gXXw": [
+   "dream_indie",
+   "mando_canto"
+  ],
+  "7XSg1vwfh0o": [
+   "mando_canto"
+  ],
+  "s26Wbqat4Vw": [
+   "mando_canto"
+  ],
+  "7qeShSmmsNg": [
+   "mando_canto"
+  ],
+  "DOgI7qUduP8": [
+   "mando_canto"
+  ],
+  "NCsVnmmNA3E": [
+   "mando_canto"
+  ],
+  "wTIcC-OF3mk": [
+   "mando_canto"
+  ],
+  "6i7V-UMWXTY": [
+   "mando_canto"
+  ],
+  "cSAXXE7VBYo": [
+   "seoul_indie",
+   "dream_indie"
+  ],
+  "bVrW1eDMtL8": [
+   "seoul_indie"
+  ],
+  "zC8RrOA0spo": [
+   "seoul_indie"
+  ],
+  "Kx8pJzPodsY": [
+   "seoul_indie"
+  ],
+  "t8P-zdkoeJA": [
+   "seoul_indie"
+  ],
+  "KczYjTVrK_o": [
+   "seoul_indie"
+  ],
+  "2C1Jg04INb4": [
+   "seoul_indie"
+  ],
+  "5_IYVichXbA": [
+   "seoul_indie"
+  ],
+  "NnRjwEhFU70": [
+   "seoul_indie"
+  ],
+  "I0_ZXHzKysc": [
+   "seoul_indie"
+  ],
+  "JsaW-lHELYo": [
+   "seoul_indie",
+   "soul_rnb"
+  ],
+  "DwBTeO_FIEg": [
+   "soul_rnb",
+   "seoul_indie"
+  ],
+  "oG32V_T3a68": [
+   "seoul_indie",
+   "bossa"
+  ],
+  "GhFudOcrfpY": [
+   "soul_rnb"
+  ],
+  "HZ5xd_3yOcQ": [
+   "seoul_indie",
+   "soul_rnb"
+  ],
+  "yP459cBS4f0": [
+   "soul_rnb",
+   "seoul_indie"
+  ],
+  "HxgK6jgRjQw": [
+   "soul_rnb",
+   "seoul_indie"
+  ],
+  "vLzgATepxzg": [
+   "soul_rnb",
+   "seoul_indie"
+  ],
+  "to_5UOAINLY": [
+   "seoul_indie",
+   "soul_rnb"
+  ],
+  "lq3NLUN8DDc": [
+   "soul_rnb"
+  ],
+  "KltW7c7RUsI": [
+   "soul_rnb"
+  ],
+  "5eANETW5TSM": [
+   "soul_rnb",
+   "seoul_indie"
+  ],
+  "hGWMhVbaJNg": [
+   "seoul_indie",
+   "soul_rnb"
+  ],
+  "dYwWCUsIKbI": [
+   "soul_rnb",
+   "seoul_indie"
+  ],
+  "cb6RNAkQU5g": [
+   "soul_rnb"
+  ],
+  "5srlMjz5ePs": [
+   "soul_rnb"
+  ],
+  "aiTXImcbhoY": [
+   "soul_rnb",
+   "late_jazz"
+  ],
+  "Q6FarZpy67M": [
+   "soul_rnb",
+   "dream_indie"
+  ],
+  "lnUV4cz0gv8": [
+   "soul_rnb"
+  ],
+  "-JIazHCRk9A": [
+   "soul_rnb"
+  ],
+  "9cHbvRUALrc": [
+   "soul_rnb",
+   "dream_indie"
+  ],
+  "6JHu3b-pbh8": [
+   "soul_rnb"
+  ],
+  "Fx3b85eDQvw": [
+   "soul_rnb"
+  ],
+  "RKD8sVVTEAA": [
+   "soul_rnb"
+  ],
+  "xyUQKDE57Ag": [
+   "soul_rnb"
+  ],
+  "zNhtz0Lygik": [
+   "soul_rnb"
+  ],
+  "4MXruqqZb8Q": [
+   "soul_rnb"
+  ],
+  "WdyPcNEA27M": [
+   "soul_rnb"
+  ],
+  "bYCG92Gjwgc": [
+   "soul_rnb",
+   "dream_indie"
+  ],
+  "aJwkmg3_6Lo": [
+   "soul_rnb"
+  ],
+  "MvB77oYXlvU": [
+   "soul_rnb"
+  ],
+  "GnxlHVdrmVE": [
+   "soul_rnb"
+  ],
+  "m8BcjF1RPHc": [
+   "soul_rnb"
+  ],
+  "r3p3G0tZunE": [
+   "soul_rnb"
+  ],
+  "TW28iWV7nxE": [
+   "soul_rnb"
+  ],
+  "b4fCymLkgOQ": [
+   "soul_rnb"
+  ],
+  "hEjriN9is-A": [
+   "soul_rnb"
+  ],
+  "7T_yOmRy4JM": [
+   "soul_rnb"
+  ],
+  "6QPQtguRdDs": [
+   "soul_rnb"
+  ],
+  "2haOtNzacIs": [
+   "soul_rnb"
+  ],
+  "-DNm9jn5z1w": [
+   "soul_rnb"
+  ],
+  "OMF7ESWdDJk": [
+   "soul_rnb"
+  ],
+  "9HA5p1v7rMw": [
+   "bossa"
+  ],
+  "b7d6wnaRm2E": [
+   "bossa"
+  ],
+  "9NblOknpJQ0": [
+   "bossa"
+  ],
+  "cF4RRJD4xrI": [
+   "bossa"
+  ],
+  "RgXHWXgwJko": [
+   "bossa"
+  ],
+  "RtaAD6UemFQ": [
+   "bossa"
+  ],
+  "JGqzKmp_5Bg": [
+   "bossa",
+   "late_jazz"
+  ],
+  "VEMWhrfFVDc": [
+   "bossa",
+   "late_jazz"
+  ],
+  "TL3CnFy0IcU": [
+   "bossa"
+  ],
+  "deyU5iDPLXo": [
+   "bossa",
+   "late_jazz"
+  ],
+  "KUud0zpls6k": [
+   "bossa",
+   "late_jazz"
+  ],
+  "Linic9PpDOw": [
+   "japan_groove"
+  ],
+  "CMZRJb1jxzE": [
+   "japan_groove"
+  ],
+  "PJe5-e3IJ3w": [
+   "japan_groove",
+   "late_jazz"
+  ],
+  "FVikHLyW500": [
+   "japan_groove"
+  ],
+  "7pPb5fmumNo": [
+   "japan_groove"
+  ],
+  "Y_68hpU-hGg": [
+   "japan_groove"
+  ],
+  "ohcY6Hhw1FM": [
+   "japan_groove"
+  ],
+  "_sOKkON_UnQ": [
+   "japan_groove",
+   "late_jazz"
+  ],
+  "MOOXO0ShopI": [
+   "japan_groove"
+  ],
+  "3agC6do-624": [
+   "japan_groove"
+  ],
+  "4driqASPxqc": [
+   "japan_groove"
+  ],
+  "VDuDQNkSC6g": [
+   "japan_groove"
+  ],
+  "W6XZVDuhC6o": [
+   "japan_groove"
+  ],
+  "z4RgLXO8KOU": [
+   "japan_groove",
+   "soul_rnb"
+  ],
+  "ZS6p32gX_yk": [
+   "japan_groove"
+  ]
+ }
+}

@@ -21,6 +21,7 @@ COPY --chown=app pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-default-groups --no-install-project
 COPY --chown=app zhiyin ./zhiyin
 COPY --chown=app web ./web
+COPY --chown=app demo ./demo
 COPY --chown=app README.md LICENSE ./
 RUN uv sync --frozen --no-default-groups
 
