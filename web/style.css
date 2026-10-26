@@ -326,7 +326,7 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .lk.on { color: var(--fg); background: var(--sel); box-shadow: none; }
 
 /* the day's programme: every song of this station in order, the playing one lit */
-.queue { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.queue { min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .s-head { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 0 0 6px; }
 .s-head h3 { display: none; margin: 0 10px 0 0; font-size: 13px; font-weight: 600; color: var(--fg-2); }
 .s-head .tb { height: 28px; font-size: 12px; color: var(--fg-3); }
@@ -768,6 +768,7 @@ a.m-acct:hover { background: var(--hover); }
   .s-head h3 { display: block; }
   .s-head .tb:first-of-type { margin-left: 0; }
   .s-note { margin: 2px 0 0; }
+  .q-promise { margin: 0; padding: 0 16px 8px; }
   .s-list { overflow: visible; margin: 0; padding: 0 4px; -webkit-mask-image: none; mask-image: none; }
   .tr, .tile { --c: 44px; gap: 12px; padding: 6px 12px; }
   .tile.more button { gap: 12px; padding: 6px 12px; }

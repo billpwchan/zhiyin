@@ -18,6 +18,11 @@ let LANG = detectLang();
 
 const STRINGS = {
   en: {
+    "精选": "Top picks",
+    "来自全部 {n} 个电台": "From all {n} stations",
+    "每个电台最有把握的几首，轮流放": "The surest songs from each of your stations, taking turns",
+    "离开页面时，YouTube 会暂停播放": "YouTube pauses when you leave the page",
+    "接着放": "Resume",
     "知音是什么": "What Zhiyin is",
     "还读不到你的喜欢": "Your likes can't be read yet",
     "建好 YouTube 频道，再点「再试一次」，就从你点过的喜欢开始。": "Make a YouTube channel, then press Try again, and it starts from the songs you've liked.",
@@ -394,6 +399,11 @@ const STRINGS = {
     "这个链接是给{name}的": "This link is for {name}",
   },
   'zh-Hant': {
+    "精选": "精選",
+    "来自全部 {n} 个电台": "來自全部 {n} 個電台",
+    "每个电台最有把握的几首，轮流放": "每個電台最有把握的幾首，輪流放",
+    "离开页面时，YouTube 会暂停播放": "離開頁面時，YouTube 會暫停播放",
+    "接着放": "接著放",
     "知音是什么": "知音是什麼",
     "还读不到你的喜欢": "還讀不到你的喜歡",
     "建好 YouTube 频道，再点「再试一次」，就从你点过的喜欢开始。": "建好 YouTube 頻道，再按「再試一次」，就從你按過的喜歡開始。",

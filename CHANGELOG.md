@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Top picks, the first station: the surest songs from every station, taking turns, and where a visit starts.
+- A song heard in one station no longer comes round again in another during the same edition.
+- On a phone, YouTube's window stays on the player card while the page scrolls and the toolbar folds away, and the cover no longer grows mid-scroll.
+- The line under Up next no longer runs into the first song on laptop-sized windows, and lines up on a phone.
+- Coming back to the page after the phone paused the song, one tap carries on.
+
 ## 0.1.0 — 2026-10-25
 
 First public release.

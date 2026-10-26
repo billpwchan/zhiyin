@@ -26,6 +26,8 @@ Likes you mark as not your taste (a song a child asked for, a phase, a joke) sta
 of this: they don't seed stations, define them, or speak for you in the portrait. You can leave out a whole artist
 the same way.
 
+The page opens on **Top picks**, a station of the surest songs from all of them, taking turns: every station gives one, the stations you've liked most lately give up to three, and the next song is the one that sounds closest to the last. It holds no songs of its own, so a song heard there doesn't come round again in its own station.
+
 A station is more than a mood. It has a scene, languages and lineage, plus seed songs, core artists, artists worth
 exploring, an energy range, things to avoid, and a share of new artists. A soft Mandopop ballad doesn't belong in a
 jazz station just because it's quiet.

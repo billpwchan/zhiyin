@@ -141,6 +141,8 @@ function buildStations() {
   (S.asks || []).slice(0, 4).forEach((a) => out.push({
     key: `ask:${a.created}`, group: 'ask', name: a.intent, sub: artistLine(a.picks), when: t('你说：{q}', { q: a.q }), tracks: a.picks, reserve: [],
   }));
+  const mix = mixOf(ed);
+  if (mix) out.push({ key: 'mix', group: 'lane', name: t('精选'), sub: t('来自全部 {n} 个电台', { n: mix.n }), when: t('每个电台最有把握的几首，轮流放'), tracks: mix.tracks, reserve: mix.reserve });
   // Each morning only the stations someone played from get new songs; mark those until they are opened.
   const partial = (ed?.lanes || []).some((l) => l.fresh === false);
   const seen = store.get(acct('seen')) || {};
@@ -150,6 +152,74 @@ function buildStations() {
   }
   if (ed?.focus?.picks?.length) out.push({ key: 'focus', group: 'lane', name: t('专注'), sub: t('一小时左右的长歌单'), when: ed.focus.when, tracks: ed.focus.picks, reserve: [] });
   ST = out;
+}
+
+/* ---------- the first station: the surest songs of every other station, taking turns ---------- */
+const MIX_N = 16;
+// The order is fixed for an edition within a visit: it starts from the hour, and a reload an hour later mustn't
+// reshuffle the queue that is playing.
+const mixOrder = new Map();
+
+function mixOf(ed) {
+  const lanes = (ed?.lanes || []).filter((l) => l.picks?.length);
+  if (lanes.length < 2) return null;
+  if (!mixOrder.has(ed.id)) mixOrder.set(ed.id, orderMix(lanes));
+  const o = mixOrder.get(ed.id);
+  // copies that remember their station: a play or a "not this" counts for the station the song came from
+  const by = new Map(lanes.flatMap((l) => l.picks.map((p) => [p.vid, { ...p, from: l.key }])));
+  const pick = (vids) => vids.map((v) => by.get(v)).filter(Boolean);
+  return { tracks: pick(o.tracks), reserve: pick(o.reserve), n: lanes.length };
+}
+
+// How much of the listener's liking each station holds lately: a like's weight halves about every seven months,
+// as when the stations were made.
+function laneWeights() {
+  const now = new Date(), w = {};
+  for (const [, at, lane] of S.timeline || []) {
+    const [y, m] = (at || '').split('-').map(Number);
+    if (!y || !m) continue;
+    const age = Math.max(0, (now.getFullYear() - y) * 12 + now.getMonth() + 1 - m);
+    w[lane] = (w[lane] || 0) + 0.5 ** (age / 7);
+  }
+  return w;
+}
+
+function orderMix(lanes) {
+  const w = laneWeights(), weight = (l) => (w[l.key] || 0) + 0.1;
+  const sure = new Map(lanes.map((l) => [l.key, [...l.picks].sort((a, b) => (b.fit || 0) - (a.fit || 0))]));
+  // every station once, then more from the ones listened to most, at most three from one
+  const slots = new Map(lanes.map((l) => [l.key, 1]));
+  let left = Math.min(MIX_N, lanes.reduce((a, l) => a + l.picks.length, 0)) - lanes.length;
+  while (left-- > 0) {
+    const open = lanes.filter((l) => slots.get(l.key) < Math.min(3, l.picks.length));
+    if (!open.length) break;
+    const l = open.reduce((a, b) => (slots.get(b.key) / weight(b) < slots.get(a.key) / weight(a) ? b : a));
+    slots.set(l.key, slots.get(l.key) + 1);
+  }
+  const heavy = [...lanes].sort((a, b) => weight(b) - weight(a));
+  const want = hourWant(), mid = (k) => { const e = S.lanes?.find((l) => l.key === k)?.energy; return e ? (e[0] + e[1]) / 2 : 3; };
+  // Rounds of one song per station. The first song fits the hour; each next one is the station whose song sounds
+  // closest to the one before (never the same station twice running), so the turns don't lurch.
+  const out = [];
+  let prev = null;
+  for (let r = 0; ; r++) {
+    const round = heavy.filter((l) => slots.get(l.key) > r);
+    if (!round.length) break;
+    while (round.length) {
+      const song = (l) => sure.get(l.key)[r];
+      const sim = (l) => { const a = vec(prev?.p), b = vec(song(l)); return a && b ? dot(a, b) : -1; };
+      const options = prev && round.length > 1 ? round.filter((l) => l.key !== prev.key) : round;
+      const l = prev ? options.reduce((a, b) => (sim(b) > sim(a) ? b : a))
+        : options.reduce((a, b) => (Math.abs(mid(b.key) - want) < Math.abs(mid(a.key) - want) ? b : a));
+      round.splice(round.indexOf(l), 1);
+      prev = { key: l.key, p: song(l) };
+      out.push(prev.p.vid);
+    }
+  }
+  // when those run out, the rest of every station's picks, taking turns the same way
+  const reserve = [];
+  for (let r = 0; r < 8; r++) for (const l of heavy) { const p = sure.get(l.key)[slots.get(l.key) + r]; if (p) reserve.push(p.vid); }
+  return { tracks: out, reserve };
 }
 
 function stHTML(s) {
@@ -190,12 +260,31 @@ function renderStations() {
     ${warm.length ? `<div class="st-h"><span>${t('先听着')}</span></div>${warm.map(stHTML).join('')}` : ''}`;
 }
 
+// Songs heard in this edition from any station. The first station shares its songs with the others, so one heard
+// there doesn't come round again in its own station (and the other way round).
+function heard() {
+  const h = store.get(acct('heard'));
+  return new Set(h?.ed === S.edition?.id ? h.vids : []);
+}
+function markHeard(vid) {
+  const h = heard();
+  if (!S.edition || h.has(vid)) return;
+  h.add(vid);
+  store.set(acct('heard'), { ed: S.edition.id, vids: [...h] });
+}
+
 function queueOf(st) {
   const id = `${S.edition?.id}|${st.key}`;
+  const h = st.group === 'lane' ? heard() : new Set();
   let q = queues.get(id);
   if (!q) {
-    q = { key: st.key, tracks: st.tracks.filter((p) => fb.get(p.vid) !== 'dislike'), reserve: [...(st.reserve || [])], i: 0, played: new Set() };
+    const tracks = st.tracks.filter((p) => fb.get(p.vid) !== 'dislike');
+    const fresh = tracks.filter((p) => !h.has(p.vid));
+    q = { key: st.key, tracks: fresh.length ? fresh : tracks, reserve: (st.reserve || []).filter((p) => !h.has(p.vid)), i: 0, played: new Set() };
     queues.set(id, q);
+  } else if (h.size) {
+    const ahead = q.tracks.slice(q.i + 1).filter((p) => !h.has(p.vid) || q.played.has(p.vid));
+    q.tracks = [...q.tracks.slice(0, q.i + 1), ...ahead];
   }
   q.st = st;
   return q;
@@ -219,10 +308,16 @@ function selectStation(key, play = true) {
   if (!same || play) loadTrack(play);
 }
 
-// The first station of a visit fits the hour: something quiet late at night, something with a pulse by day.
-function defaultStation() {
+// The energy a visit starts at: something quiet late at night, something with a pulse by day.
+function hourWant() {
   const h = new Date().getHours();
-  const want = h >= 22 || h < 5 ? 1.5 : h >= 19 ? 2.5 : h < 11 ? 2 : 3.5;
+  return h >= 22 || h < 5 ? 1.5 : h >= 19 ? 2.5 : h < 11 ? 2 : 3.5;
+}
+// A visit starts on the first station, whose first song fits the hour; without it, on the station that fits best.
+function defaultStation() {
+  const mix = ST.find((x) => x.key === 'mix' && x.tracks.length);
+  if (mix) return mix;
+  const want = hourWant();
   const mid = (k) => { const e = S.lanes?.find((l) => l.key === k)?.energy; return e ? (e[0] + e[1]) / 2 : 3; };
   const lanes = ST.filter((x) => x.group === 'lane' && x.key !== 'focus' && x.tracks.length);
   return lanes.sort((a, b) => Math.abs(mid(a.key) - want) - Math.abs(mid(b.key) - want))[0] || ST.find((x) => x.group === 'warm');
@@ -251,7 +346,8 @@ function loadTrack(play) {
 }
 
 function logPlay(p, ev, pos = 0) {
-  if (p && !SAMPLE()) api('/api/play', { vid: p.vid, lane: Q?.key, ev, pos: Math.round(pos), title: p.title, artist: p.artists?.[0]?.name }).catch(() => {});
+  if (p && ev !== 'start' && Q?.key !== 'ear' && !p.mine) markHeard(p.vid);
+  if (p && !SAMPLE()) api('/api/play', { vid: p.vid, lane: p.from || Q?.key, ev, pos: Math.round(pos), title: p.title, artist: p.artists?.[0]?.name }).catch(() => {});
 }
 
 // A song left after the first half minute (or half of a short one) was heard: it is never recommended again.
@@ -458,6 +554,7 @@ const Player = {
     setTimeout(() => next(!this.cued), 400);   // a song only loaded, not started, is replaced by one only loaded
   },
   onState(s) {
+    if (this.playing && s !== 1 && s !== 3) this.stopped = performance.now();
     this.playing = s === 1 || s === 3;
     // YouTube's player shows from the moment a song plays until it stops; paused, cued or between songs, the frame shows
     // the song's own cover instead of YouTube's thumbnail, title bar and play button
@@ -511,6 +608,15 @@ const Player = {
     return this.playing ? Math.min(c.raw + (n - c.at) / 1000, c.raw + 1) : c.raw;
   },
 };
+
+// YouTube's developer policies (III.I.9) forbid playing from a player nobody can see, and phones pause it when the
+// page goes to the background. Coming back, one tap carries on from where it stopped.
+let awayPlaying = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { awayPlaying = Player.playing || performance.now() - (Player.stopped || -1e9) < 1500; return; }
+  if (awayPlaying && !Player.playing && cur()) toast(t('离开页面时，YouTube 会暂停播放'), [[t('接着放'), () => Player.play()]], 8000);
+  awayPlaying = false;
+});
 
 function tick() {
   const [t, d] = Player.time();
@@ -719,11 +825,13 @@ function layoutStage() {
   $$('[data-k="tab-lyr"]').forEach((b) => { b.setAttribute('aria-selected', on); b.toggleAttribute('aria-disabled', !has); b.title = why; });
   $$('[data-k="tab-q"]').forEach((b) => b.setAttribute('aria-selected', !on));
   $$('[data-k="lyrics"]').forEach((b) => { b.classList.toggle('on', on); b.toggleAttribute('aria-disabled', !has); b.title = why; });
-  // a phone scrolls the page under the station strip and the tab bar: size the cover so play is on the first screen
+  // A phone scrolls the page under the station strip and the tab bar: size the cover so play is on the first screen.
+  // From the smallest height the screen has (toolbar showing), not the current one, or the cover grows and pushes
+  // the page down when the toolbar folds away mid-scroll.
   const fr = $('.frame', room), meta = $('.meta', room);
   if (PHONE.matches && fr && meta) {
-    const fit = innerHeight - $('#tabs').offsetHeight - (fr.getBoundingClientRect().top + scrollY) - meta.offsetHeight - 32;
-    room.style.setProperty('--fit', `${Math.max(120, Math.round(fit))}px`);
+    const used = $('#tabs').offsetHeight + (fr.getBoundingClientRect().top + scrollY) + meta.offsetHeight + 32;
+    room.style.setProperty('--fit', `max(120px, calc(100svh - ${Math.round(used)}px))`);
   } else room.style.removeProperty('--fit');
   placeHost();
   if (on) { Lyr.sync(true); Lyr.run(); }
@@ -937,9 +1045,13 @@ function placeHost() {
   host.classList.toggle('off', !Player.shown);
   const r = target.getBoundingClientRect();
   host.classList.toggle('docked', docked);
-  Object.assign(host.style, {
-    top: `${docked ? r.top : r.top + scrollY}px`, left: `${docked ? r.left : r.left + scrollX}px`, width: `${target.offsetWidth}px`, height: `${target.offsetHeight}px`,
-  });
+  // The card is held to the bottom of the screen, so its YouTube window is too: when a phone's toolbar folds away
+  // mid-scroll the two move together (measured from the top, the window trailed the card by the toolbar's height
+  // until the scroll ended).
+  Object.assign(host.style, docked
+    ? { top: 'auto', bottom: `${innerHeight - r.bottom}px`, left: `${r.left}px` }
+    : { top: `${r.top + scrollY}px`, bottom: 'auto', left: `${r.left + scrollX}px` },
+  { width: `${target.offsetWidth}px`, height: `${target.offsetHeight}px` });
   for (const d of $$('dialog[open]')) spare(d);
   if ($('#toast').classList.contains('show')) clearOf($('#toast'));   // a note shown before the player appeared
   const moved = hostAt && hostAt !== target.id;
@@ -958,7 +1070,7 @@ ro.observe(document.body);
 addEventListener('resize', () => (PHONE.matches ? layoutStage() : placeHost()));   // a phone's height changes with its address bar
 
 /* ---------- feedback ---------- */
-function track(p) { return { vid: p.vid, lane: Q?.key, title: p.title, artist: p.artists?.[0]?.name, artist_id: p.artists?.[0]?.id }; }
+function track(p) { return { vid: p.vid, lane: p.from || Q?.key, title: p.title, artist: p.artists?.[0]?.name, artist_id: p.artists?.[0]?.id }; }
 
 async function like(p) {
   if (SAMPLE()) return openJoin('like');
