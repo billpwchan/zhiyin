@@ -17,12 +17,13 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from starlette.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import (accounts, ask, audio, candidates, ear, edition, google, i18n, library, llm, lyrics, profile, quality, settings,
-               signals, store, ytm)
+from . import (accounts, ask, audio, candidates, cards, ear, edition, google, i18n, library, llm, lyrics, netease, profile,
+               quality, settings, signals, store, ytm)
 from .text import display_title, fold, is_version
 
 WEB = store.ROOT / "web"
@@ -86,7 +87,8 @@ async def _lifespan(_app):
 app = FastAPI(lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
-OPEN = ("/login", "/privacy", "/about", "/lang", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
+OPEN = ("/login", "/privacy", "/about", "/lang", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/", "/c/",
+        "/api/card/")
 # A YouTube video id. It names cache files, so nothing else gets through.
 VID = r"^[A-Za-z0-9_-]{1,64}$"
 Vid = Annotated[str, Field(pattern=VID)]
@@ -106,7 +108,7 @@ async def _who(request: Request, call_next):
         if request.url.path.startswith(OPEN) or request.url.path == "/api/event":
             return await call_next(request)
         path = request.url.path
-        if SAMPLE_ON[0] and request.method == "GET" and (path == "/" or path in SAMPLE_GETS):
+        if SAMPLE_ON[0] and request.method == "GET" and (path in ("/", "/card") or path in SAMPLE_GETS):
             # Someone not signed in tries the app as the sample listener, read-only, in their browser's language.
             if not _sample_may_fetch(path, request.query_params):
                 return JSONResponse({"detail": "busy"}, 429)
@@ -674,6 +676,141 @@ def event(b: Event, request: Request):
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else None
     store.count(b.name, accounts.prefs(uid).get("ref", "") if uid else _ref_cookie(request))
     return {"ok": True}
+
+
+# ---------- cards: a record from someone's public NetEase likes, and any card shared by link ----------
+CARD_WHY = {
+    "link": "这不像网易云音乐的主页或歌单链接。在网易云里打开「我喜欢的音乐」，点分享，复制链接贴过来",
+    "private": "这份「我喜欢的音乐」只有本人看得到。在网易云的隐私设置里改成所有人可见，或者贴一份公开歌单的链接",
+    "few": "这份歌单只有 {n} 首，至少要 20 首才画得出来",
+    "upstream": "网易云那边没有回应，过一会儿再试",
+}
+CARD_ID = r"^[A-Za-z0-9]{6,12}$"
+_anon_shares: dict[str, list[float]] = {}
+
+
+class CardReq(BaseModel):
+    link: Annotated[str, Field(max_length=2000)]
+    again: bool = False
+
+
+@app.post("/api/card/make")
+def card_make(b: CardReq, request: Request):
+    lang = i18n.from_request(request)
+    ref = _ref_cookie(request)
+    if not cards.may_make(request.client.host if request.client else ""):
+        raise HTTPException(429, i18n.tr("做得有点快，过几分钟再试", lang))
+    store.count("card_try", ref)
+    tl = i18n.reader.set(lang)
+    try:
+        rec = cards.make(b.link, lang, b.again)
+    except netease.Unreadable as e:
+        store.count(f"card_{e.why}", ref)
+        raise HTTPException(422, i18n.tr(CARD_WHY[e.why], lang, n=e.n)) from None
+    finally:
+        i18n.reader.reset(tl)
+    store.count("card_made", ref)
+    if rec["label"]:
+        store.count("card_named", ref)
+    return rec
+
+
+def _own_card() -> dict:
+    """What a signed-in listener's own card says, read here rather than taken from the page."""
+    rec = ear.build()
+    if not rec["label"] or not rec["songs"]:
+        raise HTTPException(409, i18n.tr("名字还没起好，等一下再分享"))
+    n = sum(1 for t in library.load() if not t["long"])
+    return {"label": rec["label"], "n": n, "since": int(rec["span"][0]), "lang": i18n.of()}
+
+
+@app.post("/api/card/share")
+async def card_share(request: Request, token: str = ""):
+    """The card as the page drew it (a 1080x1440 JPEG) gets its own link. Without an account, only a card this
+    server named moments ago can be shared, once."""
+    img = await request.body()
+    if not cards.valid_image(img):
+        raise HTTPException(400, "image")
+    uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
+    if uid and not token:
+        if cards.shares_today(uid) >= cards.SHARES_A_DAY:
+            raise HTTPException(429, i18n.tr("今天分享得够多了，明天再来"))
+        c = await run_in_threadpool(_own_card)
+        nonce = None
+    else:
+        d = cards.unsign(token)
+        if not d or cards.used(d["nonce"]):
+            raise HTTPException(403, i18n.tr("这张卡过期了，重新做一张再分享", i18n.from_request(request)))
+        ip = request.client.host if request.client else ""
+        now = time.time()
+        seen = _anon_shares[ip] = [t for t in _anon_shares.get(ip, []) if now - t < 86400]
+        if len(seen) >= cards.SHARES_A_DAY:
+            raise HTTPException(429, i18n.tr("今天分享得够多了，明天再来", d["lang"]))
+        seen.append(now)
+        c, nonce, uid = d, d["nonce"], None
+    out = cards.save(img, c["label"], c["lang"], c["n"], c["since"], uid, nonce)
+    store.count("card_shared", _ref_of_user() if uid else _ref_cookie(request))
+    return {"url": f"{google.public_url()}/c/{out['id']}", **out}
+
+
+class CardDel(BaseModel):
+    id: Annotated[str, Field(pattern=CARD_ID)]
+    key: Annotated[str, Field(max_length=64)] = ""
+
+
+@app.post("/api/card/delete")
+def card_delete(b: CardDel, request: Request):
+    uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
+    if not cards.remove(b.id, b.key or None, uid):
+        raise HTTPException(404, "card")
+    return {"ok": True}
+
+
+@app.get("/card")
+def card_maker(request: Request):
+    return index(request)
+
+
+@app.get("/c/{cid}.jpg")
+def card_image(cid: str):
+    if not re.fullmatch(CARD_ID, cid) or not (cards.DIR / f"{cid}.jpg").exists():
+        raise HTTPException(404)
+    return FileResponse(cards.DIR / f"{cid}.jpg", media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/c/{cid}")
+def card_page(cid: str, request: Request):
+    c = cards.get(cid) if re.fullmatch(CARD_ID, cid) else None
+    # link previews (WeChat, Zhihu) fetch without a language and show the page title: the card's own language then
+    lang = c["lang"] if c and c["lang"] and not request.headers.get("accept-language") else i18n.from_request(request)
+    base = google.public_url()
+    if c:
+        cl = c["lang"] or lang
+        title = c["label"] or i18n.tr("我的知音唱片", cl)
+        text = i18n.tr("{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。", cl, n=c["n"], y=c["since"])
+        og = (f'<meta name="description" content="{escape(text)}">\n<meta property="og:type" content="website">\n'
+              f'<meta property="og:site_name" content="{escape(i18n.tr("知音", cl))}">\n'
+              f'<meta property="og:title" content="{escape(title)}">\n<meta property="og:description" content="{escape(text)}">\n'
+              f'<meta property="og:url" content="{base}/c/{cid}">\n<meta property="og:image" content="{base}/c/{cid}.jpg">\n'
+              f'<meta property="og:image:width" content="1080">\n<meta property="og:image:height" content="1440">\n'
+              f'<meta name="twitter:card" content="summary_large_image">\n')
+    html = (WEB / "card.html").read_text(encoding="utf-8")
+    html = re.sub(r"<!--lang:([\w-]+)-->(.*?)<!--/lang-->", lambda m: m.group(2) if m.group(1) == lang else "", html, flags=re.S)
+    html = re.sub(r"<!--card-->(.*?)<!--/card-->", lambda m: m.group(1) if c else "", html, flags=re.S)
+    html = re.sub(r"<!--gone-->(.*?)<!--/gone-->", lambda m: "" if c else m.group(1), html, flags=re.S)
+    html = html.replace("/static/style.css", f"/static/style.css?v={int((WEB / 'style.css').stat().st_mtime)}")
+    html = html.replace('<html lang="zh-Hans">', f'<html lang="{lang}">')
+    if c:
+        html = html.replace("</head>", og + "</head>", 1).replace("__ID__", cid).replace("__TITLE__", escape(title))
+    html = html.replace("__PAGETITLE__", escape(f"{c['label']} · {i18n.tr('知音', lang)}" if c and c["label"] else i18n.tr("知音", lang)))
+    r = HTMLResponse(html, status_code=200 if c else 404, headers={"Cache-Control": HTML_CACHE})
+    if c and not _BOT.search(request.headers.get("user-agent", "")):
+        cards.seen(cid)
+        if not request.cookies.get("zy_r"):
+            store.count("visit", "card")
+            r.set_cookie("zy_r", "card", max_age=30 * 86400, httponly=True, samesite="lax", secure=base.startswith("https"))
+        store.count("card_view", _ref_cookie(request) or "card")
+    return r
 
 
 def _gate(mode: str, request: Request, **ctx) -> HTMLResponse:

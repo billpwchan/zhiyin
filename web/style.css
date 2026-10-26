@@ -517,6 +517,32 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 .era-now { margin: 12px 0 0; min-height: 3.4em; font-size: 14px; line-height: 1.7; color: var(--fg-2); text-wrap: pretty; }
 .era-now b { font-weight: 500; color: var(--fg); margin-right: 10px; }
 
+/* a record from someone's NetEase likes, for visitors without an account: one band above the sample's record */
+.maker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 500px); gap: 16px 48px; align-items: center;
+  margin: 0 0 48px; padding: 22px 24px; border-radius: 18px; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 1px var(--line); }
+.mk-k { margin: 0; font-size: 12px; color: var(--fg-3); }
+.maker h2 { margin: 2px 0 0; font-size: 20px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
+.mk-sub { margin: 6px 0 0; font-size: 13px; line-height: 1.65; color: var(--fg-2); text-wrap: pretty; }
+.mk-row { display: flex; gap: 8px; }
+.mk-row input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 0; border-radius: 12px; outline: none;
+  background: rgba(0, 0, 0, .32); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); font-size: 14px;
+  transition: box-shadow var(--fast) var(--ease); }
+.mk-row input:focus { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .34); }
+.mk-row input::placeholder { color: var(--fg-3); }
+.mk-row .btn { flex: none; height: 44px; border-radius: 12px; }
+.mk-row .btn[disabled] { opacity: .72; pointer-events: none; }
+.mk-err { margin: 10px 0 0; font-size: 13px; line-height: 1.55; color: var(--danger); text-wrap: pretty; }
+.mk-err:empty { display: none; }
+.mk-alt { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-3); }
+.lnk { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
+.lnk:hover { color: var(--fg); }
+@container (max-width: 860px) { .maker { grid-template-columns: minmax(0, 1fr); } }
+/* on a phone the link gets the whole width; a pasted link is long and the placeholder has to read in English too */
+@container (max-width: 440px) { .mk-row { flex-direction: column; } .mk-row input { flex: none; } .mk-row .btn { width: 100%; } }
+.g-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.g-acts .tb { height: 36px; padding: 0 12px 0 10px; color: var(--fg); background: rgba(255, 255, 255, .08); }
+.g-acts .tb:hover { background: rgba(255, 255, 255, .13); }
+
 .sec { margin-top: 72px; }
 .sec > h2 { margin-bottom: 18px; }
 
@@ -671,6 +697,7 @@ a.m-acct:hover { background: var(--hover); }
 .join .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; font-variant-numeric: tabular-nums; color: var(--fg-3); }
 .j-go { width: 100%; height: 46px; font-size: 15px; }
 .j-fine { margin: 14px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-3); text-wrap: pretty; }
+.j-163 { margin: 16px 0 0; font-size: 13px; color: var(--fg-3); }
 .j-alt { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; margin-top: 18px; font-size: 13px; }
 .j-alt a { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
 .j-alt a:hover { color: var(--fg); }
@@ -713,10 +740,17 @@ a.m-acct:hover { background: var(--hover); }
 .share-d[open]::backdrop { animation: fade 240ms ease-out; }
 .sc-in { position: relative; display: grid; gap: 14px; padding: 14px; }
 .sc-img { display: block; width: min(calc(100vw - 60px), calc(72dvh * .75), 570px); height: auto; aspect-ratio: 3 / 4; border-radius: 10px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .06); }
-.sc-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+/* as wide as the card, whatever the buttons and the link would like */
+.sc-acts { display: flex; flex-wrap: wrap; gap: 8px; width: 0; min-width: 100%; }
 .sc-acts .btn, .sc-acts .tb { gap: 8px; height: 40px; }
 .sc-acts svg { width: 18px; height: 18px; }
 .sc-acts .sc-x { margin-left: auto; width: 40px; height: 40px; }
+.sc-ln { display: contents; }
+.sc-link { order: 5; flex-basis: 100%; display: flex; align-items: center; gap: 4px; min-width: 0; padding: 4px 4px 4px 12px;
+  border-radius: 10px; background: rgba(255, 255, 255, .06); }
+.sc-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--fg-2); }
+.sc-link .tb { height: 34px; }
+.sc-hint { margin: -2px 0 0; font-size: 13px; color: var(--fg-2); text-align: center; }
 .keys-d { width: min(420px, calc(100vw - 32px)); margin: 18vh auto auto; padding: 18px 22px 20px; border-radius: 16px; background: var(--pop); box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 30px 80px rgba(0, 0, 0, .6); }
 .keys-d[open] { animation: pop 200ms var(--ease); }
 .keys-d h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
@@ -844,7 +878,9 @@ a.m-acct:hover { background: var(--hover); }
   .chip { height: 36px; }
   .sheet { inset: auto 0 0 0; width: 100vw; height: 92dvh; border-radius: 16px 16px 0 0; }
   .sheet[open] { animation: up 420ms var(--drawer); }
-  .link input, .invite input { font-size: 16px; }
+  .link input, .invite input, .mk-row input { font-size: 16px; }
+  .maker { margin: 0 0 28px; padding: 18px 16px 16px; border-radius: 16px; }
+  .maker h2 { font-size: 18px; }
   .welcome { padding: 32px 16px 120px; }
   .welcome h1 { font-size: 26px; }
   .scope { grid-template-columns: 1fr; }

@@ -35,6 +35,9 @@ FIRST_RUN_MAX = float(os.environ.get("ZHIYIN_LISTENER_FIRST_RUN_MAX_USD", 20))
 # Measured on the same shortlists (2026-10-25): see docs/how-it-works.md.
 KEY_MODEL = {"opus": os.environ.get("ZHIYIN_KEY_OPUS", "sonnet"), "sonnet": os.environ.get("ZHIYIN_KEY_SONNET", "sonnet"),
              "haiku": "haiku"}
+# Naming strangers' NetEase likes (cards.py), all of them together, each day, inside the month's pool. Haiku names
+# 600 likes for under a cent (measured 2026-10-26), so this is several hundred names a day.
+CARD_DAILY_USD = float(os.environ.get("ZHIYIN_CARD_DAILY_USD", 2))
 # The owner's own ceiling, far above a normal day (~$1-2), so a runaway loop or a stolen session can't drain the plan.
 OWNER_DAILY_USD = float(os.environ.get("ZHIYIN_OWNER_DAILY_USD", 10))
 WORKER_GONE_S = 120   # the worker long-polls every 25 s, so this much silence means the Mac is asleep or off
@@ -133,7 +136,10 @@ def unavailable(uid: str | None = None) -> str | None:
             return i18n.tr("这个月大家共用的 Claude 额度用完了，过几天会恢复", i18n.of(uid))
         if _background.get() and pool_spent(1) >= 2 * POOL_USD / 30:
             return i18n.tr("今天大家共用的 Claude 额度到了上限，明天再挑", i18n.of(uid))
-        if not mine and (r := _first_run.get()) is not None:
+        if uid == store.CARDS:
+            if spent(uid, days=1) >= CARD_DAILY_USD:
+                return i18n.tr("今天起名字的额度用完了，明天再来起名", i18n.of(uid))
+        elif not mine and (r := _first_run.get()) is not None:
             if first_run_left(uid, r["songs"]) <= 0:
                 return i18n.tr("第一次准备用完了它的 Claude 额度；额度按 30 天计算，过些天再试", i18n.of(uid))
         elif not mine and spent(uid, days=1, source="key") >= DAILY_USD:

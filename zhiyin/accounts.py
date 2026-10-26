@@ -6,7 +6,7 @@ import secrets
 import shutil
 import time
 
-from . import store
+from . import cards, store
 
 COOKIE = "zy"
 SESSION_DAYS = 365
@@ -134,7 +134,7 @@ def end_session(token: str | None) -> None:
 
 
 def delete(uid: str) -> None:
-    """Everything the listener left here: likes read from their account, feedback, history, tokens, sessions."""
+    """Everything the listener left here: likes read from their account, feedback, history, tokens, sessions, shared cards."""
     if uid == store.OWNER:
         raise ValueError("the owner's data stays")
     con = store.db()
@@ -143,4 +143,5 @@ def delete(uid: str) -> None:
     for t, col in (("sessions", "uid"), ("invites", "uid"), ("users", "id")):
         con.execute(f"delete from {t} where {col}=?", (uid,))
     con.commit()
+    cards.drop(uid)
     shutil.rmtree(store.USERS / uid, ignore_errors=True)

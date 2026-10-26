@@ -76,7 +76,7 @@ reader: contextvars.ContextVar[str | None] = contextvars.ContextVar("zhiyin_read
 
 def of(uid: str | None = None) -> str:
     """The listener's language: their choice, set from their browser the first time they open the app."""
-    if store.is_sample(uid):
+    if store.is_sample(uid) or (uid or store.uid()) == store.CARDS:
         return reader.get() or "en"
     return (accounts.prefs(uid or store.uid()) or {}).get("lang") or system()
 
@@ -300,6 +300,19 @@ EN = {
     "韩语": "Korean", "英语": "English", "国语": "Mandarin", "粤语": "Cantonese", "日语": "Japanese", "泰语": "Thai",
     "纯音乐": "Instrumental",
     "知音 · {name} · {date}": "Zhiyin · {name} · {date}",
+    "这不像网易云音乐的主页或歌单链接。在网易云里打开「我喜欢的音乐」，点分享，复制链接贴过来": "That doesn't look like a NetEase Cloud Music profile or playlist link. Open “My Liked Music” in NetEase, tap Share, copy the link and paste it here",
+    "这份「我喜欢的音乐」只有本人看得到。在网易云的隐私设置里改成所有人可见，或者贴一份公开歌单的链接": "Only its owner can see this “My Liked Music”. Make it visible to everyone in NetEase's privacy settings, or paste a link to a public playlist",
+    "这份歌单只有 {n} 首，至少要 20 首才画得出来": ("This playlist has only {n} song; a record needs at least 20", "This playlist has only {n} songs; a record needs at least 20"),
+    "网易云那边没有回应，过一会儿再试": "NetEase isn't answering. Try again in a little while",
+    "做得有点快，过几分钟再试": "That's a lot of records at once. Try again in a few minutes",
+    "今天起名字的额度用完了，明天再来起名": "Today's names have run out. Come back tomorrow for yours",
+    "起名字的时候出了点问题，再试一次": "Something went wrong while naming it. Try again",
+    "现在起不了名字，唱片先画好了": "It can't be named right now, so here's the record on its own",
+    "名字还没起好，等一下再分享": "Your name isn't ready yet. Share it in a moment",
+    "今天分享得够多了，明天再来": "That's enough links for today. More tomorrow",
+    "这张卡过期了，重新做一张再分享": "This card has expired. Draw it again to share it",
+    "我的知音唱片": "My Zhiyin record",
+    "{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。": "{n} liked songs since {y}, one ring a year. Make your own.",
 }
 # Taiwan and Hong Kong wording the converter doesn't know.
 HANT = {
@@ -314,6 +327,14 @@ HANT = {
     "我的另一个账号": "我的另一個帳戶",
     "YouTube 没有返回临时播放列表": "YouTube 沒有回傳臨時播放清單",
     "知音挑的歌": "知音挑的歌",
+    "这不像网易云音乐的主页或歌单链接。在网易云里打开「我喜欢的音乐」，点分享，复制链接贴过来": "這不像網易雲音樂的主頁或歌單連結。在網易雲裡打開「我喜歡的音樂」，點分享，複製連結貼過來",
+    "这份「我喜欢的音乐」只有本人看得到。在网易云的隐私设置里改成所有人可见，或者贴一份公开歌单的链接": "這份「我喜歡的音樂」只有本人看得到。在網易雲的隱私設定裡改成所有人可見，或者貼一份公開歌單的連結",
+    "今天起名字的额度用完了，明天再来起名": "今天取名字的額度用完了，明天再來取名",
+    "起名字的时候出了点问题，再试一次": "取名字的時候出了點問題，再試一次",
+    "名字还没起好，等一下再分享": "名字還沒取好，等一下再分享",
+    "现在起不了名字，唱片先画好了": "現在取不了名字，唱片先畫好了",
+    "{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。": "{n} 首喜歡，{y} 年至今，每一圈是一年。做一張你自己的。",
+    "这份歌单只有 {n} 首，至少要 20 首才画得出来": "這份歌單只有 {n} 首，至少要 20 首才畫得出來",
 }
 
 

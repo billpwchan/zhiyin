@@ -184,6 +184,18 @@ def build() -> dict:
             "center": center(mine, tags), "label": label(), "built": time.time()}
 
 
+def from_tracks(tracks: list[dict], lang: str) -> dict:
+    """The record of likes kept somewhere else (netease.likes), drawn as a new listener's is before their stations
+    exist: ring by year, angle by the time of year of the like."""
+    ts = dict(zip((t["rank"] for t in tracks), _times(tracks)))
+    songs = []
+    _calendar(tracks, ts, (set(), set()), songs)
+    tags = {t["vid"]: {"year": t["year"]} for t in tracks if t.get("year")}
+    return {"songs": songs, "sectors": [], "span": [round(min(ts.values()), 3), round(max(ts.values()), 3)], "eras": [],
+            "facts": facts(tracks, ts, {t["vid"]: "none" for t in tracks}, {}, tags, True, lang),
+            "real_dates": True, "stage": "library", "center": center(tracks, tags), "label": None, "built": time.time()}
+
+
 def center(tracks, tags) -> int | None:
     """The year by which half of the liked songs had come out (the lower median of release years)."""
     years = sorted(y for t in tracks if (y := (tags.get(t["vid"]) or {}).get("year") or 0) > 1950)

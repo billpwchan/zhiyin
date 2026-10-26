@@ -256,7 +256,7 @@ def build(model: str = "opus", log=print) -> dict:
 
 
 LABEL_SCHEMA = {"type": "object", "properties": {"label": {"type": "string"}}, "required": ["label"]}
-LABEL_SYSTEM = """You name one person's taste in music, from the songs they liked on YouTube (newest first, with the
+LABEL_SYSTEM = """You name one person's taste in music, from the songs they liked on @SERVICE@ (newest first, with the
 month of each like).
 Write one label of @LABEL@ in @LANG@: a name for their taste or for the kind of listener they are, the way a sharp
 friend would put it. It is the first line on their own page and on the card they may post, so they should read it
@@ -284,23 +284,30 @@ def label() -> str:
     from . import settings
     nm = settings.not_me()
     rows = [r for r, t in zip(rows, tracks or [None] * len(rows)) if not (t and settings.is_not_me(t, nm))]
+    return name_taste(rows, i18n.of())
+
+
+def name_taste(rows: list[tuple[str, str, str]], lang: str, lines: int = LABEL_LINES, model: str = "sonnet",
+               service: str = "YouTube") -> str:
+    """The label from (month liked, title, artists) rows, newest first."""
     if not rows:
         return ""
-    if len(rows) > LABEL_LINES:   # the newest in full, then an even sample of the years before
-        old = rows[400:]
-        rows = rows[:400] + old[::max(1, len(old) // (LABEL_LINES - 400))][:LABEL_LINES - 400]
-    w = i18n.WRITE[i18n.of()]
-    system = LABEL_SYSTEM.replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"])
+    if len(rows) > lines:   # the newest in full, then an even sample of the years before
+        head = lines * 2 // 3
+        old = rows[head:]
+        rows = rows[:head] + old[::max(1, len(old) // (lines - head))][:lines - head]
+    w = i18n.WRITE[lang]
+    system = LABEL_SYSTEM.replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"]).replace("@SERVICE@", service)
     prompt = "\n".join(" | ".join(r) for r in rows)
     for _ in range(2):
-        out = llm.call(prompt, system, LABEL_SCHEMA, model="sonnet", timeout=180, retries=1)["label"].strip().rstrip("。.!！")
-        if len(out.split()) <= 7 if i18n.of() == "en" else len(out) <= 18:
+        out = llm.call(prompt, system, LABEL_SCHEMA, model=model, timeout=180, retries=1)["label"].strip().rstrip("。.!！")
+        if len(out.split()) <= 7 if lang == "en" else len(out) <= 18:
             break
         prompt += f"\n\n(\"{out}\" is too long: {w['label']}.)"
-    if i18n.of() == "en":
+    if lang == "en":
         return out
     # the script of the likes can leak into the label (粵語 for a Simplified reader)
-    return i18n.zh_punct(i18n.convert(out, "zh-Hant" if i18n.of() == "zh-Hans" else "zh-Hans", i18n.of()))
+    return i18n.zh_punct(i18n.convert(out, "zh-Hant" if lang == "zh-Hans" else "zh-Hans", lang))
 
 
 def absorb_new(log=print) -> int:

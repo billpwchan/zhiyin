@@ -16,6 +16,8 @@ DB = DATA / "zhiyin.db"
 OWNER = "owner"              # the first listener; their data predates accounts
 # A made-up listener anyone can try before signing in, read-only, in English or Chinese (demo/ in the repo).
 SAMPLE, SAMPLE_ZH = "sample", "sample-zh"
+# Whose Claude spending naming strangers' NetEase likes goes under (cards.py): nobody's account.
+CARDS = "cards"
 
 for d in (DATA, CACHE, USERS):
     d.mkdir(parents=True, exist_ok=True)
@@ -133,6 +135,9 @@ def _migrate(con: sqlite3.Connection) -> None:
         primary key(uid, day, source));
     create table if not exists waitlist(sub text primary key, email text, name text, ts real, lang text, admitted real);
     create table if not exists events(day text, name text, ref text, n integer, primary key(day, name, ref));
+    create table if not exists cards(id text primary key, created real, label text, lang text, n integer, since integer,
+        uid text, del text, nonce text unique, views integer not null default 0);
+    create table if not exists card_names(k text primary key, label text, day text, rolls integer);
     create index if not exists feedback_vid on feedback(vid);
     create index if not exists shown_vid on shown(vid);
     """)

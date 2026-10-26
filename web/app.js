@@ -39,6 +39,7 @@ const I = {
   share: '<svg viewBox="0 0 24 24"><path d="M12 14.5V4.5M8 8.5l4-4 4 4"/><path d="M7 11H5.5v8.5h13V11H17"/></svg>',
   save: '<svg viewBox="0 0 24 24"><path d="M12 4.5v10M8 10.5l4 4 4-4"/><path d="M5.5 15.5v4h13v-4"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5v-1h-11v11h1"/></svg>',
+  link: '<svg viewBox="0 0 24 24"><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1"/><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1"/></svg>',
 };
 
 let S = null;          // server state
@@ -1540,6 +1541,7 @@ function openJoin(why) {
     ${invite ? `<a class="btn j-go" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`
       : `<a class="btn j-go" href="/auth/google/start?mode=join">${G_LOGO}${full ? t('用 Google 登记') : t('用 Google 继续')}</a>`}
     ${!invite && !full && !me.google?.verified ? `<p class="j-fine">${t('Google 会提示「Google 尚未验证此应用」。点「高级」，再点「前往 {host}」就能继续。', { host: esc(location.host) })}</p>` : ''}
+    ${SAMPLE() ? `<p class="j-163">${t('不用 YouTube Music？')}<button class="lnk" data-k="tomaker">${t('用网易云歌单画一张唱片')}</button></p>` : ''}
     <div class="j-alt">${invite ? '<span></span>' : `<a href="/auth/google/start?mode=login">${t('已经加入过？登录')}</a>`}<a href="/about">${t('知音是什么')}</a><a href="/privacy">${t('知音怎么用你的数据')}</a></div>
     <div class="j-lang">${Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" ${k === LANG ? 'aria-current="true"' : ''}>${v}</button>`).join('')}</div>
   </div>`;
@@ -1669,7 +1671,8 @@ function headLines(x, text, maxW) {
   for (let i = 1; i < toks.length; i++) {
     const a = toks.slice(0, i).join('').trim(), b = toks.slice(i).join('').trim(), m = Math.max(w(a), w(b));
     if (m > maxW) continue;
-    const k = m * (/[，、；：,;:\s]$/.test(toks[i - 1]) ? 0.8 : 1);
+    // a pause reads best; then a break before 的 or after 和, which Chinese readers take as a joint, not a cut
+    const k = m * (/[，、；：,;:\s]$/.test(toks[i - 1]) ? 0.8 : /^[的之]/.test(toks[i]) || /[和与跟或]$/.test(toks[i - 1]) ? 0.9 : 1);
     if (!best || k < best[0]) best = [k, [a, b]];
   }
   return best?.[1] || null;
@@ -1749,12 +1752,12 @@ async function cardCanvas() {
   x.fillStyle = INK;
   let y = M + 96;
   for (const l of lines) { y += size * 0.96; x.fillText(l, M, y); y += size * 0.2; }
-  const songs = EAR.list.length, first = yearOf(EAR.span[0]);
-  const kinds = S.lanes.length;
+  const songs = EAR.list.length, first = yearOf(EAR.span[0]), liked = EAR.n ?? (S.library.songs || songs);
+  const kinds = EAR.sectors.length ? S.lanes.length : 0;
   font(400, 28);
   x.fillStyle = INK3;
   y += 50;
-  x.fillText([t('{n} 首喜欢', { n: S.library.songs || songs }), t('{y} 年至今', { y: first }), kinds ? t('{n} 种口味', { n: kinds }) : ''].filter(Boolean).join('  ·  '), M, y);
+  x.fillText([t('{n} 首喜欢', { n: liked }), t('{y} 年至今', { y: first }), kinds ? t('{n} 种口味', { n: kinds }) : ''].filter(Boolean).join('  ·  '), M, y);
 
   // the number, at the foot
   const lead = EAR.center || first;
@@ -1844,7 +1847,7 @@ async function cardCanvas() {
   x.stroke();
   font(600, Math.round(hr * 0.5));
   x.fillStyle = INK;
-  x.fillText(S.library.songs || songs, c.x, c.y - hr * 0.1);
+  x.fillText(liked, c.x, c.y - hr * 0.1);
   font(400, Math.round(hr * 0.2));
   x.fillStyle = INK3;
   x.fillText(t('首喜欢'), c.x, c.y + hr * 0.34);
@@ -1852,6 +1855,17 @@ async function cardCanvas() {
 }
 
 let card = null;
+const WECHAT = /MicroMessenger/i.test(navigator.userAgent);
+// links this browser made, so it can take them down again: [{ id, key, url, label }]
+const myLinks = () => store.get('cards') || [];
+// The link already made for the card on screen: per name for an account, per record for a NetEase one.
+const linkFor = () => (guest() ? GUEST.shared : myLinks().find((c) => c.uid === S.me?.uid && c.label === EAR.label)) || null;
+function linkHTML(l) {
+  return l ? `<div class="sc-link"><span class="sc-url">${esc(l.url.replace(/^https?:\/\//, ''))}</span>
+      <button class="tb" data-k="copylink">${I.copy}<span>${t('复制链接')}</span></button>
+      <button class="tb" data-k="unlink">${t('收回')}</button></div>`
+    : `<button class="tb" data-k="cardlink">${I.link}<span>${t('生成链接')}</span></button>`;
+}
 async function shareCard(btn) {
   btn.disabled = true;
   try {
@@ -1859,15 +1873,19 @@ async function shareCard(btn) {
     const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
     if (card?.url) URL.revokeObjectURL(card.url);
     const file = new File([blob], 'zhiyin.png', { type: 'image/png' });
-    card = { blob, file, url: URL.createObjectURL(blob) };
+    card = { blob, file, cv, url: URL.createObjectURL(blob) };
     const d = $('#shareD');
-    const phone = navigator.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches;
+    const phone = !WECHAT && navigator.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches;
+    // the sample listener's card can be saved, not linked: a link is someone's own record
+    const linkable = guest() || !SAMPLE();
     d.innerHTML = `<div class="sc-in">
       <img class="sc-img" src="${card.url}" alt="${esc(EAR.label || t('你的喜欢'))}" width="1080" height="1440">
+      ${WECHAT ? `<p class="sc-hint">${t('长按图片，保存或发给朋友')}</p>` : ''}
       <div class="sc-acts">
         ${phone ? `<button class="btn" data-k="sharenow">${I.share}<span>${t('分享')}</span></button>` : ''}
-        <button class="${phone ? 'tb' : 'btn'}" data-k="savecard">${I.save}<span>${t('保存图片')}</span></button>
-        ${!phone && window.ClipboardItem ? `<button class="tb" data-k="copycard">${I.copy}<span>${t('复制图片')}</span></button>` : ''}
+        ${WECHAT ? '' : `<button class="${phone ? 'tb' : 'btn'}" data-k="savecard">${I.save}<span>${t('保存图片')}</span></button>`}
+        ${!phone && !WECHAT && window.ClipboardItem ? `<button class="tb" data-k="copycard">${I.copy}<span>${t('复制图片')}</span></button>` : ''}
+        ${linkable ? `<span class="sc-ln" id="scLn">${linkHTML(linkFor())}</span>` : ''}
         <button class="ib sm sc-x" data-k="closeshare" aria-label="${t('关闭')}">${I.close}</button>
       </div></div>`;
     if (!d.open) { d.showModal(); ev('share_open'); }
@@ -1875,11 +1893,47 @@ async function shareCard(btn) {
   } catch { toast(t('图片没做出来，再试一次')); }
   btn.disabled = false;
 }
-async function cardAct(k) {
+async function makeLink(b) {
+  b.disabled = true;
+  $('span', b).textContent = t('正在生成…');
+  try {
+    const jpg = await new Promise((res) => card.cv.toBlob(res, 'image/jpeg', 0.9));
+    const g = guest();
+    const r = await fetch(`/api/card/share${g ? `?token=${encodeURIComponent(GUEST.token)}` : ''}`, {
+      method: 'POST', body: jpg, headers: { 'Content-Type': 'image/jpeg', ...(g || !S.me?.uid ? {} : { 'X-Zhiyin-Uid': S.me.uid }) } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || t('链接没生成，再试一次'));
+    const l = { id: d.id, key: d.key, url: d.url, label: EAR.label || '', uid: g ? null : S.me?.uid };
+    store.set('cards', [l, ...myLinks()].slice(0, 40));
+    if (g) { GUEST.shared = l; store.set('guest', GUEST); }
+    $('#scLn').innerHTML = linkHTML(l);
+  } catch (e) {
+    if (b.isConnected) { b.disabled = false; $('span', b).textContent = t('生成链接'); }
+    toast(e.message);
+  }
+}
+async function cardAct(k, btn) {
   if (!card) return;
+  const l = linkFor();
   // the link rides along where the app keeps text with an image (Messages, X, LINE); ?ref=card counts who it brings
   if (k === 'sharenow') {
-    try { await navigator.share({ files: [card.file], text: `${EAR.label || t('你的喜欢')}  ${location.origin}/?ref=card` }); ev('share_send'); } catch {}
+    try { await navigator.share({ files: [card.file], text: `${EAR.label || t('你的喜欢')}  ${l ? l.url : `${location.origin}/card?ref=card`}` }); ev('share_send'); } catch {}
+    return;
+  }
+  if (k === 'cardlink') return makeLink(btn);
+  if (k === 'copylink' && l) {
+    try { await navigator.clipboard.writeText(l.url); $('span', btn).textContent = t('链接已复制'); } catch { toast(l.url, [], 8000); }
+    setTimeout(() => { if (btn.isConnected) $('span', btn).textContent = t('复制链接'); }, 2400);
+    return;
+  }
+  if (k === 'unlink' && l) {
+    try {
+      await api('/api/card/delete', { id: l.id, key: l.key });
+    } catch (e) { if (!/card/.test(e.message)) return toast(e.message); }   // already gone is gone
+    store.set('cards', myLinks().filter((c) => c.id !== l.id));
+    if (guest()) { delete GUEST.shared; store.set('guest', GUEST); }
+    $('#scLn').innerHTML = linkHTML(null);
+    toast(t('链接收回了，打开它只会看到「这张卡已经收回」'));
     return;
   }
   if (k === 'savecard') { Object.assign(document.createElement('a'), { href: card.url, download: 'zhiyin.png' }).click(); ev('share_save'); return; }
@@ -1890,7 +1944,7 @@ async function cardAct(k) {
 $('#shareD').addEventListener('click', (e) => {
   if (e.target === e.currentTarget || e.target.closest('[data-k="closeshare"]')) { e.currentTarget.close(); return; }
   const b = e.target.closest('[data-k]');
-  if (b) { e.stopPropagation(); cardAct(b.dataset.k); }
+  if (b) { e.stopPropagation(); cardAct(b.dataset.k, b); }
 });
 
 /* ---------- shortcuts ---------- */
@@ -1963,10 +2017,7 @@ async function loadEar() {
   earStale = false;
   let d = null;
   try {
-    d = { songs: [], sectors: [], span: [0, 0], eras: [], facts: [], ...await api('/api/ear') };
-    d.list = d.songs.map(([vid, title, artists, album, dur, t, lane, a, ll, off]) => ({
-      vid, title, artists: artists.map((name) => ({ name })), album: album ? { name: album } : null, dur, t, lane, a, ll, off: !!off,
-    })).sort((x, y) => x.t - y.t);
+    d = earOf(await api('/api/ear'));
   } catch {
     earFailed = true;   // the page still reads without the record
   } finally {
@@ -1983,15 +2034,91 @@ async function loadEar() {
   if (d) earColors();
 }
 
+function earOf(raw) {
+  const d = { songs: [], sectors: [], span: [0, 0], eras: [], facts: [], ...raw };
+  d.list = d.songs.map(([vid, title, artists, album, dur, t, lane, a, ll, off]) => ({
+    vid, title, artists: artists.map((name) => ({ name })), album: album ? { name: album } : null, dur, t, lane, a, ll, off: !!off,
+  })).sort((x, y) => x.t - y.t);
+  return d;
+}
+
+/* ---------- a record from someone's public NetEase likes, before (or instead of) an account ---------- */
+// It lives in this browser only: the server draws it, names it and forgets the songs (cards.py).
+let GUEST = store.get('guest');
+let MAKE = false;   // came in on /card: the box to paste a link into is what the page is for
+// the box outlives the page being redrawn under it (the sample's record arriving, colours, polls)
+const MK = { link: '', busy: '', err: '' };
+const guest = () => !!(SAMPLE() && GUEST?.songs);
+function useGuest(fresh) {
+  EAR = earOf(GUEST);
+  earFailed = false;
+  if (fresh) earRevealed = false;   // a new record grows in once, as a new listener's does
+}
+
+function makerHTML() {
+  return `<form class="maker" id="maker" autocomplete="off">
+    <div class="mk-t"><p class="mk-k">${t('这是一位示例听众的唱片')}</p><h2>${t('画一张你自己的')}</h2>
+      <p class="mk-sub">${t('在网易云音乐打开「我喜欢的音乐」，点分享，复制链接贴在这里。不用登录，也不保存你的歌单。')}</p></div>
+    <div class="mk-f"><div class="mk-row"><input id="mkLink" name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false"
+      placeholder="${t('粘贴网易云的歌单或主页链接')}" aria-label="${t('网易云的歌单或主页链接')}" value="${esc(MK.link)}"><button class="btn" type="submit"${MK.busy ? ' disabled' : ''}>${esc(MK.busy || t('画出来'))}</button></div>
+      <p class="mk-err" id="mkErr" role="alert">${esc(MK.err)}</p>
+      <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="join">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每天还有几首新歌。')}</p></div>
+  </form>`;
+}
+
+function guestNextHTML() {
+  return `<section class="sec g-next"><h2>${t('只在这个浏览器里')}<small>${t('知音没有保存你的歌单。分享出去的只有这张卡，随时可以收回。')}</small></h2>
+    <div class="g-acts"><button class="tb" data-k="gnew">${I.swap}<span>${t('换一份歌单')}</span></button>
+      <button class="tb" data-k="join">${I.go}<span>${t('用 YouTube Music 每天听新歌')}</span></button></div></section>`;
+}
+
+function paintMaker() {
+  const b = $('#maker button[type=submit]'), err = $('#mkErr');
+  if (b) { b.disabled = !!MK.busy; b.textContent = MK.busy || t('画出来'); }
+  if (err) err.textContent = MK.err;
+}
+
+async function makeCard(link, again) {
+  if (!again) Object.assign(MK, { link, err: '', busy: t('正在读你的歌单…') });
+  paintMaker();
+  const slow = setTimeout(() => { if (MK.busy) { MK.busy = t('正在给你的口味起名字…'); paintMaker(); } }, 2600);
+  try {
+    const d = await api('/api/card/make', { link, again: !!again });
+    MK.link = '';
+    GUEST = { ...d, link };
+    store.set('guest', GUEST);
+    useGuest(!again);
+    if (again && !d.why) toast(t('换了个说法'));
+    if (again && d.why) toast(d.why);
+    renderEar();
+    if (!again) { $('.ear-wrap').scrollTop = 0; scrollTo(0, 0); }
+  } catch (e) {
+    if (again || !$('#mkErr')) toast(e.message); else MK.err = e.message;
+  } finally {
+    clearTimeout(slow);
+    MK.busy = '';
+    paintMaker();
+  }
+}
+
+function leaveGuest() {
+  GUEST = null;
+  store.del('guest');
+  EAR = null;
+  earRevealed = false;
+  renderEar();
+  $('#mkLink')?.focus();
+}
+
 const yearOf = (t) => Math.floor(t);
 const whenLiked = (y) => (EAR?.real_dates ? new Date(yearOf(y), Math.min(11, Math.floor((y - yearOf(y)) * 12))).toLocaleDateString(LANG, { year: 'numeric', month: 'short' }) : t('{y} 年前后', { y: yearOf(y) }));
 const songByTitle = (t) => EAR?.list.findLast((s) => s.title === t) || EAR?.list.findLast((s) => s.title.startsWith(t));
 // 《title》 (“title” in English) in the portrait and the facts plays that like
-const playable = (text) => esc(text).replace(/《([^》]+)》|“([^”]+)”/g, (m, a, b) => {
+const playable = (text) => (EAR?.pics ? esc(text) : esc(text).replace(/《([^》]+)》|“([^”]+)”/g, (m, a, b) => {
   const s = songByTitle((a ?? b).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
   // a link, not a button: a button is laid out as one box, so a long title would break away from its sentence
   return s ? `<a class="song" href="#" role="button" data-play="${s.vid}">${m}</a>` : m;
-});
+}));
 
 // YouTube Data API quotas reset at midnight Pacific time.
 function quotaReset() {
@@ -2262,15 +2389,22 @@ function renderEar() {
     placeHost();
     return;
   }
+  const g = guest();
+  if (g && EAR?.token !== GUEST.token) useGuest(true);
+  else if (!g && EAR?.token) EAR = null;   // back to the sample listener's record
   if ((!EAR || earStale) && !earFailed) loadEar();
   const keep = $('.ear-wrap')?.scrollTop || 0;
-  const po = S.portrait, full = !!(po && S.lanes.length);
+  const typing = $('#mkLink');
+  if (typing) MK.link = typing.value;
+  const refocus = typing && document.activeElement === typing;
+  const po = S.portrait, full = !!(po && S.lanes.length) && !g;
   // The name of their taste heads the page; Claude's portrait sentence follows it. Before the name exists (or
   // without one) the portrait's first sentence heads it, as it always did.
   const name = EAR?.label;
-  const songs = EAR?.list.length || 0, n = S.library.songs || songs;
-  let head = name || '', lede = name ? po?.headline || '' : '';
-  if (!name && po) {
+  const songs = EAR?.list.length || 0, n = g ? EAR.n : S.library.songs || songs;
+  let head = name || '', lede = name && !g ? po?.headline || '' : '';
+  if (g && !name) { head = t('你的喜欢'); lede = EAR.why || ''; }
+  else if (!name && po) {
     const cut = po.headline.search(/[。！？]|[.!?](?=\s)/);   // the first sentence is the heading, in either script
     head = cut > 0 ? po.headline.slice(0, cut + 1) : po.headline;
     lede = po.headline.slice(head.length).trim();
@@ -2279,9 +2413,9 @@ function renderEar() {
   const naming = (!name && S.jobs?.label?.running) || !songs;
 
   const first = songs ? yearOf(EAR.span[0]) : (S.timeline.map((p) => p[1]).filter(Boolean).sort()[0] || '').slice(0, 4);
-  const meta = [SAMPLE() ? t('示例听众') : '', n ? t('{n} 首喜欢', { n }) : '', first ? t('{y} 年至今', { y: first }) : '',
+  const meta = [g ? t('网易云音乐') : SAMPLE() ? t('示例听众') : '', n ? t('{n} 首喜欢', { n }) : '', first ? t('{y} 年至今', { y: first }) : '',
     full ? t('{n} 种口味', { n: S.lanes.length }) : ''].filter(Boolean).map((x) => `<span class="nw">${esc(x)}</span>`).join(' · ');
-  const canShare = songs && name;
+  const canShare = songs && (name || g);
   const fbRows = S.feedback.filter((f) => f.action !== 'known').slice(0, 30);
   const label = (f) => (f.action === 'like' ? t('喜欢') : f.scope === 'artist' ? t('不要这位歌手') : t('不要这首'));
   const sec = (k) => EAR?.sectors.find((x) => x.key === k);
@@ -2292,9 +2426,10 @@ function renderEar() {
   const asideN = S.set_aside.reduce((a, x) => a + x.n, 0) + offN;
   $('#view').innerHTML = `
   <div class="ear-wrap"><div class="ear">
+    ${SAMPLE() && !g ? makerHTML() : ''}
     <header class="ear-hero">
       <div class="hero-t">
-        <h1 class="${naming ? 'sk' : ''}">${naming ? t('正在给你的口味起个名字') : name && !SAMPLE() ? relabelable(name) : esc(head || t('你的喜欢'))}</h1>
+        <h1 class="${naming ? 'sk' : ''}">${naming ? t('正在给你的口味起个名字') : name && g ? relabelable(name, 'grelabel') : name && !SAMPLE() ? relabelable(name) : esc(head || t('你的喜欢'))}</h1>
         ${lede ? `<p class="lede">${esc(lede)}</p>` : ''}
         <div class="meta-row"><p class="meta-line num">${meta}</p>${canShare ? `<button class="tb share" data-k="share">${I.share}<span>${t('分享')}</span></button>` : ''}</div>
       </div>
@@ -2307,6 +2442,7 @@ function renderEar() {
         <p class="era-now" id="eraNow"></p>` : songs ? `<div class="eras2"><button class="replay" data-k="replay" title="${t('从第一首喜欢开始，重放一遍')}">${I.play}<span>${t('回放')}</span></button><p class="disc-key">${t('每一圈是一年，越往外越近；角度是你在一年里的哪个月点的喜欢。')}</p></div>` : ''}
       </div>`}
     </header>
+    ${g ? guestNextHTML() : ''}
     ${full ? `<section class="sec"><h2>${t('你的口味')}<small>${t('{n} 种在推荐里。点封面就放这个口味的电台；关掉的下一批起不再出现；新面孔是没收藏过的歌手占多少。', { n: on })}</small></h2>
       <div class="lanes">${S.lanes.map((l) => laneRow(l, sec(l.key))).join('')}</div></section>
     ${listenedHTML()}
@@ -2327,15 +2463,18 @@ function renderEar() {
   </div></div>`;
   $('.ear-wrap').scrollTop = keep;
   if (songs) mountDisc();
+  if (g) earColors();
   paintNow();
   placeHost();
   if (full) loadQuality();
+  if (refocus) $('#mkLink')?.focus({ preventScroll: true });
+  if (MAKE && $('#mkLink')) { MAKE = false; if (matchMedia('(pointer: fine)').matches) $('#mkLink').focus({ preventScroll: true }); }
 }
 
 // the re-roll button rides on the name's last word (or character), so it never wraps onto a line by itself
-function relabelable(name) {
+function relabelable(name, k = 'relabel') {
   const [, a, b] = name.match(/^(.*?)([A-Za-z0-9’'.-]{1,24}|.)$/su);
-  return `${esc(a)}<span class="nw">${esc(b)}<button class="ib sm relabel" data-k="relabel" title="${t('换个说法')}" aria-label="${t('换个说法')}">${I.refresh}</button></span>`;
+  return `${esc(a)}<span class="nw">${esc(b)}<button class="ib sm relabel" data-k="${k}" title="${t('换个说法')}" aria-label="${t('换个说法')}">${I.refresh}</button></span>`;
 }
 
 async function relabel(btn) {
@@ -2505,16 +2644,16 @@ function paintHub() {
   const hub = $('#hub');
   if (!hub || !EAR) return;
   if (E.T !== Infinity) { hub.dataset.u = ''; hub.className = 'hub'; hub.innerHTML = `<b class="num">${yearOf(Math.min(E.T, EAR.span[1]))}</b>`; return; }
-  const p = E.hover?.s || cur();
-  if (p) {
-    const u = px(cover(p, 300));
+  const p = E.hover?.s || (EAR.pics ? null : cur());
+  const u = p && (EAR.pics ? (EAR.pics[p.vid] ? `${EAR.pics[p.vid]}?param=300y300` : '') : px(cover(p, 300)));
+  if (u) {
     if (hub.dataset.u !== u) { hub.dataset.u = u; hub.innerHTML = `<img src="${u}" alt="">`; }
     hub.className = `hub ${E.hover ? '' : 'spin'}`;
     return;
   }
   hub.dataset.u = '';
   hub.className = 'hub';
-  hub.innerHTML = `<b class="num">${EAR.list.length}</b><span>${t('首喜欢')}</span>`;
+  hub.innerHTML = `<b class="num">${EAR.n ?? EAR.list.length}</b><span>${t('首喜欢')}</span>`;
 }
 
 function showEra(i) {
@@ -2576,6 +2715,7 @@ function bindDisc(box) {
     if (E.anim) return stopReplay();
     const p = nearestDot(e);
     if (!p) return hoverDot(null);
+    if (EAR.pics) return hoverDot(E.touch && E.hover === p ? null : p);
     if (E.touch && E.hover !== p) return hoverDot(p);
     playFromDisc(p);
   };
@@ -2668,34 +2808,50 @@ function playVid(vid) {
 }
 
 // dot colours come from each song's own cover; kept per browser so the record is in colour from the second visit
-async function earColors() {
-  if (!earCol.size) for (const [v, c] of Object.entries(store.get(acct('earCol')) || {})) earCol.set(v, c);
+function earColors() {
+  E.colouring ||= colourDots().finally(() => { E.colouring = null; });
+  return E.colouring;
+}
+async function colourDots() {
+  const pics = EAR.pics;
+  if (!earCol.size && !pics) for (const [v, c] of Object.entries(store.get(acct('earCol')) || {})) earCol.set(v, c);
   const todo = [...new Set(EAR.list.map((s) => s.vid))].filter((v) => !earCol.has(v));
   if (!todo.length) return;
+  // NetEase songs share their album's cover (and its CDN allows reading the pixels): one look per cover
+  const byPic = new Map();
+  const colorOf = (v) => {
+    if (!pics) return dotColor(px(`https://i.ytimg.com/vi/${v}/default.jpg`));
+    const u = pics[v];
+    if (!u) return Promise.reject();
+    if (!byPic.has(u)) byPic.set(u, dotColor(`${u}?param=40y40`, true));
+    return byPic.get(u);
+  };
   let i = 0, dirty = false;
   const flush = setInterval(() => { if (dirty && E.T === Infinity) { dirty = false; paintDisc(); } }, 160);
   const work = async () => {
     while (i < todo.length) {
       const v = todo[i++];
-      try { earCol.set(v, await dotColor(px(`https://i.ytimg.com/vi/${v}/default.jpg`))); } catch { earCol.set(v, null); }
+      try { earCol.set(v, await colorOf(v)); } catch { earCol.set(v, null); }
       dirty = true;
     }
   };
-  await Promise.all(Array.from({ length: 6 }, work));
+  await Promise.all(Array.from({ length: pics ? 8 : 6 }, work));
   clearInterval(flush);
   paintDisc();
-  store.set(acct('earCol'), Object.fromEntries([...earCol].filter(([, c]) => c)));
+  if (!pics) store.set(acct('earCol'), Object.fromEntries([...earCol].filter(([, c]) => c)));
 }
 
-function dotColor(src) {
+function dotColor(src, square) {
   return new Promise((res, rej) => {
     const img = new Image();
+    if (square) img.crossOrigin = 'anonymous';
     img.onload = () => {
       const c = document.createElement('canvas');
       c.width = c.height = 16;
       const x = c.getContext('2d', { willReadFrequently: true });
-      // default.jpg is 4:3 around a 16:9 frame; the middle holds the artwork
-      x.drawImage(img, img.width * 0.22, img.height * 0.2, img.width * 0.56, img.height * 0.6, 0, 0, 16, 16);
+      // default.jpg is 4:3 around a 16:9 frame; the middle holds the artwork. An album cover is all artwork.
+      if (square) x.drawImage(img, 0, 0, 16, 16);
+      else x.drawImage(img, img.width * 0.22, img.height * 0.2, img.width * 0.56, img.height * 0.6, 0, 0, 16, 16);
       const d = x.getImageData(0, 0, 16, 16).data;
       let r = 0, g = 0, b = 0, w = 0, sat = 0;
       for (let k = 0; k < d.length; k += 4) {
@@ -2795,6 +2951,9 @@ async function act(k, btn) {
     location.href = '/login';
   }
   else if (k === 'replay') replay();
+  else if (k === 'grelabel' && GUEST) { btn.disabled = true; await makeCard(GUEST.link, true); }
+  else if (k === 'gnew') leaveGuest();
+  else if (k === 'tomaker') { $('#join').close(); GUEST = null; store.del('guest'); MAKE = true; if (location.hash === '#ear') { EAR = null; renderEar(); } else location.hash = '#ear'; }
   else if (k === 'lovesmore') { lovesAll = !lovesAll; renderEar(); }
   else if (k === 'histdel') {
     try { const r = await api('/api/history/delete', {}); S.jobs = r.jobs; EAR.history = null; renderEar(); poll(); toast(t('播放记录删掉了')); } catch (err) { toast(err.message); }
@@ -2926,6 +3085,13 @@ function onKey(e) {
 document.addEventListener('keydown', onKey);
 
 document.addEventListener('submit', async (e) => {
+  if (e.target.id === 'maker') {
+    e.preventDefault();
+    const link = e.target.link.value.trim();
+    if (!link) e.target.link.focus();
+    else if (!MK.busy) makeCard(link);
+    return;
+  }
   if (e.target.id !== 'invite') return;
   e.preventDefault();
   const name = e.target.name.value.trim();
@@ -3108,6 +3274,7 @@ async function boot() {
   Player.init();
   // a listener who just joined lands on their record, which is drawn within seconds; stations take a while
   if (!location.hash && ['importing', 'building'].includes(S.me?.status)) history.replaceState(null, '', '#ear');
+  if (location.pathname === '/card') { MAKE = SAMPLE() && !GUEST; history.replaceState(null, '', '/#ear'); }
   route();
   if (cur()) { Player.load(cur(), false); trackChanged(); }
   if (Object.values(S.jobs || {}).some((j) => j?.running)) poll();

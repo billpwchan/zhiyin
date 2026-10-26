@@ -109,6 +109,7 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 | `ANTHROPIC_API_KEY` | optional: an API key for everyone but you (`deploy/claude-token.sh --api-key`) |
 | `ZHIYIN_KEY_MONTHLY_USD` | the API key's budget over 30 days (default 100) |
 | `ZHIYIN_LISTENER_DAILY_USD` | what each listener may spend on the API key per day (default 0.5) |
+| `ZHIYIN_CARD_DAILY_USD` | what naming records made from NetEase links without signing in may spend on the API key per day, all visitors together (default 2; about a fifth of a cent each) |
 | `ZHIYIN_KEY_OPUS`, `ZHIYIN_KEY_SONNET` | the model listeners get where you get Opus or Sonnet (defaults `sonnet`, `sonnet`) |
 | `ZHIYIN_SEATS` | how many people may join with Google without an invite (default 0: invites only) |
 | `ZHIYIN_GOOGLE_VERIFIED` | `1` once Google has verified the app; drops the "unverified app" note from the join sheet |

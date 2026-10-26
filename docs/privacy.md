@@ -34,6 +34,18 @@ plays, joins and how they ended, first records, names, finished first runs and s
 carries its link in its settings for at most 30 days, so the steps of its first run can be counted. No row names a
 person.
 
+Someone who makes a record from a NetEase Cloud Music link without signing in (`netease.py`, `cards.py`) leaves
+little more. The public playlist is read, the record goes back to their browser, and the playlist is not kept. The
+titles and artists of its newest 600 songs go to Anthropic for a name, billed to the server's API key under the
+`cards` account and capped at `ZHIYIN_CARD_DAILY_USD` a day (default $2); the name is kept for 7 days in
+`card_names`, keyed by a hash of the playlist id and language, so the same list is named once a day (three times if
+they ask for another). How many records an address made in the last ten minutes is counted in memory only.
+
+A card shared by link (`/c/<id>`) is the only thing kept: the 1080×1440 picture in `data/cards/`, and a row with the
+name, the number of liked songs, the first year, the language, the account if one shared it, a hash of the key that
+takes it down, and how often it was opened. It stays until the browser that made it takes it down, the account that
+shared it is deleted, or the operator runs `zhiyin cards --rm <id>`.
+
 ## How long it is kept
 
 Zhiyin follows the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
@@ -68,6 +80,7 @@ says so.
 | Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
+| NetEase Cloud Music | the playlist or profile id someone pasted to make a record without signing in | read that public playlist |
 | The YouTube embedded player, in your browser | the video being played | playback, under YouTube's own terms |
 
 Your Google token is only used for your own account. It is never sent anywhere but Google.
@@ -78,14 +91,10 @@ and shown to every listener who plays it, whoever's Claude made them.
 
 ## Removing someone
 
-On a server, delete `data/users/<id>/` and the listener's rows:
+On a server, `accounts.delete` removes the listener's folder, rows and shared cards:
 
 ```sh
-docker exec zhiyin python -c "
-from zhiyin import store
-con = store.db()
-for t in ('feedback', 'shown', 'plays', 'sessions', 'invites', 'outbox', 'usage'): con.execute(f'delete from {t} where uid=?', ('<id>',))
-con.execute('delete from users where id=?', ('<id>',)); con.commit()"
+docker exec zhiyin python -c "from zhiyin import accounts; accounts.delete('<id>')"
 docker exec zhiyin python -c "from zhiyin import store; con = store.db(); con.execute('delete from waitlist where email=?', ('<email>',)); con.commit()"
 ```
 
