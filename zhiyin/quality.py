@@ -52,6 +52,27 @@ def first_listens(since: float, uid: str | None = None) -> list[dict]:
     return out
 
 
+def by_lane(uid: str | None = None) -> dict:
+    """Per station, the verdicts its next editor will read (rank.outcomes): loved, heard through, skipped within
+    seconds, turned down. Shown on the station so the listener sees their reactions are being used."""
+    uid = uid or store.uid()
+    out = defaultdict(lambda: {"like": 0, "good": 0, "early": 0, "nope": 0})
+    counted = set()
+    for x in first_listens(0, uid):
+        if not x["lane"]:
+            continue
+        k = "like" if x["like"] else "nope" if x["nope"] else x["out"] if x["out"] in ("good", "early") else None
+        if k:
+            out[x["lane"]][k] += 1
+            counted.add(x["vid"])
+    for r in store.db().execute("select vid, action, lane from feedback where uid=? and action in ('like', 'dislike') "
+                                "and lane is not null", (uid,)):
+        if r["vid"] not in counted:
+            out[r["lane"]]["like" if r["action"] == "like" else "nope"] += 1
+            counted.add(r["vid"])
+    return dict(out)
+
+
 def _fit_bin(x: dict) -> str:
     f = x["fit"] or 0
     return next(name for lo, name in FIT_BINS if f >= lo)

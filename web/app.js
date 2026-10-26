@@ -134,6 +134,7 @@ function toast(msg, actions = [], ms) {
   t.innerHTML = `<span>${esc(msg)}</span>${actions.length ? `<div class="acts">${actions.map(([l], i) => `<button data-i="${i}">${esc(l)}</button>`).join('')}</div>` : ''}`;
   $$('button', t).forEach((b) => { b.onclick = () => { t.classList.remove('show'); actions[+b.dataset.i][1](); }; });
   t.style.left = t.style.bottom = '';
+  t.classList.toggle('many', actions.length > 2);
   t.classList.add('show');
   clearOf(t);
   clearTimeout(t._h);
@@ -544,6 +545,25 @@ function paintSteer() {
   const w = $('#qWhen'), n = $('#sNote');
   if (w && Q) w.textContent = Q.st.when || '';
   if (n) n.textContent = s.note || '';
+  const g = $('#qWent');
+  if (g) {
+    const v = wentOf(Q), note = laneOf(Q)?.note;
+    // each count stays whole when the line wraps on a phone
+    g.innerHTML = v.length ? `<span>${esc(t('下一期会参考：{x}', { x: v[0] }))}</span>${v.slice(1).map((x) => ` · <span>${esc(x)}</span>`).join('')}` : '';
+    g.title = v.length ? t('挑下一期时，编辑会看到你对这条电台每首歌的反应') : '';
+    $('#qNote').textContent = note ? t('你说过「{x}」', { x: note }) : '';
+    $('#qNote').title = note || '';
+  }
+}
+
+// What this station's next editor will read about how its songs went (quality.by_lane), so a reaction visibly counts.
+function wentOf(q) {
+  if (!q || SAMPLE()) return [];
+  const lanes = q.key === 'mix' ? Object.values(S.went || {}) : [S.went?.[q.key]].filter(Boolean);
+  const n = lanes.reduce((a, c) => ({ like: a.like + c.like, good: a.good + c.good, early: a.early + c.early, nope: a.nope + c.nope }),
+    { like: 0, good: 0, early: 0, nope: 0 });
+  return [n.like && `♥ ${n.like}`, n.good && t('听完 {n}', { n: n.good }), n.early && t('秒切 {n}', { n: n.early }),
+    n.nope && t('不要 {n}', { n: n.nope })].filter(Boolean);
 }
 
 /* ---------- player: one YouTube player ---------- */
@@ -1204,6 +1224,11 @@ function nope(p) {
       renderQueue();
     }],
     [t('{a}也不要', { a: spaced(p.artists?.[0]?.name || t('这位歌手')) }), () => blockArtist(p)],
+    // a song that's fine but in the wrong station is a different lesson for that station's editor (rank.outcomes)
+    ...(Q.key.startsWith('ask:') ? [] : [[t('只是不该在这个电台'), () => {
+      api('/api/feedback', { ...track(p), action: 'dislike', scope: 'song', reason: t('只是不该在这个电台') }).catch(() => {});
+      toast(t('记下了，这个电台的编辑下一期会看到'));
+    }]]),
   ]);
 }
 
@@ -1319,7 +1344,7 @@ function renderListen() {
   <div class="listen">
     ${SAMPLE() ? `<button class="s-bar" data-k="join"><span>${t('示例听众的电台')}</span><b>${t('用你自己的收藏开始')}</b>${I.go}</button>` : ''}
     <header class="l-head">
-      <div class="ttl"><h2 id="qName"></h2><p id="qWhen"></p></div>
+      <div class="ttl"><h2 id="qName"></h2><p id="qWhen"></p><p class="went" id="qNote"></p><p class="went" id="qWent"></p></div>
       <div class="views">
         <button class="ib sm" data-k="lyrics" title="${t('歌词（G）')}">${I.lyrics}</button>
         <button class="ib sm" data-k="pip" title="${t('小窗（M）')}">${I.pip}</button>
@@ -1678,8 +1703,48 @@ function stationMenu(anchor) {
     <button class="m-item" role="menuitem" data-k="ytm">${I.ext}${t('在 YouTube Music 里接着放')}</button>
     ${S.me?.writes_back ? `<button class="m-item" role="menuitem" data-k="save">${I.plus}${t('把这个电台存成歌单')}</button>` : ''}
     <button class="m-item" role="menuitem" data-k="radio">${I.branch}${t('沿着这首继续')}</button>
+    ${laneOf(Q) && !SAMPLE() ? `<button class="m-item" role="menuitem" data-k="lanenote">${I.lyrics}${t('告诉这个电台…')}</button>` : ''}
     ${Q.key.startsWith('ask:') && !Q.key.endsWith(':pending') ? `<button class="m-item" role="menuitem" data-k="unaskcur">${I.close}${t('删掉这个点歌')}</button>` : ''}`);
 }
+
+// Their own words for a station ("less trap drums, more 90s"): its screen and editor follow them from then on.
+const laneOf = (q) => (q && S.lanes?.find((l) => l.key === q.key)) || null;
+function openLaneNote() {
+  closeMenu();
+  const l = laneOf(Q), d = $('#noteD');
+  if (!l) return;
+  d.innerHTML = `<form class="nd-in" id="ndForm">
+    <h2>${t('告诉「{s}」', { s: esc(l.name) })}</h2>
+    <p>${t('用你自己的话说想多听什么、少听什么。这个电台以后挑歌都会照着做。')}</p>
+    <textarea id="ndText" maxlength="300" rows="3" placeholder="${t('比如：少点 trap 鼓点，多点九十年代的')}">${esc(l.note || '')}</textarea>
+    <div class="nd-acts"><button class="tb" type="button" data-k="ndclose">${t('取消')}</button>
+      <button class="tb" type="submit" value="save">${t('保存')}</button>
+      <button class="btn" type="submit" value="again">${t('保存并重挑')}</button></div>
+  </form>`;
+  if (!d.open) d.showModal();
+  spare(d);
+  $('#ndText').focus();
+}
+$('#noteD').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget || e.target.closest('[data-k="ndclose"]')) e.currentTarget.close();
+});
+$('#noteD').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const l = laneOf(Q), again = e.submitter?.value === 'again', note = $('#ndText').value.trim();
+  if (!l) return;
+  try {
+    await api('/api/settings/lane', { key: l.key, note });
+    l.note = note;
+    $('#noteD').close();
+    paintSteer();
+    if (!again) return toast(note ? t('记下了，下一期「{s}」会照着挑', { s: l.name }) : t('清掉了'));
+    try { await api('/api/refresh', { lanes: [l.key] }); } catch (err) { return toast(err.message); }
+    toast(t('正在按你的话重挑「{s}」，好了会自动换上', { s: l.name }), [], 5000);
+    S.jobs = await api('/api/jobs');
+    renderStations();
+    poll();
+  } catch (err) { toast(err.message); }
+});
 
 /* ---------- share card: the record, the name of the taste, and a number a friend can hold against their own ---------- */
 const LOGO = new Path2D('M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33');
@@ -2979,6 +3044,7 @@ async function act(k, btn) {
   else if (k === 'share') shareCard(btn);
   else if (k === 'relabel') relabel(btn);
   else if (k === 'radio') { closeMenu(); continueFrom(null); }
+  else if (k === 'lanenote') openLaneNote();
   else if (k === 'unaskcur') { closeMenu(); unask(+Q.key.slice(4)); }
   else if (k === 'lyrics') toggleLyrics();
   else if (k === 'tab-lyr') toggleLyrics(true);

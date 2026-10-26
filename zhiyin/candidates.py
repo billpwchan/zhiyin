@@ -379,9 +379,16 @@ def score(c: dict, lane: dict) -> float:
     return s
 
 
-def shortlist(lane: dict, cands: dict, k: int = 32) -> list[dict]:
+def shortlist(lane: dict, cands: dict, k: int = 32, order: list[str] | None = None) -> list[dict]:
+    """The best k for the editor, holding the lane's share of new artists and at most two songs an artist. Best by
+    the graph score, or by `order` (vids, best first, as the screen returned them) when there is one."""
     # public playlists only corroborate: alone they bring popular songs from outside the lane's scene
-    ranked = sorted((c for c in cands.values() if set(c["sources"]) - {"playlist"}), key=lambda c: -score(c, lane))
+    pool = [c for c in cands.values() if set(c["sources"]) - {"playlist"}]
+    if order is not None:
+        at = {v: i for i, v in enumerate(order)}
+        ranked = sorted((c for c in pool if c["vid"] in at), key=lambda c: at[c["vid"]])
+    else:
+        ranked = sorted(pool, key=lambda c: -score(c, lane))
     out, per_artist = [], Counter()
     target_new = lane.get("discovery", 0.4)
     n_new = max(1, round(k * target_new))

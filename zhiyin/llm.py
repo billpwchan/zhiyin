@@ -39,7 +39,7 @@ KEY_MODEL = {"opus": os.environ.get("ZHIYIN_KEY_OPUS", "sonnet"), "sonnet": os.e
 # 600 likes for under a cent (measured 2026-10-26), so this is several hundred names a day.
 CARD_DAILY_USD = float(os.environ.get("ZHIYIN_CARD_DAILY_USD", 2))
 # The owner's own ceiling, far above a normal day (~$1-2), so a runaway loop or a stolen session can't drain the plan.
-OWNER_DAILY_USD = float(os.environ.get("ZHIYIN_OWNER_DAILY_USD", 10))
+OWNER_DAILY_USD = float(os.environ.get("ZHIYIN_OWNER_DAILY_USD", 30))
 WORKER_GONE_S = 120   # the worker long-polls every 25 s, so this much silence means the Mac is asleep or off
 PICKUP_S = 60
 

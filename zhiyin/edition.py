@@ -143,7 +143,8 @@ def negatives() -> list[str]:
     return out + [f"{d['title']} — {d['artist']} (thumbs-down on YouTube)" for d in signals.youtube().get("disliked", [])[:8]]
 
 
-PRE_K = 64   # graph-ranked candidates per lane that get listened to before the final shortlist
+PRE_K = 64   # candidates per lane that get listened to before the final shortlist
+EDITOR_K = {False: 32, True: 40}   # songs the editor reads per lane: with the whole pool screened first, more of them are worth it
 
 
 def build_lane(lane, tracks, prof, known, rng, n, log, loves=()):
@@ -156,7 +157,7 @@ def build_lane(lane, tracks, prof, known, rng, n, log, loves=()):
     return lane, seeds, g, pre
 
 
-def listen(built, taste_args, log, itunes_budget=None, text=None):
+def listen(built, taste_args, log, itunes_budget=None, text=None, orders=None):
     """Embed every pre-shortlisted track, then re-rank each lane by how it sounds against the listener's likes
     (and, for a request in words, against the words themselves)."""
     pool = [c for b in built for c in b[3]]
@@ -174,7 +175,8 @@ def listen(built, taste_args, log, itunes_budget=None, text=None):
             # Sound barely predicts what they will like (AUC 0.55-0.61 on held-out likes), and choosing by it pulled
             # mellow Mandopop into the jazz lane. For the daily edition it only vetoes near-copies of refused sounds.
             keep = {c["vid"]: c for c in pre if not (c.get("audio") and c["audio"]["neg"] > taste.NEG_FLOOR)}
-            out.append((lane, seeds, g, candidates.shortlist(lane, keep)))
+            order = (orders or {}).get(lane["key"])
+            out.append((lane, seeds, g, candidates.shortlist(lane, keep, k=EDITOR_K[order is not None], order=order)))
         else:
             out.append((lane, seeds, g, taste.select(lane, taste.rank(lane, pre, text_vec=tv))))
     return out, t
@@ -257,9 +259,25 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
             for c in built[-1][3]:
                 known.taken.add(c["vid"])
         focus = prev["focus"] if prev and prev.get("focus") and "focus" not in only else build_focus(prof, known, rng, log)
-        built, tst = listen(built, (tracks, prof), log)
     finally:
         GATHER.release()
+
+    # What the screen and the editor read about each lane: all its songs, and how earlier picks for it went. The
+    # owner's own accounts get the whole pool read by Claude before listening (rank.screen); others the graph's top.
+    mine = store.is_owners(store.uid())
+    stories = {b[0]["key"]: rank.lane_story(b[0], tracks, prof, loves, rank.STORY_N if mine else 60) for b in built}
+    went = {b[0]["key"]: rank.outcomes(b[0]["key"]) for b in built}
+    orders = {}
+    if mine and built:
+        log(i18n.tr("Claude 通读每条线的全部候选（{n} 条线）", n=len(built)))
+        with store.Pool(4) as ex:
+            for b, order in zip(built, ex.map(lambda b: rank.screen(b[0], b[2]["cands"], stories[b[0]["key"]],
+                                                                    went[b[0]["key"]], model=model), built)):
+                if order:
+                    orders[b[0]["key"]] = order
+        built = [(lane, seeds, g, candidates.shortlist(lane, g["cands"], k=PRE_K, order=orders[lane["key"]])
+                  if lane["key"] in orders else pre) for lane, seeds, g, pre in built]
+    built, tst = listen(built, (tracks, prof), log, orders=orders)
 
     negs = negatives()
     log(i18n.tr("编辑精选中（{n} 条线并行）", n=len(built)))
@@ -269,7 +287,7 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
         lane, seeds, g, sl = b
         # No editor, no edition: graph-ranked songs nobody vetted are what cost the listener's trust before, so a
         # failure keeps the previous edition up and the scheduler tries again.
-        picks = rank.pick(lane, sl, seeds, negs, model=model)
+        picks = rank.pick(lane, sl, seeds, negs, model=model, story=stories.get(lane["key"], ()), went=went.get(lane["key"], ()))
         # fewer, surer picks: what the editor isn't confident about doesn't go out (but always a few to play)
         sure = [p for p in picks if p["fit"] >= rank.MIN_FIT] or picks[:3]
         chosen = rank.enforce_quota(sure, n, lane["discovery"])

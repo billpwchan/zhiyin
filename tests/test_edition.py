@@ -44,3 +44,90 @@ def test_a_pick_is_shown_next_to_a_real_like_of_theirs():
     assert near == {"vid": "like0000001", "title": "Drifter", "artist": "KIRINJI", "at": "2024-03", "how": "near"}
     assert edition.because({"like_vid": None, "via": ["Aliens - KIRINJI"]}, theirs)["how"] == "from"
     assert edition.because({"via": ["Someone else - X"]}, theirs) is None
+
+
+def _cand(vid, artist, support=1.0, familiar=0):
+    return {"vid": vid, "title": f"Song {vid}", "artists": [{"name": artist}], "support": support, "via": [],
+            "sources": ["radio"], "familiar": familiar, "knows": None}
+
+
+LANE = {"key": "jazz", "name": "夜里的爵士", "english": "Late jazz", "sound": "brushed drums", "when": "night",
+        "langs": ["en"], "energy": [1, 2], "avoid": ["big band"], "discovery": 0.5}
+
+
+def test_the_shortlist_follows_the_screen_but_keeps_the_new_artist_share_and_two_an_artist():
+    from zhiyin import candidates
+    cands = {c["vid"]: c for c in [_cand("a", "Old", familiar=3), _cand("b", "Old", familiar=3), _cand("c", "Old", familiar=3),
+                                   _cand("d", "New1"), _cand("e", "New2"), _cand("f", "Old2", familiar=1)]}
+    out = candidates.shortlist(LANE, cands, k=4, order=["a", "b", "c", "f", "d", "e"])
+    assert [c["vid"] for c in out] == ["d", "e", "a", "b"]          # two new (half of four), then the screen's best known
+    assert [c["vid"] for c in candidates.shortlist(LANE, cands, k=4, order=["e"])] == ["e"]   # only what the screen kept
+
+
+def test_the_screen_merges_its_reads_and_falls_back_when_they_all_fail(monkeypatch):
+    from zhiyin import llm, rank
+    pool = {f"v{i}": _cand(f"v{i}", f"A{i}", support=1 + i / 100) for i in range(80)}
+    reads = iter([{"ids": [0, 1, 2]}, {"ids": [2, 1, 0]}, {"ids": [2, 5]}])
+    seen = []
+
+    def call(prompt, system, schema, **k):
+        seen.append(prompt)
+        return next(reads)
+    monkeypatch.setattr(llm, "call", call)
+    monkeypatch.setattr(rank, "SCREEN_PASSES", 3)
+    order = rank.screen(LANE, pool, ["- Blue in Green — Bill Evans (liked 2026-09)"], ["- X — Y: heard it through"])
+    assert len(seen) == 3 and "Blue in Green" in seen[0] and "heard it through" in seen[0] and "[79]" in seen[0]
+    # the song every read put near the top wins
+    by_line = {}
+    for line in seen[0].split("\n"):
+        if line.startswith("["):
+            by_line[int(line[1:line.index("]")])] = line.split("] ")[1].split(" — ")[0]
+    assert len(order) == 4 and order[0] == by_line[2].replace("Song ", "")
+
+    def fail(*a, **k):
+        raise llm.LLMError("down")
+    monkeypatch.setattr(llm, "call", fail)
+    assert rank.screen(LANE, pool, [], []) is None
+    assert rank.screen(LANE, dict(list(pool.items())[:40]), [], []) is None   # a small pool is read whole by the editor
+
+
+def test_earlier_picks_tell_the_editor_only_real_verdicts():
+    import time
+    from zhiyin import rank, store
+    con, now = store.db(), time.time()
+    rows = [("p1", "start", 0, None, now - 50), ("p1", "done", 200, None, now - 40),
+            ("p2", "start", 0, None, now - 30), ("p2", "skip", 4, None, now - 29),
+            ("p3", "start", 0, None, now - 20), ("p3", "stop", 5, None, now - 19),
+            ("p4", "start", 0, None, now - 10), ("p4", "done", 200, None, now - 9)]
+    for vid, ev, pos, _, ts in rows:
+        con.execute("insert into plays(vid, lane, ts, ev, pos, dur, uid, slot, title, artist) values (?,?,?,?,?,?,?,?,?,?)",
+                    (vid, "jazz", ts, ev, pos, 200, store.uid(), 0, f"T{vid}", "Ar"))
+    con.execute("insert into feedback(vid, action, lane, scope, reason, title, artist, ts, uid) values (?,?,?,?,?,?,?,?,?)",
+                ("p4", "dislike", "jazz", "song", "太吵", "Tp4", "Ar", now - 5, store.uid()))
+    con.execute("insert into feedback(vid, action, lane, scope, reason, title, artist, ts, uid) values (?,?,?,?,?,?,?,?,?)",
+                ("p5", "like", "jazz", "song", None, "Tp5", "Ar", now - 1, store.uid()))
+    con.execute("insert into feedback(vid, action, lane, scope, reason, title, artist, ts, uid) values (?,?,?,?,?,?,?,?,?)",
+                ("p6", "dislike", "jazz", "song", "只是不該在這個電台", "Tp6", "Ar", now - 60, store.uid()))
+    con.commit()
+    assert rank.outcomes("jazz")[-1] == "- Tp6 — Ar: said it's fine but doesn't belong in this lane"
+    assert rank.outcomes("jazz")[:-1] == ["- Tp5 — Ar: loved it (added to likes)", "- Tp4 — Ar: said it's not for them: 太吵",
+                                     "- Tp2 — Ar: skipped it within seconds", "- Tp1 — Ar: heard it through"]
+    assert rank.outcomes("other") == []
+
+
+def test_a_lane_is_told_from_all_its_songs_newest_first():
+    from zhiyin import rank, settings
+    def t(r, vid, artist):
+        return {"vid": vid, "rank": r, "long": False, "title": f"S{r}", "type": "ATV", "artists": [{"name": artist}],
+                "liked_est": f"2026-0{9 - r}-01"}
+    tracks = [t(2, "x2", "B"), t(0, "x0", "A"), t(1, "x1", "C"), t(3, "x3", "D")]
+    prof = {"assign": {"x0": ["soul"], "x1": ["pop"], "x2": ["soul"], "x3": ["soul"]}, "set_aside": [{"ranks": [3]}]}
+    loves = [{"vid": "l1", "title": "Often", "artists": [{"name": "E"}], "lane": ["soul"]}]
+    s = settings.load()
+    s["not_me"]["artists"] = ["b"]
+    settings.save(s)
+    try:
+        assert rank.lane_story({**LANE, "key": "soul"}, tracks, prof, loves) == ["- S0 — A (liked 2026-09)", "- Often — E (played often, never liked)"]
+    finally:
+        s["not_me"]["artists"] = []
+        settings.save(s)

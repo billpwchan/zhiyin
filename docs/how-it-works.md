@@ -81,11 +81,22 @@ For each station, Zhiyin collects about 600 candidates:
 Songs that were shown earlier but never played are not used up. They can come back later, behind fresher
 candidates of the same strength.
 
-## 4. A graph score narrows it to a shortlist
+## 4. Narrowing it to a shortlist
 
-Each candidate scores higher the more of your seeds lead to it, the closer it sits to your core artists, and if it
-is a recent release. A huge hit by an artist you already follow scores lower, since you've probably heard it. The
-top 64 go on to the next step.
+This is where most of the songs you'd go on to like used to be lost. On held-out likes, half of them were in a
+station's pool of about 600, but only a handful survived into the shortlist.
+
+Each candidate has a graph score: higher the more of your seeds lead to it, the closer it sits to your core artists,
+and if it is a recent release. A huge hit by an artist you already follow scores lower, since you've probably heard
+it.
+
+On the owner's own accounts (and on a server you run for yourself), Claude then reads the whole pool, up to 700
+songs, against every song of yours in the station and how its earlier picks went, and keeps the 64 you're most
+likely to add on the first listen. It reads the list three times in different orders and the reads are merged, since
+one read of a long list leans on where songs sit in it. On held-out likes this kept 10 of the 19 that were in the
+pool, where the graph score's top 64 kept 6. Listeners on the shared key get the graph score's top 64: Sonnet reading
+the pool did no better than the graph (8 against 7 in the top 100), and Opus three times over costs too much to give
+everyone.
 
 ## 5. Sound vetoes, it doesn't choose
 
@@ -105,9 +116,17 @@ sound choose pulled soft ballads into the jazz station.
 
 ## 6. An editor keeps the few it is sure of
 
-Claude (Opus) sees the station, the songs that define it right now, what you recently refused, and a shortlist of 32
-with mixed new and familiar artists and, where the pool allows, at most two songs per artist. It returns up to 12 songs with a confidence
+Claude (Opus) sees the station, every song of yours in it (newest first, with when you liked it), how its earlier
+picks went (added to your likes, heard through, skipped within seconds, turned down and why), what you recently
+refused, and a shortlist of 40 (32 on the shared key) with mixed new and familiar artists and, where the pool allows,
+at most two songs per artist. Each station shows the same verdicts under its name ("the next edition learns from"),
+so you can see your reactions being used. It returns up to 12 songs with a confidence
 score, one line each, and which of the station's songs each pick is closest to.
+
+Two corrections reach the editor in your own words. "Tell this station…" in a station's menu keeps a sentence such
+as "fewer trap drums, more from the nineties", which the screen and the editor follow from then on; "save and repick"
+rebuilds that one station right away. After "not for me", "just not in this station" tells the editor the song was
+fine but in the wrong place, which is a different lesson from a song you don't want.
 
 The line is about the song only. What the page says about you comes from your data, not from the model: the like a
 pick is shown next to (the one the editor named, or the one whose radio turned it up), which you can play and then
@@ -157,3 +176,6 @@ What we learned the hard way:
 - **Assuming the listener knows the classics.** Telling the editor to assume the listener already knew the classics
   removed songs they went on to like.
 - **Tuning weights didn't help.** Seven variants of the graph score made no difference to recall.
+- **Asking the model to name songs adds nothing measurable.** Of 246 songs Opus named for eight stations (and found
+  on YouTube Music), one was a held-out like, and the graph had already found it. What the graph misses tends to be
+  songs met elsewhere in life (a trend, a show, a phase), which no taste model predicts.

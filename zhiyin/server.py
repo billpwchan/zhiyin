@@ -1041,7 +1041,7 @@ def state():
     for l in prof.get("lanes", []):
         lv = settings.lane_view(l)
         lanes.append({k: lv[k] for k in ("key", "name", "english", "blurb", "when", "sound", "langs", "energy",
-                                         "core_artists", "avoid", "discovery", "enabled")} | {"size": counts.get(l["key"], 0)})
+                                         "core_artists", "avoid", "discovery", "enabled", "note")} | {"size": counts.get(l["key"], 0)})
     timeline = []
     for t in tracks:
         if t["long"]:
@@ -1065,6 +1065,7 @@ def state():
                     "synced": lib.get("synced"), "source": tracks[0]["source"] if tracks else None},
         "me": _me(), "jobs": jobs(), "owner_name": "" if store.is_sample() else (accounts.get(store.OWNER) or {}).get("name") or "",
         "stale_lang": i18n.stale(),
+        "went": {} if store.is_sample() else quality.by_lane(),
     }
     rl = i18n.of()
     if rl != "en":   # Claude's text was written in one Chinese script; show it in the reader's
@@ -1140,12 +1141,17 @@ def jobs():
     return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell", "label", "history")}
 
 
+class RefreshReq(BaseModel):
+    lanes: list[str] | None = None   # just these stations; the rest keep the songs not yet heard
+
+
 @app.post("/api/refresh")
-def refresh():
+def refresh(body: RefreshReq | None = None):
     why = llm.unavailable()
     if why:
         raise HTTPException(503, why)
-    _start("refresh", lambda log: edition.build(log=log) and None)
+    only = set(body.lanes) if body and body.lanes else None
+    _start("refresh", lambda log: edition.build(log=log, only=only) and None)
     return jobs()
 
 
@@ -1290,6 +1296,7 @@ class LaneSetting(BaseModel):
     key: str
     enabled: bool | None = None
     discovery: float | None = None
+    note: str | None = Field(None, max_length=300)   # their own words for the station, read by its screen and editor
 
 
 @app.post("/api/settings/lane")
@@ -1300,6 +1307,8 @@ def lane_setting(s: LaneSetting):
         o["enabled"] = s.enabled
     if s.discovery is not None:
         o["discovery"] = max(0.0, min(1.0, s.discovery))
+    if s.note is not None:
+        o["note"] = " ".join(s.note.split())
     settings.save(cur)
     return {"ok": True}
 

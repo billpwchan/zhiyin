@@ -537,3 +537,22 @@ def test_a_request_can_be_taken_off_the_list_one_or_all():
     c = TestClient(server.app)
     assert [a["q"] for a in c.post("/api/ask/delete", json={"created": 2.25}).json()["asks"]] == ["c", "a"]
     assert c.post("/api/ask/delete", json={}).json()["asks"] == []
+
+
+def test_a_station_keeps_their_words_and_can_be_repicked_alone(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import edition, llm, settings
+    c = TestClient(server.app)
+    with store.as_user(store.OWNER):
+        assert c.post("/api/settings/lane", json={"key": "jazz", "note": "  少点  trap 鼓点 "}).status_code == 200
+        assert settings.lane_view({"key": "jazz"})["note"] == "少点 trap 鼓点"
+    started = {}
+    monkeypatch.setattr(llm, "unavailable", lambda *a: None)
+    monkeypatch.setattr(server, "_start", lambda name, fn: started.update(name=name, fn=fn))
+    monkeypatch.setattr(edition, "build", lambda log=None, only=None: started.update(only=only))
+    c.post("/api/refresh", json={"lanes": ["jazz"]})
+    started["fn"](print)
+    assert started["only"] == {"jazz"}
+    c.post("/api/refresh")
+    started["fn"](print)
+    assert started["only"] is None

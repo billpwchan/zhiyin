@@ -225,6 +225,7 @@ EN = {
     "试听失败，按图谱排序 ({e})": "Couldn't hear them, ranking by the graph ({e})",
     "专注: {n} 个长歌单候选": "Focus: {n} long mixes found",
     "编辑精选中（{n} 条线并行）": "The editor is choosing ({n} stations at once)",
+    "Claude 通读每条线的全部候选（{n} 条线）": "Claude is reading every candidate for each station ({n} stations)",
     "整理歌曲信息": "Tidying song details",
     "已读 {n} / {total} 个喜欢的视频": "Read {n} of {total} liked videos",
     "查看 {n} 个新喜欢的视频是不是歌": "Checking whether {n} newly liked videos are songs",
