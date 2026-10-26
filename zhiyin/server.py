@@ -668,7 +668,7 @@ def _milestone(name: str) -> None:
 
 
 class Event(BaseModel):
-    name: Annotated[str, Field(pattern=r"^(sample_play|share_open|share_send|share_save|share_copy)$")]
+    name: Annotated[str, Field(pattern=r"^(sample_play|share_open|share_send|share_save|share_copy|yt_down)$")]
 
 
 @app.post("/api/event")

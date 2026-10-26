@@ -110,7 +110,7 @@ def main():
     elif a.cmd == "stats":
         import time
         since = time.strftime("%Y-%m-%d", time.localtime(time.time() - (a.days - 1) * 86400))
-        steps = ["visit", "sample_play", "join_start", "join_cancel", "join_noscope", "join_full", "join_ok",
+        steps = ["visit", "yt_down", "sample_play", "join_start", "join_cancel", "join_noscope", "join_full", "join_ok",
                  "first_disc", "named", "ready", "thin", "no_channel", "setup_error", "share_open", "share_send", "share_save", "share_copy",
                  "card_try", "card_made", "card_named", "card_private", "card_few", "card_link", "card_upstream", "card_shared",
                  "card_view"]

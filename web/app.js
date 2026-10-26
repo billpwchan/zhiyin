@@ -556,7 +556,17 @@ const Player = {
     };
     const s = document.createElement('script');
     s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => this.unreachable();
     document.head.append(s);
+    // where YouTube is blocked the request just hangs, so silence counts as an answer too
+    setTimeout(() => { if (!window.YT?.Player) this.unreachable(); }, 8000);
+  },
+  down: false,
+  unreachable() {
+    if (this.down || this.ready) return;
+    this.down = true;
+    ev('yt_down');
+    noYouTube();
   },
   fadeTo(vol, ms, then) {
     clearInterval(this.ramp);
@@ -581,7 +591,7 @@ const Player = {
   load(p, play) {
     this.settle(!play);
     if (play) this.use();
-    if (!this.ready) { this.want = { p, play }; return; }
+    if (!this.ready) { this.want = { p, play }; if (play && this.down) noYouTube(); return; }
     // a skip lets the old song drop away for a moment instead of cutting it mid-note
     if (play && this.playing && this.vid !== p.vid) this.fadeTo(0, 180, () => this.start(p.vid, true));
     else this.start(p.vid, play);
@@ -2055,6 +2065,19 @@ function useGuest(fresh) {
   if (fresh) earRevealed = false;   // a new record grows in once, as a new listener's does
 }
 
+function toMaker() {
+  MAKE = !guest();
+  if (location.hash !== '#ear') location.hash = '#ear';
+  else { if (MAKE) EAR = null; renderEar(); }
+}
+
+// a visitor who can't reach YouTube (mainland China, a school network) can still get a record of their own
+function noYouTube() {
+  if (!SAMPLE() || (view === 'ear' && !guest())) return;
+  toast(t('这里连不上 YouTube。贴一个网易云歌单，也能画一张你的唱片'),
+    [[guest() ? t('看我的唱片') : t('去画一张'), toMaker]], 15000);
+}
+
 function makerHTML() {
   return `<form class="maker" id="maker" autocomplete="off">
     <div class="mk-t"><p class="mk-k">${t('这是一位示例听众的唱片')}</p><h2>${t('画一张你自己的')}</h2>
@@ -2953,7 +2976,7 @@ async function act(k, btn) {
   else if (k === 'replay') replay();
   else if (k === 'grelabel' && GUEST) { btn.disabled = true; await makeCard(GUEST.link, true); }
   else if (k === 'gnew') leaveGuest();
-  else if (k === 'tomaker') { $('#join').close(); GUEST = null; store.del('guest'); MAKE = true; if (location.hash === '#ear') { EAR = null; renderEar(); } else location.hash = '#ear'; }
+  else if (k === 'tomaker') { $('#join').close(); toMaker(); }
   else if (k === 'lovesmore') { lovesAll = !lovesAll; renderEar(); }
   else if (k === 'histdel') {
     try { const r = await api('/api/history/delete', {}); S.jobs = r.jobs; EAR.history = null; renderEar(); poll(); toast(t('播放记录删掉了')); } catch (err) { toast(err.message); }
