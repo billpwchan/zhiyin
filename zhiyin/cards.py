@@ -135,7 +135,7 @@ def _verdict(tracks: list[dict], total: int, key: str, lang: str, again: bool) -
     row = con.execute("select label, roast, day, rolls from card_names where k=?", (k,)).fetchone()
     rolls = row["rolls"] if row and row["day"] == today else 0
     kept = (row["label"], row["roast"]) if row else (None, None)
-    if row and row["label"] and (not again or rolls >= NAMES_A_DAY):
+    if row and row["label"] and row["roast"] and (not again or rolls >= NAMES_A_DAY):   # names kept before roasts get one
         return *kept, i18n.tr("今天换了好几次了，明天再换", lang) if again else None
     with store.as_user(store.CARDS):
         if llm.unavailable():

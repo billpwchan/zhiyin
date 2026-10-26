@@ -133,6 +133,19 @@ def test_a_name_for_a_playlist_is_kept_for_the_day_and_tries_are_counted(monkeyp
     assert last["label"] == "三" and last["why"]                   # three names a day for one list
 
 
+def test_a_name_kept_from_before_roasts_is_written_again_with_one(monkeypatch):
+    import hashlib
+    from zhiyin import store
+    _fake(monkeypatch, 30)
+    k = hashlib.sha256("163:77|zh-Hans".encode()).hexdigest()[:24]
+    con = store.db()
+    con.execute("insert or replace into card_names(k, label, day, rolls) values (?, '旧名字', ?, 1)", (k, time.strftime("%Y-%m-%d")))
+    con.commit()
+    monkeypatch.setattr(cards, "verdict", lambda *a, **k: ("新名字", "一句锐评"))
+    got = cards.make("https://music.163.com/#/user/home?id=5", "zh-Hans")
+    assert (got["label"], got["roast"]) == ("新名字", "一句锐评")
+
+
 def test_deleting_an_account_takes_its_shared_cards_down():
     from zhiyin import accounts
     uid = accounts.redeem(accounts.invite("Lin"))
