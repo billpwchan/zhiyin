@@ -177,6 +177,7 @@ def build() -> dict:
         if inside:
             eras.append({"years": er["years"], "label": i18n.convert(er["label"], pl, rl), "text": i18n.convert(er["text"], pl, rl),
                          "t0": round(min(inside), 3), "t1": round(max(inside), 3)})
+    eras.sort(key=lambda e: e["t0"])   # the portrait lists them newest first; the page reads them oldest first
     mine = [t for t in tracks if not settings.is_not_me(t, nm)] or tracks
     return {"songs": songs, "sectors": sectors, "span": [round(t0, 3), round(t1, 3)], "eras": eras,
             "facts": facts(mine, ts, lane_of, lanes, tags, real, rl), "real_dates": real, "stage": stage,

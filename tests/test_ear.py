@@ -39,3 +39,16 @@ def test_the_name_of_a_taste_follows_the_readers_script_but_not_their_language(m
         assert ear.label() == "老派港樂，新派韓流"
         monkeypatch.setattr(i18n, "of", lambda uid=None: "en")
         assert ear.label() is None   # an English reader gets a name of their own, not a translation
+
+
+def test_eras_reach_the_page_oldest_first():
+    from pathlib import Path
+    from zhiyin import ear, store
+    demo = Path(__file__).parent.parent / "demo"
+    with store.as_user("eras1"):
+        d = store.USERS / "eras1"
+        d.mkdir(parents=True, exist_ok=True)
+        for f in ("library.json", "tags.json", "profile.json", "edition.json", "ident.json"):
+            (d / f).write_bytes((demo / f).read_bytes())
+        eras = ear.build()["eras"]
+    assert len(eras) > 2 and [e["t0"] for e in eras] == sorted(e["t0"] for e in eras)
