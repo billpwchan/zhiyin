@@ -267,6 +267,14 @@ EN = {
     "知音": "Zhiyin",
     "朋友": "Friend",
     "排队中：另一位听众的电台正在准备": "Waiting: another listener's stations are being set up",
+    "第一次准备用完了它的 Claude 额度；额度按 30 天计算，过些天再试":
+        "Your first setup used up its Claude allowance, which counts over 30 days; try again in a few days",
+    "排队中：前面还有 {n} 位，大约 {m} 分钟后开始": ("Waiting: 1 listener ahead of you, starting in about {m} min",
+                                           "Waiting: {n} listeners ahead of you, starting in about {m} min"),
+    "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片": "Zhiyin: every song you've liked on YouTube Music, drawn as a record",
+    "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每天几首你没听过的歌，每首都写着为什么挑它。":
+        "Sign in with Google and within a minute you get your record and a name for your taste. Then a few songs a day "
+        "you haven't heard, each with the reason it was picked.",
     "其他": "Other",
     "{n} 年": ("{n} year", "{n} years"),
     "{n} 种语言": ("{n} language", "{n} languages"),
@@ -288,6 +296,9 @@ EN = {
 }
 # Taiwan and Hong Kong wording the converter doesn't know.
 HANT = {
+    "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片": "知音：把你在 YouTube Music 按過的喜歡，畫成一張唱片",
+    "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每天几首你没听过的歌，每首都写着为什么挑它。":
+        "用 Google 登入，一分鐘內畫出你的唱片，幫你的口味取個名字。之後每天幾首你沒聽過的歌，每首都寫著為什麼挑它。",
     "先在服务器上配置 Claude API key：你的 Claude 订阅只能你自己用": "先在伺服器上設定 Claude API key：你的 Claude 訂閱只能你自己用",
     "YouTube Music 的连接失效了，在设置里重新连接": "YouTube Music 的連接失效了，在設定裡重新連接",
     "先在设置里连接 YouTube Music": "先在設定裡連接 YouTube Music",

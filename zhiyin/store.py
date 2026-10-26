@@ -5,6 +5,7 @@ import os
 import sqlite3
 import threading
 import time
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -130,6 +131,7 @@ def _migrate(con: sqlite3.Connection) -> None:
     create table if not exists usage(uid text, day text, source text, calls integer, usd real,
         primary key(uid, day, source));
     create table if not exists waitlist(sub text primary key, email text, name text, ts real, lang text, admitted real);
+    create table if not exists events(day text, name text, ref text, n integer, primary key(day, name, ref));
     create index if not exists feedback_vid on feedback(vid);
     create index if not exists shown_vid on shown(vid);
     """)
@@ -166,6 +168,25 @@ def is_owners(uid: str) -> bool:
 
 def now() -> float:
     return time.time()
+
+
+REFS_A_DAY = 60   # sources counted by name each day; anyone can make up more, and those go under "other"
+
+
+def count(name: str, ref: str = "") -> None:
+    """One more of something on the way in (a visit, a join, a first record, a share), by where it came from.
+    Counts per day only: never who. Never in the way of what is being counted."""
+    day = time.strftime("%Y-%m-%d")
+    try:
+        con = db()
+        if ref and not con.execute("select 1 from events where day=? and ref=? limit 1", (day, ref)).fetchone():
+            if con.execute("select count(distinct ref) from events where day=?", (day,)).fetchone()[0] >= REFS_A_DAY:
+                ref = "other"
+        con.execute("insert into events values (?, ?, ?, 1) on conflict(day, name, ref) do update set n = n + 1",
+                    (day, name, ref or ""))
+        con.commit()
+    except sqlite3.Error:
+        traceback.print_exc()
 
 
 def kv_get(k: str, default=None):

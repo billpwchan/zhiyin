@@ -1,3 +1,4 @@
+import time
 import pytest
 
 from zhiyin import server, store
@@ -170,7 +171,7 @@ def test_someone_not_signed_in_hears_the_sample_in_their_language_and_changes_no
     assert [c.get("/api/more?vid=hp0KiJs0S5g").status_code for _ in range(3)] == [200, 200, 429]
 
 
-def _join(c, monkeypatch, who, mode="join", scope=None):
+def _join(c, monkeypatch, who, mode="join", scope=None, start=None):
     from urllib.parse import parse_qs, urlparse
     from zhiyin import google
     scope = scope or f"openid {google.YT_READ}"
@@ -178,10 +179,12 @@ def _join(c, monkeypatch, who, mode="join", scope=None):
                                                               "access_token": "a", "refresh_token": "r"})
     monkeypatch.setattr(google, "claims", lambda tok: {"sub": tok, "email": f"{tok}@example.com", "name": tok.title()})
     c.cookies.clear()                     # a stranger's browser
-    r = c.get(f"/auth/google/start?mode={mode}", follow_redirects=False)
+    r = c.get(start or f"/auth/google/start?mode={mode}", follow_redirects=False)
     loc = r.headers["location"]
-    if mode == "join":
+    if mode == "join" and server._join_state() == "open":
         assert "youtube.readonly" in loc and "%2Fyoutube+" not in loc and "%2Fyoutube&" not in loc   # read only
+    if mode == "join" and server._join_state() == "full" and not start:
+        assert "youtube" not in loc   # getting on the waitlist asks only who they are
     state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
     c.cookies.clear()
     c.cookies.set("zy_o", state)
@@ -200,6 +203,10 @@ def test_strangers_join_with_google_until_the_seats_run_out_then_wait(monkeypatc
     monkeypatch.setattr(server, "SEATS", accounts.joined() + 1)
     c = TestClient(server.app)
 
+    n = accounts.joined()                   # unticking YouTube on Google's page makes no account and takes no seat
+    assert [_join(c, monkeypatch, "eve", scope="openid email").headers["location"] for _ in range(2)] == ["/login?e=noscope"] * 2
+    assert accounts.by_google("eve") is None and accounts.joined() == n
+
     r = _join(c, monkeypatch, "ann")
     assert r.status_code == 303 and r.headers["location"] == "/" and accounts.COOKIE in r.cookies
     uid = accounts.by_google("ann")
@@ -208,19 +215,22 @@ def test_strangers_join_with_google_until_the_seats_run_out_then_wait(monkeypatc
         assert not google.writes_back() and server._queue_rate("hp0KiJs0S5g", "LIKE") == "read-only"
         assert server._me()["sync_likes"] is False
 
-    n = accounts.joined()                   # unticking YouTube on Google's page makes no account and takes no seat
-    assert [_join(c, monkeypatch, "eve", scope="openid email").headers["location"] for _ in range(2)] == ["/login?e=noscope"] * 2
-    assert accounts.by_google("eve") is None and accounts.joined() == n
-
-    r = _join(c, monkeypatch, "bo")          # the last seat is taken: Bo goes on the waitlist, no account
+    monkeypatch.setattr(server, "SEATS", accounts.joined() + 5)
+    monkeypatch.setattr(llm, "pool_spent", lambda days: llm.POOL_USD - 1)
+    assert server._join_state() == "full"     # seats left, but not the budget for one more first setup
+    monkeypatch.setattr(llm, "pool_spent", lambda days: 0)
+    monkeypatch.setattr(server, "SEATS", accounts.joined())
+    r = _join(c, monkeypatch, "bo", scope="openid email")   # the last seat is taken: Bo goes on the waitlist
     assert r.headers["location"] == "/login?e=full" and accounts.by_google("bo") is None
     assert store.db().execute("select count(*) from waitlist where sub='bo'").fetchone()[0] == 1
 
     con = store.db()
     con.execute("update waitlist set admitted=1 where sub='bo'")
     con.commit()
-    assert _join(c, monkeypatch, "bo", mode="login").headers["location"] == "/auth/google/start?mode=join"   # signing in joins
-    assert _join(c, monkeypatch, "bo").headers["location"] == "/" and accounts.by_google("bo")
+    assert _join(c, monkeypatch, "bo", mode="login").headers["location"] == "/auth/google/start?mode=join&yt=1"   # signing in joins
+    assert _join(c, monkeypatch, "bo", scope="openid email").headers["location"] == "/auth/google/start?mode=join&yt=1"
+    r = _join(c, monkeypatch, "bo", start="/auth/google/start?mode=join&yt=1")
+    assert r.headers["location"] == "/" and accounts.by_google("bo")
     assert store.db().execute("select count(*) from waitlist where sub='bo'").fetchone()[0] == 0
 
     n = len(accounts.users())
@@ -323,3 +333,179 @@ def test_a_rename_already_under_way_is_not_counted(monkeypatch):
     assert not accounts.prefs(uid).get("label_rolls")
     with store.as_user(uid), pytest.raises(RuntimeError):
         server._label(print)   # no likes yet: no name, and the job counts as failed rather than done
+
+
+def test_the_way_in_is_counted_by_where_people_came_from_never_who(monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(server, "SAMPLE_ON", [server._install_sample()])
+    con = store.db()
+    con.execute("delete from events")   # the data folder is shared by the whole run
+    con.commit()
+    c = TestClient(server.app)
+    page = c.get("/?ref=Reddit", headers={"accept-language": "en-US"}).text
+    assert 'property="og:image"' in page and "/static/og-en.png" in page and "drawn as a record" in page
+    assert c.cookies.get("zy_r") == "reddit"
+    c.get("/", headers={"accept-language": "en-US"})   # a second look from the same browser is not a new visit
+    TestClient(server.app).get("/", headers={"referer": "https://www.threads.net/@x/post/1"})
+    TestClient(server.app).get("/", headers={"user-agent": "Twitterbot/1.0"})   # a link preview is not a visit
+    assert c.post("/api/event", json={"name": "sample_play"}).status_code == 200
+    assert c.post("/api/event", json={"name": "anything"}).status_code == 422
+    rows = {(r["name"], r["ref"]): r["n"] for r in store.db().execute("select name, ref, n from events")}
+    assert rows == {("visit", "reddit"): 1, ("visit", "threads.net"): 1, ("sample_play", "reddit"): 1}
+    assert [c[1] for c in store.db().execute("pragma table_info(events)")] == ["day", "name", "ref", "n"]
+
+
+def test_first_runs_wait_in_order_and_are_told_their_place(monkeypatch):
+    monkeypatch.setattr(server, "HEAVY_AT_ONCE", 1)
+    first, second, third = ({"msg": ""} for _ in range(3))
+    server._line.extend([first, second])
+    said = []
+    import threading
+    t = threading.Thread(target=server._take_turn, args=(third, said.append))
+    t.start()
+    import time as _t
+    _t.sleep(0.2)
+    assert said and "2" in said[-1]   # two ahead of it: the one running and the one waiting
+    server._leave_line(first)
+    server._leave_line(second)
+    t.join(2)
+    assert not t.is_alive() and len(server._line) == 1 and server._line[0] is third
+    server._leave_line(third)
+
+
+def test_likes_not_read_again_in_30_days_are_deleted_but_the_account_stays(monkeypatch):
+    from zhiyin import accounts, google
+    monkeypatch.setattr(google, "disconnect", lambda uid: None)
+    owner_prefs = accounts.prefs(store.OWNER)
+    old, now = time.time() - 31 * 86400, time.time()
+    gone = accounts.redeem(accounts.invite("Gone"))
+    here = accounts.redeem(accounts.invite("Here"))
+    mine = accounts.redeem(accounts.invite("Mine", mine=True))
+    for u in (gone, here, mine):
+        accounts.set_status(u, "ready")
+    accounts.set_prefs(gone, synced=old, google_error="revoked", ref="x")
+    accounts.set_prefs(here, synced=now - 3 * 86400)
+    accounts.set_prefs(mine, synced=old)
+    accounts.set_prefs(store.OWNER, synced=old)
+    with store.as_user(gone):
+        store.write_json(store.LIBRARY, {"tracks": [{"vid": "a"}]})
+        store.write_json(store.GLIMPSE, {"songs": []})
+        store.write_json(store.ASKS, {"kept": True})
+    con = store.db()
+    con.execute("insert into feedback (uid, vid, action, ts) values (?, 'a', 'like', 0)", (gone,))
+    con.commit()
+    try:
+        users = [accounts.get(u) for u in (store.OWNER, gone, here, mine)]
+        store.kv_set("forget_from", None)
+        assert server._forget_stale(users) == set()   # a server that just got this rule waits a few days first
+        assert accounts.get(gone)["status"] == "ready"
+        store.kv_set("forget_from", time.time() - 1)
+        assert server._forget_stale(users) == {gone}
+        u = accounts.get(gone)
+        assert u and u["status"] == "new" and "synced" not in u["prefs"] and u["prefs"]["forgot"]
+        with store.as_user(gone):
+            assert not store.LIBRARY.exists() and not store.GLIMPSE.exists() and store.ASKS.exists()
+        assert store.db().execute("select count(*) from feedback where uid=?", (gone,)).fetchone()[0] == 1
+        assert accounts.get(here)["status"] == accounts.get(mine)["status"] == "ready"
+        assert server._forget_stale([accounts.get(gone)]) == set()   # nothing left to forget: it is new again
+
+        # most listeners unread at once is the connection breaking, not people leaving: nothing is deleted
+        many = [accounts.redeem(accounts.invite(f"L{i}")) for i in range(4)]
+        for m in many:
+            accounts.set_status(m, "ready")
+            accounts.set_prefs(m, synced=old)
+        assert server._forget_stale([accounts.get(m) for m in many + [here]]) == set()
+        assert all(accounts.get(m)["status"] == "ready" for m in many)
+    finally:
+        accounts.set_prefs(store.OWNER, synced=owner_prefs.get("synced"))
+
+
+def test_a_failed_read_of_the_likes_waits_before_trying_again(monkeypatch):
+    from zhiyin import accounts
+    uid = accounts.redeem(accounts.invite("Retry"))
+    monkeypatch.setitem(server._jobs, (uid, "sync"), {"running": False, "error": "quota", "ended": time.time() - 3600})
+    assert server._sync_waits(uid)
+    server._jobs[(uid, "sync")]["ended"] = time.time() - 7 * 3600
+    assert not server._sync_waits(uid)
+    server._jobs[(uid, "sync")] = {"running": False, "error": None, "ended": time.time()}
+    assert not server._sync_waits(uid)   # a read that worked doesn't hold the next one back
+
+
+def test_a_read_that_worked_counts_even_if_filing_the_new_likes_fails(monkeypatch):
+    from zhiyin import accounts, library, profile
+    uid = accounts.redeem(accounts.invite("Filed"))
+    monkeypatch.setattr(library, "sync_from_google", lambda log=None: {"added": 3, "songs": 30})
+
+    def no_claude(log=None):
+        raise RuntimeError("Claude is out")
+    monkeypatch.setattr(profile, "absorb_new", no_claude)
+    with store.as_user(uid), pytest.raises(RuntimeError):
+        server._sync_likes(lambda *a, **k: None)
+    assert time.time() - accounts.prefs(uid)["synced"] < 5
+
+
+def test_likes_a_reread_took_in_join_the_stations_on_the_next_sync(monkeypatch):
+    from zhiyin import library, profile
+    calls = []
+    monkeypatch.setattr(library, "sync_from_google", lambda log=None: {"added": 0, "songs": 30})
+    monkeypatch.setattr(profile, "absorb_new", lambda log=None: calls.append(1) or 0)
+    server._sync_likes(lambda *a, **k: None)
+    assert calls == [1]
+
+
+def test_first_run_steps_count_once_however_often_it_is_retried():
+    from zhiyin import accounts
+    con = store.db()
+    con.execute("delete from events")
+    con.commit()
+    uid = accounts.redeem(accounts.invite("Steps"))
+    accounts.set_prefs(uid, ref="zhihu")
+    with store.as_user(uid):
+        for _ in range(3):
+            server._milestone("setup_error")
+        server._milestone("ready")
+    rows = {(r["name"], r["ref"]): r["n"] for r in store.db().execute("select name, ref, n from events")}
+    assert rows == {("setup_error", "zhihu"): 1, ("ready", "zhihu"): 1}
+
+
+def test_made_up_sources_cannot_grow_the_counts_without_end():
+    con = store.db()
+    con.execute("delete from events")
+    con.commit()
+    for i in range(store.REFS_A_DAY + 5):
+        store.count("visit", f"r{i}")
+    refs = {r["ref"] for r in store.db().execute("select ref from events")}
+    assert len(refs) == store.REFS_A_DAY + 1 and "other" in refs
+
+
+def test_a_first_run_that_fails_leaves_the_line():
+    from zhiyin import accounts
+    uid = accounts.redeem(accounts.invite("Fails"))
+
+    def boom(log):
+        raise RuntimeError("nope")
+    with store.as_user(uid):
+        j = server._start("setup", boom)
+    for _ in range(50):
+        if not j["running"]:
+            break
+        time.sleep(0.05)
+    assert not j["running"] and j["error"] == "nope" and not any(x is j for x in server._line)
+
+
+def test_an_account_without_a_youtube_channel_is_told_what_to_do(monkeypatch):
+    import httpx
+    from zhiyin import accounts, google
+
+    def refuse(uid, method, path, cost, **kw):
+        r = httpx.Response(401, json={"error": {"errors": [{"reason": "youtubeSignupRequired"}]}},
+                           request=httpx.Request(method, f"{google.API}/{path}"))
+        r.raise_for_status()
+    monkeypatch.setattr(google, "_call", refuse)
+    uid = accounts.redeem(accounts.invite("NoChannel"))
+    with store.as_user(uid):
+        with pytest.raises(google.NoChannel):
+            server._setup(lambda *a, **k: None)
+        me = server._me()
+    assert me["status"] == "error" and me["setup_issue"] == "nochannel"

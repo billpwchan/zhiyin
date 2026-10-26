@@ -27,7 +27,7 @@
     <li>每天为你调用了多少次 Claude、大约花了多少钱；</li>
     <li>名额满时用 Google 登记的人：账号 id、邮箱、名字、语言和登记时间，进来或被移除后就删掉。</li>
   </ul>
-  <p>没有登录时听的示例电台，不会记下任何关于你的东西。</p>
+  <p>没有登录时听示例电台，知音不会记下关于你的东西，只放一个 cookie 记住你是从哪个链接来的（保存 30 天），用来数每个链接带来了多少人。知音每天只记人数：多少人来过、加入、做出唱片、分享了卡片，不记是谁。新账号会带着它的来源最多 30 天，也只用来计数。</p>
   <p>这些都存在运营者的服务器上，运营者能看到。每个账号的数据彼此分开，一个账号看不到另一个账号的喜欢和反馈。歌曲的声音特征是所有人共用的，试听音频只在内存里解码，不保存。</p>
 
   <h2>发给了谁</h2>
@@ -38,9 +38,10 @@
     <li><b>网易云音乐、LRCLIB、YouTube Music</b>：歌名、歌手和时长，用来找歌词。</li>
   </ul>
   <p>你的 Google 凭证只用于你自己的账号，除了 Google 不会发给任何地方。知音使用 YouTube API 服务，适用 <a href="https://www.youtube.com/t/terms">YouTube 服务条款</a>和 <a href="https://policies.google.com/privacy">Google 隐私权政策</a>。</p>
+  <p>知音对从 Google API 获得的信息的使用和转移，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服务用户数据政策</a>，包括其中的「有限使用」要求：这些数据只用来给你本人做推荐，不卖、不用于广告，也不用来训练任何模型。从 YouTube 读到的喜欢至少每 30 天重新读取一次；如果 30 天里一直读不到（比如你撤销了授权），从 YouTube 读来的喜欢和由它们做出的唱片、电台都会删掉，账号保留，重新连接就从头开始。删除账号时立即全部删除。</p>
 
   <h2>删除</h2>
-  <p>在设置里点「断开并删除我的数据」，知音会撤销 Google 授权，删掉你的喜欢、电台和反馈。你也可以随时在 <a href="https://myaccount.google.com/permissions">Google 账号的第三方访问</a>里撤销知音的权限。</p>
+  <p>在设置里点「断开并删除我的数据」，知音会撤销 Google 授权，删掉你的喜欢、电台和反馈。你也可以随时在 <a href="https://myaccount.google.com/permissions">Google 账号的第三方访问</a>里撤销知音的权限；撤销后知音读不到新的喜欢，从上次读取算起 30 天内会删掉从 YouTube 读来的一切。</p>
 
   <p class="gate-note">技术细节见 <a href="https://github.com/billpwchan/zhiyin/blob/main/docs/privacy.md">docs/privacy.md</a>。</p>
 <!--/lang-->
@@ -60,7 +61,7 @@
     <li>每天為你呼叫了多少次 Claude、大約花了多少錢；</li>
     <li>名額滿時用 Google 登記的人：帳戶 ID、電子郵件、名字、語言和登記時間，進來或被移除後就刪掉。</li>
   </ul>
-  <p>沒有登入時聽的範例電台，不會記下任何關於你的東西。</p>
+  <p>沒有登入時聽範例電台，知音不會記下關於你的東西，只放一個 cookie 記住你是從哪個連結來的（保存 30 天），用來數每個連結帶來了多少人。知音每天只記人數：多少人來過、加入、做出唱片、分享了卡片，不記是誰。新帳戶會帶著它的來源最多 30 天，也只用來計數。</p>
   <p>這些都存在營運者的伺服器上，營運者看得到。每個帳戶的資料彼此分開，一個帳戶看不到另一個帳戶的喜歡和回饋。歌曲的聲音特徵是所有人共用的，試聽音訊只在記憶體裡解碼，不保存。</p>
 
   <h2>傳給了誰</h2>
@@ -71,9 +72,10 @@
     <li><b>網易雲音樂、LRCLIB、YouTube Music</b>：歌名、歌手和長度，用來找歌詞。</li>
   </ul>
   <p>你的 Google 憑證只用於你自己的帳戶，除了 Google 不會傳到任何地方。知音使用 YouTube API 服務，適用 <a href="https://www.youtube.com/t/terms">YouTube 服務條款</a>和 <a href="https://policies.google.com/privacy">Google 隱私權政策</a>。</p>
+  <p>知音對從 Google API 取得的資訊的使用和轉移，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服務使用者資料政策</a>，包括其中的「有限使用」要求：這些資料只用來為你本人做推薦，不販售、不用於廣告，也不用來訓練任何模型。從 YouTube 讀到的喜歡至少每 30 天重新讀取一次；如果 30 天裡一直讀不到（例如你撤銷了授權），從 YouTube 讀來的喜歡和由它們做出的唱片、電台都會刪除，帳戶保留，重新連接就從頭開始。刪除帳戶時立即全部刪除。</p>
 
   <h2>刪除</h2>
-  <p>在設定裡點「中斷連接並刪除我的資料」，知音會撤銷 Google 授權，刪掉你的喜歡、電台和回饋。你也可以隨時在 <a href="https://myaccount.google.com/permissions">Google 帳戶的第三方存取權</a>裡撤銷知音的權限。</p>
+  <p>在設定裡點「中斷連接並刪除我的資料」，知音會撤銷 Google 授權，刪掉你的喜歡、電台和回饋。你也可以隨時在 <a href="https://myaccount.google.com/permissions">Google 帳戶的第三方存取權</a>裡撤銷知音的權限；撤銷後知音讀不到新的喜歡，從上次讀取算起 30 天內會刪除從 YouTube 讀來的一切。</p>
 
   <p class="gate-note">技術細節見 <a href="https://github.com/billpwchan/zhiyin/blob/main/docs/privacy.md">docs/privacy.md</a>。</p>
 <!--/lang-->
@@ -93,7 +95,7 @@
     <li>How many times Claude was called for you each day, and roughly what it cost;</li>
     <li>For people who signed up with Google while there was no free place: their account ID, email address, name, language and when they signed up, deleted once they are let in or removed.</li>
   </ul>
-  <p>Listening to the sample stations without signing in records nothing about you.</p>
+  <p>Listening to the sample stations without signing in records nothing about you, except a cookie that remembers which link brought you (kept for 30 days), used to count how many people each link brings. Each day Zhiyin keeps only counts: how many people came, joined, got their record and shared a card, never who. A new account carries the link it came from for at most 30 days, and only for these counts.</p>
   <p>All of this sits on the operator's server, and the operator can see it. Each account's data is kept apart: one account can't see another's likes or feedback. The sound features of songs are shared by everyone; preview audio is decoded in memory and never saved.</p>
 
   <h2>Who it is sent to</h2>
@@ -104,9 +106,10 @@
     <li><b>NetEase Cloud Music, LRCLIB, YouTube Music</b>: titles, artists and lengths, to find lyrics.</li>
   </ul>
   <p>Your Google token is used only for your own account and is never sent anywhere but Google. Zhiyin uses YouTube API Services; the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a> and the <a href="https://policies.google.com/privacy">Google Privacy Policy</a> apply.</p>
+  <p>Zhiyin's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements: the data is used only to make recommendations for you, and is never sold, used for ads or used to train any model. Likes read from YouTube are re-read at least every 30 days. If they can't be read for 30 days (say you removed access), the likes read from YouTube and the record and stations made from them are deleted; the account stays, and connecting again starts over. Deleting your account deletes everything at once.</p>
 
   <h2>Deleting</h2>
-  <p>In Settings, choose "Disconnect and delete my data": Zhiyin revokes Google access and deletes your likes, stations and feedback. You can also remove Zhiyin's access at any time under <a href="https://myaccount.google.com/permissions">third-party access in your Google Account</a>.</p>
+  <p>In Settings, choose "Disconnect and delete my data": Zhiyin revokes Google access and deletes your likes, stations and feedback. You can also remove Zhiyin's access at any time under <a href="https://myaccount.google.com/permissions">third-party access in your Google Account</a>; Zhiyin then can't read your likes any more, and deletes everything read from YouTube within 30 days of the last read.</p>
 
   <p class="gate-note">Technical details: <a href="https://github.com/billpwchan/zhiyin/blob/main/docs/privacy.md">docs/privacy.md</a>.</p>
 <!--/lang-->

@@ -157,6 +157,7 @@ def sync_from_google(log=print, glimpsed=None) -> dict:
     recs = added + [t for t in recs if id(t) not in gone]
     recs.sort(key=lambda t: t["rank"])
     store.write_json(store.LIBRARY, {**lib, "synced": store.now(), "google_since": store.now(), "tracks": recs})
+    store.GLIMPSE.unlink(missing_ok=True)   # only for drawing the record before the library existed; not kept
     return {"videos": len(items), "added": len(added), "removed": len(removed),
             "songs": sum(1 for t in recs if not t["long"]), "first": first}
 

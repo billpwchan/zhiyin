@@ -4,11 +4,14 @@ import hmac
 import os
 import re
 import secrets
+import shutil
+import sqlite3
 import threading
 import time
 import traceback
 from contextlib import asynccontextmanager
 from typing import Annotated
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -98,7 +101,7 @@ async def _who(request: Request, call_next):
         return await call_next(request)
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE))
     if uid is None:
-        if request.url.path.startswith(OPEN):
+        if request.url.path.startswith(OPEN) or request.url.path == "/api/event":
             return await call_next(request)
         path = request.url.path
         if SAMPLE_ON[0] and request.method == "GET" and (path == "/" or path in SAMPLE_GETS):
@@ -140,10 +143,32 @@ def healthz():
 _jobs: dict[tuple[str, str], dict] = {}
 _job_lock = threading.Lock()
 # Listeners' stations are built side by side, a few at a time; the editor calls themselves are rationed in llm.
-HEAVY_AT_ONCE = int(os.environ.get("ZHIYIN_HEAVY", 2))
-_heavy = threading.BoundedSemaphore(HEAVY_AT_ONCE)
-_heavy_busy = [0]
+HEAVY_AT_ONCE = max(1, int(os.environ.get("ZHIYIN_HEAVY", 2)))
 HEAVY = {"setup"}   # a first run; editions ration their own gathering in edition.GATHER
+# First runs wait in the order they asked, and each one waiting is told its place and roughly how long.
+_line: list[dict] = []
+_line_cv = threading.Condition()
+SETUP_SECS = 600   # until a first run on this server has been timed
+
+
+def _place(j: dict) -> int:
+    return next(i for i, x in enumerate(_line) if x is j)   # by identity: two listeners' jobs can be equal dicts
+
+
+def _take_turn(j: dict, log) -> None:
+    with _line_cv:
+        _line.append(j)
+        while (ahead := _place(j)) >= HEAVY_AT_ONCE:
+            turns = ahead - HEAVY_AT_ONCE + 1   # first runs that must end before this one starts
+            mins = max(1, round(turns * store.kv_get("setup_secs", SETUP_SECS) / HEAVY_AT_ONCE / 60))
+            log(i18n.tr("排队中：前面还有 {n} 位，大约 {m} 分钟后开始", n=ahead, m=mins))
+            _line_cv.wait(30)
+
+
+def _leave_line(j: dict) -> None:
+    with _line_cv:
+        _line[:] = [x for x in _line if x is not j]
+        _line_cv.notify_all()
 STALE_AFTER_H = 20
 ACTIVE_DAYS = 3   # a listener away longer gets the next edition when they come back, not every morning meanwhile
 FRESH_HOUR = 5
@@ -166,14 +191,18 @@ def _start(kind: str, fn):
     def run():
         try:
             if kind in HEAVY:
-                if _heavy_busy[0] >= HEAVY_AT_ONCE:
-                    log(i18n.tr("排队中：另一位听众的电台正在准备"))
-                with _heavy:
-                    _heavy_busy[0] += 1
-                    try:
-                        j["result"] = fn(log)
-                    finally:
-                        _heavy_busy[0] -= 1
+                try:
+                    _take_turn(j, log)
+                    t0 = time.time()
+                    j["result"] = fn(log)
+                    if (j["result"] or {}).get("songs", 0) >= MIN_LIKES:   # a too-thin library ends early: not a timing
+                        try:
+                            s = store.kv_get("setup_secs", SETUP_SECS)
+                            store.kv_set("setup_secs", round(s * 0.7 + (time.time() - t0) * 0.3))
+                        except sqlite3.Error:
+                            traceback.print_exc()
+                finally:
+                    _leave_line(j)
             else:
                 j["result"] = fn(log)
         except Exception as e:
@@ -236,11 +265,9 @@ def _auto_refresh(ed: dict | None):
 
 def _sync_likes(log):
     r = library.sync_from_google(log=log)
-    if r["added"]:
-        profile.absorb_new(log=log)
-        if audio.REMOTE:
-            audio.ensure([t for t in library.load() if not t["long"]], log=log)
-    accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)
+    accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)   # the read worked, whatever follows
+    if profile.absorb_new(log=log) and audio.REMOTE:   # also likes a re-read took in while the listener was away
+        audio.ensure([t for t in library.load() if not t["long"]], log=log)
     log(i18n.tr("新增 {n} 首", n=r["added"]) if r["added"] else i18n.tr("没有新的喜欢"))
     return r
 
@@ -251,8 +278,7 @@ def _auto_sync():
         return
     if time.time() - u["prefs"].get("synced", 0) < LIKE_SYNC_H * 3600:
         return
-    j = _jobs.get((u["id"], "sync"))
-    if j and j["running"]:
+    if _sync_waits(u["id"]):
         return
     try:
         _start("sync", _sync_likes)
@@ -260,9 +286,103 @@ def _auto_sync():
         pass
 
 
+def _sync_waits(uid: str) -> bool:
+    """A read of the likes is running, or failed less than SYNC_RETRY_H ago: each try pages through every like."""
+    j = _jobs.get((uid, "sync"))
+    return bool(j and (j["running"] or (j.get("error") and time.time() - j.get("ended", 0) < SYNC_RETRY_H * 3600)))
+
+
+SYNC_RETRY_H = 6
+
+
+def _reread_likes(log):
+    """YouTube's rules: likes kept from its API are refreshed (or deleted) within 30 days. A listener who has been
+    away gets the list re-read and nothing else; the new likes join their stations when they come back."""
+    r = library.sync_from_google(log=log)
+    accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)
+    return r
+
+
+REREAD_DAYS = 25
+KEEP_DAYS = 30
+FORGET_DAYS = 28    # unread this long and it goes; a hold below adds at most HOLD_DAYS, so nothing outlives KEEP_DAYS
+HOLD_DAYS = 2
+# Everything made from what YouTube's API returned for one listener. Their feedback, plays and asks are their own.
+FROM_YOUTUBE = ("LIBRARY", "GLIMPSE", "TAGS", "PROFILE", "PROFILES", "EDITION", "IDENT")
+
+
+def _last_read(u: dict) -> float:
+    return u["prefs"].get("synced") or u["created"] or time.time()
+
+
+def _unread_too_long(u: dict) -> bool:
+    if store.is_owners(u["id"]) or u["status"] == "new":
+        return False
+    if any(j["running"] for (uid, _), j in list(_jobs.items()) if uid == u["id"]):
+        return False   # a slow read may be about to land; deleting under it would leave its files behind
+    return time.time() - _last_read(u) > FORGET_DAYS * 86400
+
+
+def _forget_youtube(uid: str) -> None:
+    """What YouTube returned for this listener couldn't be read again within 30 days (access taken away, the
+    connection dropped, or every read failing): it is deleted. The account stays, and connecting again starts over."""
+    print(f"zhiyin: likes of {uid} not re-read in {KEEP_DAYS} days, deleting what was read from YouTube", flush=True)
+    google.disconnect(uid)
+    for k in FROM_YOUTUBE:
+        f = store.USERS / uid / store._PER_USER[k]
+        if f.is_dir():
+            shutil.rmtree(f)
+        else:
+            f.unlink(missing_ok=True)
+    accounts.set_status(uid, "new")
+    accounts.set_prefs(uid, synced=None, last_sync=None, setup_fails=None, setup_issue=None, google_error=None,
+                       ref=None, counted=None, forgot=time.time())
+
+
+FORGET_GRACE_DAYS = 3   # after this rule first runs on a server, so listeners already past 30 days get a re-read first
+
+
+def _forget_stale(users: list[dict]) -> set[str]:
+    stale = [u for u in users if _unread_too_long(u)]
+    if not (start := store.kv_get("forget_from")):
+        store.kv_set("forget_from", start := time.time() + FORGET_GRACE_DAYS * 86400)
+    if time.time() < start:
+        for u in stale:
+            print(f"zhiyin: likes of {u['id']} not re-read in {KEEP_DAYS} days; deleted from "
+                  f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(start))} unless a read works first", flush=True)
+        return set()
+    listeners = sum(1 for u in users if not store.is_owners(u["id"]))
+    if len(stale) > 3 and len(stale) > listeners / 4:
+        # many at once means reading is broken for everyone (a changed OAuth client, Google down), not that they left:
+        # hold off a little for the operator to fix it, never past KEEP_DAYS
+        held = store.kv_get("forget_held") or time.time()
+        store.kv_set("forget_held", held)
+        if time.time() - held < HOLD_DAYS * 86400:
+            print(f"zhiyin: {len(stale)} of {listeners} listeners not re-read in {FORGET_DAYS} days; deleting from "
+                  f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(held + HOLD_DAYS * 86400))} unless the Google "
+                  "connection is fixed first", flush=True)
+            return set()
+    store.kv_set("forget_held", None)
+    for u in stale:
+        _forget_youtube(u["id"])
+    return {u["id"] for u in stale}
+
+
 def _scheduler():
     while True:
-        for u in accounts.users():
+        users = accounts.users()
+        try:
+            gone = _forget_stale(users)
+            google.sweep_videos()
+            for u in users:
+                if u["prefs"].get("ref") and time.time() - (u["created"] or 0) > KEEP_DAYS * 86400:
+                    accounts.set_prefs(u["id"], ref=None)   # where someone came from is only kept for the counts
+        except Exception:
+            traceback.print_exc()
+            gone = set()
+        for u in users:
+            if u["id"] in gone:
+                continue
             try:
                 with store.as_user(u["id"]):
                     j = _jobs.get((u["id"], "setup"))
@@ -270,12 +390,19 @@ def _scheduler():
                         _start("setup", _setup)   # the server restarted in the middle of a first run
                     elif (u["status"] == "error" and u["prefs"].get("setup_fails", 0) < 3
                           and google.connected(u["id"]) and not llm.unavailable(u["id"])
+                          and (store.is_owners(u["id"]) or not llm.API_KEY
+                               or llm.first_run_left(u["id"], (u["prefs"].get("last_sync") or {}).get("songs", 0)) > 0)
                           and not (j and (j["running"] or time.time() - j.get("ended", 0) < 1800))):
                         _start("setup", _setup)   # a first run that failed, e.g. while Claude was out
                     if u["status"] == "ready" and time.time() - (u["last_seen"] or 0) < ACTIVE_DAYS * 86400:
                         with llm.background():
                             _auto_refresh(store.read_json(store.EDITION))
                         _auto_sync()
+                    elif (u["status"] in ("ready", "thin", "error") and u["prefs"].get("google_error") != "revoked"
+                          and time.time() - _last_read(u) > REREAD_DAYS * 86400
+                          and google.configured() and google.connected(u["id"]) and not _sync_waits(u["id"])
+                          and not (_jobs.get((u["id"], "setup")) or {}).get("running")):
+                        _start("sync", _reread_likes)
             except Exception:
                 traceback.print_exc()
         time.sleep(1800)
@@ -288,6 +415,8 @@ def _label(log):
     name = profile.label()
     if not name:
         raise RuntimeError("no likes to name yet")
+    if not store.read_json(store.IDENT):
+        _milestone("named")
     store.write_json(store.IDENT, {"label": name, "lang": i18n.of(), "built": store.now()})
 
 
@@ -307,14 +436,25 @@ def _want_label():
 def _setup(log):
     """First run for a listener who just connected Google: read likes, learn the lanes, pick the first stations.
     Their record is drawn from the liked videos as soon as those are read, and named a few seconds later."""
+    with llm.first_run():
+        return _first_setup(log)
+
+
+def _first_setup(log):
     uid = store.uid()
     accounts.set_status(uid, "importing")
     try:
         log(i18n.tr("读取你在 YouTube 点过的喜欢"), step=1)
-        r = library.sync_from_google(log=log, glimpsed=_want_label)
+
+        def glimpsed():
+            _milestone("first_disc")
+            _want_label()
+        r = library.sync_from_google(log=log, glimpsed=glimpsed)
         accounts.set_prefs(uid, synced=time.time(), last_sync=r)
+        llm.first_run_songs(r["songs"])
         if r["songs"] < MIN_LIKES:
             accounts.set_status(uid, "thin")
+            _milestone("thin")
             return r
         if audio.REMOTE:
             audio.ensure([t for t in library.load() if not t["long"]], log=log)
@@ -327,11 +467,15 @@ def _setup(log):
         log(i18n.tr("挑第一批电台"), step=3)
         edition.build(log=log)
         accounts.set_status(uid, "ready")
-        accounts.set_prefs(uid, setup_fails=0)
+        accounts.set_prefs(uid, setup_fails=0, setup_issue=None)
+        _milestone("ready")
         return r
-    except Exception:
+    except Exception as e:
         accounts.set_status(uid, "error")
-        accounts.set_prefs(uid, setup_fails=accounts.prefs(uid).get("setup_fails", 0) + 1)
+        nochannel = isinstance(e, google.NoChannel)
+        accounts.set_prefs(uid, setup_fails=accounts.prefs(uid).get("setup_fails", 0) + 1,
+                           setup_issue="nochannel" if nochannel else None)
+        _milestone("no_channel" if nochannel else "setup_error")
         raise
 
 
@@ -410,6 +554,8 @@ def _sync_view(uid: str) -> dict:
 
 
 def _seats_left() -> int:
+    if llm.API_KEY and llm.pool_spent(30) + llm.FIRST_RUN_USD > llm.POOL_USD:
+        return 0   # the month's budget can't pay for another first setup: newcomers wait instead of failing halfway
     return max(0, SEATS - accounts.joined())
 
 
@@ -431,7 +577,7 @@ def _me() -> dict:
     return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "mine": store.is_owners(u["id"]), "status": u["status"], "auth": AUTH,
             "lang": i18n.of(u["id"]),
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
-                       "error": u["prefs"].get("google_error")},
+                       "error": u["prefs"].get("google_error")}, "setup_issue": u["prefs"].get("setup_issue"),
             "sync_likes": u["prefs"].get("sync_likes", True) and (not ok or google.writes_back(u["id"])),
             "writes_back": ok and google.writes_back(u["id"]), "sync": _sync_view(u["id"]),
             "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"),
@@ -440,13 +586,74 @@ def _me() -> dict:
 
 
 # ---------- sign-in ----------
+# What a link to the site shows when it is pasted into a chat or a post
+OG_TITLE = "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片"
+OG_TEXT = "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每天几首你没听过的歌，每首都写着为什么挑它。"
+
+
+def _og(lang: str) -> str:
+    from html import escape
+    base = google.public_url()
+    title, text = escape(i18n.tr(OG_TITLE, lang)), escape(i18n.tr(OG_TEXT, lang))
+    return (f'<meta name="description" content="{text}">\n'
+            f'<meta property="og:type" content="website">\n<meta property="og:site_name" content="{escape(i18n.tr("知音", lang))}">\n'
+            f'<meta property="og:title" content="{title}">\n<meta property="og:description" content="{text}">\n'
+            f'<meta property="og:url" content="{base}/">\n<meta property="og:image" content="{base}/static/og-{lang}.png">\n'
+            f'<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n'
+            f'<meta name="twitter:card" content="summary_large_image">\n')
+
+
 def _page(name: str, lang: str) -> str:
     html = (WEB / name).read_text(encoding="utf-8")
     for f in ("style.css", "i18n.js", "app.js"):
         html = html.replace(f"/static/{f}", f"/static/{f}?v={int((WEB / f).stat().st_mtime)}")
     # pages are written in Simplified Chinese; the language decided here is the one the page starts in
     return html.replace('<html lang="zh-Hans">', f'<html lang="{lang}" data-lang="{lang}">').replace(
-        "<title>知音</title>", f"<title>{i18n.tr('知音', lang)}</title>")
+        "<title>知音</title>", f"<title>{i18n.tr('知音', lang)}</title>").replace("</head>", _og(lang) + "</head>", 1)
+
+
+# Where a visitor came from: ?ref= or utm_source on the link, else the site that sent them. Kept in a cookie for a
+# month so a join days later still counts for the post that brought them.
+_BOT = re.compile(r"bot|crawl|spider|preview|facebookexternalhit|whatsapp|telegram|slack|discord|embedly|skype|headless", re.I)
+
+
+def _ref_from(request: Request) -> str:
+    q = request.query_params.get("ref") or request.query_params.get("utm_source")
+    if not q:
+        try:
+            host = (urlsplit(request.headers.get("referer", "")).hostname or "").removeprefix("www.")
+        except ValueError:
+            host = ""
+        q = host if host and host != urlsplit(google.public_url()).hostname else "direct"
+    return re.sub(r"[^a-z0-9._-]", "", q.lower())[:40] or "direct"
+
+
+def _ref_cookie(request: Request) -> str:
+    return re.sub(r"[^a-z0-9._-]", "", request.cookies.get("zy_r", ""))[:40]
+
+
+def _ref_of_user() -> str:
+    return accounts.prefs(store.uid()).get("ref", "") if not store.is_sample() else ""
+
+
+def _milestone(name: str) -> None:
+    """A step of a listener's first run, counted once however many times it is retried."""
+    p = accounts.prefs(store.uid())
+    if name in p.get("counted", []):
+        return
+    store.count(name, p.get("ref", ""))
+    accounts.set_prefs(store.uid(), counted=[*p.get("counted", []), name])
+
+
+class Event(BaseModel):
+    name: Annotated[str, Field(pattern=r"^(sample_play|share_open|share_send|share_save|share_copy)$")]
+
+
+@app.post("/api/event")
+def event(b: Event, request: Request):
+    uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else None
+    store.count(b.name, accounts.prefs(uid).get("ref", "") if uid else _ref_cookie(request))
+    return {"ok": True}
 
 
 def _gate(mode: str, request: Request, **ctx) -> HTMLResponse:
@@ -517,7 +724,7 @@ def logout(request: Request):
 
 
 @app.get("/auth/google/start")
-def google_start(request: Request, mode: str = "connect", write: int = 0,
+def google_start(request: Request, mode: str = "connect", write: int = 0, yt: int = 0,
                  as_: Annotated[str, Query(alias="as", max_length=254)] = ""):
     """mode=login&as=<email> is a bookmark that goes straight back into that listener's account. mode=join is
     signing up with Google in one step (no invite), asking only to read YouTube; write=1 adds writing likes back."""
@@ -525,9 +732,13 @@ def google_start(request: Request, mode: str = "connect", write: int = 0,
         raise HTTPException(503, i18n.tr("Google 登录还没配置", i18n.from_request(request)))
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
     join = mode == "join" and AUTH and not uid and _join_state() != "invite"
+    if join and not yt:
+        store.count("join_start", _ref_cookie(request))
     if mode == "join" and not join and not uid:
         mode = "login"
-    connect = mode == "connect" or join
+    # With every seat taken, getting on the waitlist asks Google only who they are: YouTube is asked once there is room.
+    register = join and _join_state() == "full" and not yt   # yt=1: let in from the waitlist, or room came up
+    connect = (mode == "connect" or join) and not register
     if connect and not uid and not join:
         return RedirectResponse("/login", 303)
     asked_write = bool(write)
@@ -538,7 +749,8 @@ def google_start(request: Request, mode: str = "connect", write: int = 0,
     con = store.db()
     con.execute("delete from kv where k like 'oauth:%' and json_extract(v, '$.t') < ?", (time.time() - 900,))
     con.commit()
-    store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "join": join, "uid": uid, "t": time.time(),
+    store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "join": join, "register": register, "uid": uid,
+                                    "t": time.time(),
                                     "lang": i18n.from_request(request), "write_on": asked_write})
     named = "" if connect else as_
     hint = named or ((accounts.get(uid) or {}).get("email") if uid else None)
@@ -556,22 +768,29 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     con.execute("delete from kv where k=?", (f"oauth:{state}",))
     con.commit()
     if error or not code:
+        if st.get("join"):
+            store.count("join_cancel", _ref_cookie(request))
         return RedirectResponse("/?google=cancelled" if st["connect"] and not st.get("join") else "/login?e=cancelled", 303)
     tok = google.exchange(code, st["v"])
     c = google.claims(tok["id_token"])
     if st.get("join"):
         st["uid"] = accounts.by_google(c["sub"])
         if not st["uid"]:
-            if not google.has_youtube(tok):
-                return RedirectResponse("/login?e=noscope", 303)   # no account is made without likes to read
             w = con.execute("select admitted from waitlist where sub=?", (c["sub"],)).fetchone()
             if not _seats_left() and not (w and w["admitted"]):
                 con.execute("insert or ignore into waitlist values (?, ?, ?, ?, ?, null)",
                             (c["sub"], c.get("email", ""), c.get("name", ""), time.time(), st.get("lang")))
                 con.commit()
+                store.count("join_full", _ref_cookie(request))
                 return RedirectResponse("/login?e=full", 303)
+            if not google.has_youtube(tok):
+                if st.get("register"):   # let in, or room came up since they started: now ask for YouTube
+                    return RedirectResponse("/auth/google/start?mode=join&yt=1", 303)
+                store.count("join_noscope", _ref_cookie(request))
+                return RedirectResponse("/login?e=noscope", 303)   # no account is made without likes to read
             st["uid"] = accounts.create(c.get("name", ""))
-            accounts.set_prefs(st["uid"], joined=True, lang=st.get("lang"), sync_likes=False)
+            accounts.set_prefs(st["uid"], joined=True, lang=st.get("lang"), sync_likes=False, ref=_ref_cookie(request))
+            store.count("join_ok", _ref_cookie(request))
             con.execute("delete from waitlist where sub=?", (c["sub"],))
             con.commit()
     if not st["connect"]:
@@ -579,7 +798,7 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
         if not uid:
             w = con.execute("select admitted from waitlist where sub=?", (c["sub"],)).fetchone()
             if w and w["admitted"] and _join_state() != "invite":
-                return RedirectResponse("/auth/google/start?mode=join", 303)   # let in from the waitlist: joins now
+                return RedirectResponse("/auth/google/start?mode=join&yt=1", 303)   # let in from the waitlist: joins now
             return RedirectResponse("/login?e=unknown", 303)
         return _signed_in(RedirectResponse("/", 303), uid, request)
     uid = st["uid"]
@@ -618,7 +837,12 @@ def index(request: Request):
     # YouTube's embed player rejects requests without a Referer (error 153); keep the default
     # strict-origin-when-cross-origin policy and never send no-referrer.
     html = _page("index.html", i18n.of())
-    return HTMLResponse(html, headers={"Referrer-Policy": "strict-origin-when-cross-origin", "Cache-Control": "no-store"})
+    r = HTMLResponse(html, headers={"Referrer-Policy": "strict-origin-when-cross-origin", "Cache-Control": "no-store"})
+    if store.is_sample() and not request.cookies.get("zy_r") and not _BOT.search(request.headers.get("user-agent", "")):
+        ref = _ref_from(request)
+        store.count("visit", ref)
+        r.set_cookie("zy_r", ref, max_age=30 * 86400, httponly=True, samesite="lax", secure=google.public_url().startswith("https"))
+    return r
 
 
 @app.get("/api/state")

@@ -31,6 +31,8 @@ def main():
     p.add_argument("--owner", action="store_true")
     p.add_argument("--mine", action="store_true", help="another account of yours: it runs on your Claude")
     sub.add_parser("users", help="who has joined")
+    p = sub.add_parser("stats", help="the way in, counted per day and by where people came from")
+    p.add_argument("--days", type=int, default=7)
     p = sub.add_parser("waitlist", help="who asked to join while the seats were full (ZHIYIN_SEATS)")
     p.add_argument("--admit", metavar="EMAIL", help="let this person in on their next Google sign-in, seats or not")
     p = sub.add_parser("about", help="tell the editor who you are (languages, where you grew up); shown in its prompts")
@@ -90,6 +92,19 @@ def main():
             seen = __import__("time").strftime("%m-%d %H:%M", __import__("time").localtime(u["last_seen"])) if u["last_seen"] else "-"
             print(f"{u['id']:10} {u['name'] or '-':12} {u['status']:9} {u.get('email') or '-':28} last seen {seen}  "
                   f"claude {llm.source(u['id']) or 'none'}, ${llm.spent(u['id']):.2f} in 7 days")
+    elif a.cmd == "stats":
+        import time
+        since = time.strftime("%Y-%m-%d", time.localtime(time.time() - (a.days - 1) * 86400))
+        steps = ["visit", "sample_play", "join_start", "join_cancel", "join_noscope", "join_full", "join_ok",
+                 "first_disc", "named", "ready", "thin", "no_channel", "setup_error", "share_open", "share_send", "share_save", "share_copy"]
+        rows = store.db().execute("select ref, name, sum(n) n from events where day >= ? group by ref, name", (since,)).fetchall()
+        refs = sorted({r["ref"] for r in rows}, key=lambda x: -sum(r["n"] for r in rows if r["ref"] == x))
+        got = {(r["ref"], r["name"]): r["n"] for r in rows}
+        used = [s for s in steps if any((r, s) in got for r in refs)]
+        print(f"since {since}")
+        print(f"{'from':18}" + "".join(f"{s:>13}" for s in used))
+        for r in refs:
+            print(f"{r or '(unknown)':18}" + "".join(f"{got.get((r, s), 0):>13}" for s in used))
     elif a.cmd == "waitlist":
         import time
         con = store.db()

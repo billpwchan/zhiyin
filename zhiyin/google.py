@@ -48,6 +48,10 @@ class QuotaExceeded(Exception):
     pass
 
 
+class NoChannel(Exception):
+    """A Google account that never made a YouTube channel: the API can't list its likes until it has one."""
+
+
 def client() -> dict | None:
     """The OAuth client the owner created in Google Cloud ("Web application"), as downloaded."""
     path = store.DATA / "google_client.json"
@@ -213,7 +217,13 @@ def likes(uid: str, log=None, pages: int | None = None) -> list[dict]:
         params = {"part": "snippet,contentDetails", "playlistId": "LL", "maxResults": 50}
         if page:
             params["pageToken"] = page
-        d = _call(uid, "GET", "playlistItems", 1, params=params).json()
+        try:
+            d = _call(uid, "GET", "playlistItems", 1, params=params).json()
+        except httpx.HTTPStatusError as e:
+            if not page and e.response.status_code in (401, 404) and (
+                    "youtubeSignupRequired" in e.response.text or "playlistNotFound" in e.response.text):
+                raise NoChannel() from e
+            raise
         for it in d.get("items", []):
             sn, cd = it["snippet"], it["contentDetails"]
             if sn.get("title") in ("Deleted video", "Private video"):
@@ -237,13 +247,14 @@ def _iso_dur(s: str) -> int:
 
 
 def videos(uid: str, vids: list[str]) -> dict[str, dict]:
-    """Category, length and channel per video. Kept for everyone: these are public facts about the video."""
+    """Category, length and channel per video. Kept for everyone: these are public facts about the video, fetched
+    again after 30 days as YouTube's rules ask of anything kept from its API."""
     cache = store.CACHE / "ytv"
     cache.mkdir(parents=True, exist_ok=True)
     out, todo = {}, []
     for v in dict.fromkeys(vids):
         f = cache / f"{v}.json"
-        if f.exists():
+        if f.exists() and time.time() - f.stat().st_mtime < 30 * 86400:
             out[v] = json.loads(f.read_text())
         else:
             todo.append(v)
@@ -257,7 +268,17 @@ def videos(uid: str, vids: list[str]) -> dict[str, dict]:
                     "live": sn.get("liveBroadcastContent") not in (None, "none")}
             out[it["id"]] = info
             (cache / f"{it['id']}.json").write_text(json.dumps(info, ensure_ascii=False))
+        for v in chunk:
+            if v not in out:
+                (cache / f"{v}.json").unlink(missing_ok=True)   # gone from YouTube
     return out
+
+
+def sweep_videos() -> None:
+    """Video facts nobody asked for again in 30 days are deleted rather than kept stale."""
+    for f in (store.CACHE / "ytv").glob("*.json"):
+        if time.time() - f.stat().st_mtime > 30 * 86400:
+            f.unlink(missing_ok=True)
 
 
 def rate(uid: str, vid: str, rating: str) -> None:

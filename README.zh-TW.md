@@ -11,6 +11,10 @@
 </p>
 
 <p align="center">
+  <a href="https://zhiyin.billpwchan.art/?ref=github"><b>在瀏覽器裡試試</b></a> · 用 Google 登入，或先聽聽範例聽眾的電台
+</p>
+
+<p align="center">
   <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <b>繁體中文</b>
 </p>
 

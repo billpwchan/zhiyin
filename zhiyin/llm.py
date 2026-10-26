@@ -27,6 +27,10 @@ WORKER = bool(os.environ.get("ZHIYIN_WORKER_TOKEN"))
 # faster than twice the even pace on any one day, and at most DAILY_USD a day for one listener.
 POOL_USD = float(os.environ.get("ZHIYIN_KEY_MONTHLY_USD", 100))
 DAILY_USD = float(os.environ.get("ZHIYIN_LISTENER_DAILY_USD", 0.5))
+# A first setup reads the whole library once (about $2 for 800 likes): its own allowance, outside the day's, per 800
+# songs so a big library isn't cut off halfway, up to FIRST_RUN_MAX.
+FIRST_RUN_USD = float(os.environ.get("ZHIYIN_LISTENER_FIRST_RUN_USD", 4))
+FIRST_RUN_MAX = float(os.environ.get("ZHIYIN_LISTENER_FIRST_RUN_MAX_USD", 20))
 # What runs on the key for listeners when code asks for a model; the owner's own accounts keep what they asked for.
 # Measured on the same shortlists (2026-10-25): see docs/how-it-works.md.
 KEY_MODEL = {"opus": os.environ.get("ZHIYIN_KEY_OPUS", "sonnet"), "sonnet": os.environ.get("ZHIYIN_KEY_SONNET", "sonnet"),
@@ -50,6 +54,34 @@ def background():
         yield
     finally:
         _background.reset(t)
+
+
+_first_run = contextvars.ContextVar("llm_first_run", default=None)
+
+
+@contextlib.contextmanager
+def first_run():
+    """A listener's first setup. On the key its calls are counted apart ("key:first"), against first_run_allowance over
+    30 days rather than the listener's day, so joining doesn't stop halfway or leave them unable to ask that evening."""
+    t = _first_run.set({"songs": 0})
+    try:
+        yield
+    finally:
+        _first_run.reset(t)
+
+
+def first_run_songs(n: int) -> None:
+    """How many songs this first setup has to read, once that is known: the allowance grows with the library."""
+    if (r := _first_run.get()) is not None:
+        r["songs"] = n
+
+
+def first_run_allowance(songs: int = 0) -> float:
+    return min(FIRST_RUN_MAX, FIRST_RUN_USD * max(1.0, songs / 800))
+
+
+def first_run_left(uid: str, songs: int = 0) -> float:
+    return first_run_allowance(songs) - spent(uid, days=30, source="key:first")
 
 
 _slots = threading.BoundedSemaphore(int(os.environ.get("ZHIYIN_LLM_CONCURRENCY", 4)))
@@ -101,7 +133,10 @@ def unavailable(uid: str | None = None) -> str | None:
             return i18n.tr("这个月大家共用的 Claude 额度用完了，过几天会恢复", i18n.of(uid))
         if _background.get() and pool_spent(1) >= 2 * POOL_USD / 30:
             return i18n.tr("今天大家共用的 Claude 额度到了上限，明天再挑", i18n.of(uid))
-        if not mine and spent(uid, days=1, source="key") >= DAILY_USD:
+        if not mine and (r := _first_run.get()) is not None:
+            if first_run_left(uid, r["songs"]) <= 0:
+                return i18n.tr("第一次准备用完了它的 Claude 额度；额度按 30 天计算，过些天再试", i18n.of(uid))
+        elif not mine and spent(uid, days=1, source="key") >= DAILY_USD:
             return i18n.tr("你今天的 Claude 额度用完了，明天再来", i18n.of(uid))
     if HOSTED and mine and spent(uid, days=1) >= OWNER_DAILY_USD:
         return i18n.tr("今天的 Claude 额度（${cap}）用完了，明天再来", i18n.of(uid), cap=f"{OWNER_DAILY_USD:g}")
@@ -139,10 +174,14 @@ def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout:
     except NoClaude:
         raise
     except LLMError as e:
-        _record(uid, src, e.usd)
+        _record(uid, _tally(uid, src), e.usd)
         raise
-    _record(uid, src, out.get("usd") or 0)
+    _record(uid, _tally(uid, src), out.get("usd") or 0)
     return out["data"]
+
+
+def _tally(uid: str, src: str) -> str:
+    return "key:first" if src == "key" and _first_run.get() is not None and not store.is_owners(uid) else src
 
 
 def _env(src: str) -> dict | None:
@@ -302,7 +341,8 @@ def spent(uid: str, days: int = 7, source: str | None = None) -> float:
 
 def pool_spent(days: int) -> float:
     since = (dt.date.today() - dt.timedelta(days=days - 1)).isoformat()
-    return store.db().execute("select coalesce(sum(usd), 0) from usage where source='key' and day>=?", (since,)).fetchone()[0]
+    return store.db().execute("select coalesce(sum(usd), 0) from usage where source in ('key', 'key:first') and day>=?",
+                              (since,)).fetchone()[0]
 
 
 # ---------- calls handed to the Mac worker ----------

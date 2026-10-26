@@ -45,7 +45,13 @@ Three limits keep the key's bill where you set it:
 - the key's monthly budget (`ZHIYIN_KEY_MONTHLY_USD`, default 100), counted over the last 30 days;
 - morning rebuilds may run at no more than twice the even daily pace of that budget;
 - each listener's own day (`ZHIYIN_LISTENER_DAILY_USD`, default 0.5); past that, their asks and rebuilds wait for
-  the next day.
+  the next day;
+- each listener's first setup (`ZHIYIN_LISTENER_FIRST_RUN_USD`, default 4 per 800 liked songs, at most
+  `ZHIYIN_LISTENER_FIRST_RUN_MAX_USD`, default 20, over 30 days), counted apart from their day so that joining never
+  stops halfway. When what is left of the month's budget can't pay for one more first
+  setup, new people go on the waitlist even if seats are free.
+
+So open seats to match the budget: a newcomer costs about $2 to set up, then cents a day while they listen.
 
 `zhiyin users` and the 朋友 panel show what each listener used over the last seven days, priced as on an API key.
 
@@ -170,6 +176,17 @@ docker exec zhiyin zhiyin waitlist --admit ann@example.com  # lets Ann in on her
 ```
 
 Raising `ZHIYIN_SEATS` lets the next people in on their own. A seat is a joined account, so deleting one frees it.
+
+First runs take a few minutes each and run two at a time (`ZHIYIN_HEAVY`); people further back are told their place
+and roughly when theirs starts. To see how people find the site and how far they get, add `?ref=<name>` to the link
+you post, then:
+
+```sh
+docker exec zhiyin zhiyin stats --days 7   # per source: visits, first listens, joins, records, names, shares
+```
+
+Only counts per day are kept, never who. A visitor's source sits in a cookie for 30 days so a later join still
+counts for the link that brought them, and a shared card's link carries `?ref=card`.
 
 Have a second YouTube Music account of your own? In Settings, under Friends, "Add another account of yours" (or
 `zhiyin invite --mine`) makes a link for it. It is a separate account with its own Google sign-in, likes, stations

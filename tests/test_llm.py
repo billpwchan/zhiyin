@@ -142,3 +142,28 @@ def test_listeners_on_the_key_get_sonnet_where_the_owner_keeps_opus(hosted, monk
         with store.as_user(u):
             llm.call("p", "s", {}, model="opus")
     assert used == ["sonnet", "opus", "opus"]
+
+
+def test_a_first_setup_has_its_own_allowance_and_leaves_the_day_alone(hosted, monkeypatch):
+    from zhiyin import accounts
+    hosted(key=True)
+    monkeypatch.setattr(llm, "run_api", lambda *a, **k: {"data": {"ok": 1}, "usd": 0.4})
+    uid = accounts.redeem(accounts.invite("Newcomer"))
+    pool = llm.pool_spent(1)
+    with store.as_user(uid):
+        with llm.first_run():
+            for _ in range(5):   # $2.00 in all, four times the listener's day
+                assert llm.call("p", "s", {}) == {"ok": 1}
+        assert llm.spent(uid, days=1, source="key") == 0 and llm.unavailable() is None   # they can still ask today
+        assert round(llm.pool_spent(1) - pool, 2) == 2.0                                  # the shared budget pays it
+        with llm.first_run():
+            for _ in range(5):
+                llm.call("p", "s", {})
+            with pytest.raises(llm.NoClaude):   # a first setup that keeps failing stops at its allowance
+                llm.call("p", "s", {})
+            llm.first_run_songs(1600)            # unless the library is big: the allowance grows with it
+            assert llm.call("p", "s", {}) == {"ok": 1}
+        assert llm.first_run_allowance(100_000) == llm.FIRST_RUN_MAX
+        llm.call("p", "s", {})
+        llm.call("p", "s", {})
+        assert llm.unavailable()   # an ordinary day still ends at DAILY_USD

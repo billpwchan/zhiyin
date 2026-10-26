@@ -18,6 +18,13 @@ let LANG = detectLang();
 
 const STRINGS = {
   en: {
+    "还读不到你的喜欢": "Your likes can't be read yet",
+    "建好 YouTube 频道，再点「再试一次」，就从你点过的喜欢开始。": "Make a YouTube channel, then press Try again, and it starts from the songs you've liked.",
+    "第一批电台没做成": "Your first stations didn't come through",
+    "点「再试一次」重新准备，读到的喜欢都还在。": "Press Try again to start over; the likes already read are kept.",
+    "这个 Google 账号还没有 YouTube 频道": "This Google account has no YouTube channel yet",
+    "没有频道，YouTube 不让别的应用读你点过的喜欢。建一个频道只要一分钟，不用发视频；建好回来点「再试一次」。": "Without one, YouTube won't let other apps read your likes. Making a channel takes a minute and you never have to post anything; then come back and press Try again.",
+    "去建频道": "Make a channel",
     "{n} 种口味": ["1 taste", "{n} tastes"],
     "{n} 首，留在你的喜欢里，但不拿来推歌": ["1 song, still in your likes but not used to pick songs", "{n} songs, still in your likes but not used to pick songs"],
     "你收藏过 {a} 的 {n} 首": ["You've liked 1 song by {a}", "You've liked {n} songs by {a}"],
@@ -386,6 +393,13 @@ const STRINGS = {
     "这个链接是给{name}的": "This link is for {name}",
   },
   'zh-Hant': {
+    "还读不到你的喜欢": "還讀不到你的喜歡",
+    "建好 YouTube 频道，再点「再试一次」，就从你点过的喜欢开始。": "建好 YouTube 頻道，再按「再試一次」，就從你按過的喜歡開始。",
+    "第一批电台没做成": "第一批電台沒做成",
+    "点「再试一次」重新准备，读到的喜欢都还在。": "按「再試一次」重新準備，讀到的喜歡都還在。",
+    "这个 Google 账号还没有 YouTube 频道": "這個 Google 帳戶還沒有 YouTube 頻道",
+    "没有频道，YouTube 不让别的应用读你点过的喜欢。建一个频道只要一分钟，不用发视频；建好回来点「再试一次」。": "沒有頻道，YouTube 不讓別的應用程式讀你按過的喜歡。建一個頻道只要一分鐘，不用發影片；建好回來按「再試一次」。",
+    "去建频道": "去建頻道",
     "{n} 种口味": "{n} 種口味",
     "{n} 首，留在你的喜欢里，但不拿来推歌": "{n} 首，留在你的喜歡裡，但不拿來推歌",
     "你收藏过 {a} 的 {n} 首": "你收藏過 {a} 的 {n} 首",

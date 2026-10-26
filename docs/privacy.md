@@ -1,8 +1,8 @@
 # Privacy
 
 Zhiyin is meant to run on a machine you control, for you, the people you invite and, if you open seats, people
-who join on their own. Nothing is sent to the author
-of this project, and there is no analytics.
+who join on their own. Nothing is sent to the author of this project. The only analytics are daily counts kept on
+the server itself (below).
 
 ## What is stored
 
@@ -18,7 +18,32 @@ On the machine running Zhiyin:
 - for people who asked to join while the seats were full: their Google account id, email, name, language and when
   they asked, until they are let in (the row is then deleted) or removed.
 
-Someone listening to the sample without signing in leaves nothing behind: their plays are not recorded.
+Someone listening to the sample without signing in leaves no record of themselves: their plays are not recorded.
+The first page they open sets a cookie, `zy_r`, holding the link that brought them (`?ref=`, `utm_source`, or the
+referring site's host name) for 30 days. The server keeps one table of counts per day and per link: visits, sample
+plays, joins and how they ended, first records, names, finished first runs and shares (`zhiyin stats`). A new account
+carries its link in its settings for at most 30 days, so the steps of its first run can be counted. No row names a
+person.
+
+## How long it is kept
+
+Zhiyin follows the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
+including its Limited Use requirements, and YouTube's rule that data from its API is refreshed or deleted within
+30 days:
+
+- every listener's likes are read again from YouTube once 25 days have passed since the last read, also while they
+  are away (a failed read is tried again every 6 hours);
+- when they can't be read for 28 days (access removed in the Google account, the connection dropped, or every read
+  failing), what was read from YouTube is deleted: the library, the record drawn from it before the songs were
+  matched, tags, profile, stations and the taste's name. The account, its feedback and plays stay, and connecting
+  again starts over. The server prints each one it deletes. When more than a quarter of the listeners can't be read
+  at once (the connection breaking, not people leaving), it waits up to 2 more days for the operator to fix it,
+  then deletes anyway, so nothing outlives 30 days;
+- the first quick list of liked videos, used to draw the record before the library exists, is deleted as soon as
+  the library is written;
+- facts about a video from YouTube's API (category, length, channel), shared by all listeners, are fetched again
+  when needed after 30 days, and deleted if nobody needed them in that time;
+- deleting an account deletes everything about it at once.
 
 The owner of the server can read all of it. The join sheet and the welcome page link to the privacy page, which
 says so.

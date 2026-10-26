@@ -69,6 +69,8 @@ async function api(path, body) {
   if (!r.ok) throw new Error(data.detail || r.statusText);
   return data;
 }
+// counts on the way in (a first listen to the sample, a card shared): how many, never who
+const ev = (name) => api('/api/event', { name }).catch(() => {});
 
 /* ---------- covers ---------- */
 const isGoogleArt = (u) => /googleusercontent|ggpht/.test(u || '');
@@ -167,6 +169,7 @@ function prepHTML() {
     return `<div class="prep"><b>${t('正在准备你的电台 · {n}/3', { n: step })}</b><p>${esc(STEPS()[step - 1])}${t('。')}${step === 1 ? t('要几分钟，可以先听着，好了会告诉你。') : t('大约一刻钟，可以先听着，好了会告诉你。')}</p></div>`;
   }
   if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${t('你在 YouTube 只点过 {n} 首歌的喜欢，至少要 20 首才分得出你的几种口味。先听「先听着」；在 YouTube Music 里多点几首喜欢，攒够了再读一次。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('攒够了，重新读取')}</button></div>`;
+  if (me.status === 'error' && me.setup_issue === 'nochannel') return `<div class="prep"><b>${t('这个 Google 账号还没有 YouTube 频道')}</b><p>${t('没有频道，YouTube 不让别的应用读你点过的喜欢。建一个频道只要一分钟，不用发视频；建好回来点「再试一次」。')}</p><div class="prep-acts"><a class="tb" href="https://www.youtube.com/create_channel" target="_blank" rel="noopener">${t('去建频道')}</a><button class="tb" data-k="setup">${t('再试一次')}</button></div></div>`;
   if (me.status === 'error') return `<div class="prep"><b>${t('准备电台时出了问题')}</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">${t('再试一次')}</button></div>`;
   return '';
 }
@@ -472,7 +475,10 @@ const Player = {
     tick();
     Lyr.run();
     const p = cur();
-    if (s === 1 && p && this.logged !== p.vid) { this.logged = p.vid; logPlay(p, 'start'); Lyr.prefetch(); }
+    if (s === 1 && p && this.logged !== p.vid) {
+      if (SAMPLE() && !this.logged) ev('sample_play');
+      this.logged = p.vid; logPlay(p, 'start'); Lyr.prefetch();
+    }
     if (s === 0 && p) {
       logPlay(p, 'done', this.time()[1]);
       Q.played.add(p.vid);
@@ -1103,7 +1109,11 @@ function welcomeHTML() {
 function renderListen() {
   if (!Q && S.me?.status === 'new') { $('#view').innerHTML = welcomeHTML(); placeHost(); return; }
   if (!Q && !ready()) {
-    $('#view').innerHTML = `<div class="empty"><h2>${S.me.status === 'thin' ? t('先听点什么') : t('马上就能听')}</h2><p>${S.me.status === 'thin' ? t('「先听着」从你最近的喜欢出发。') : t('正在从你最近的喜欢里找第一首歌。')}</p></div>`;
+    const st = S.me.status === 'error' && S.me.setup_issue === 'nochannel' ? 'nochannel' : S.me.status;
+    const [h, p] = { thin: [t('先听点什么'), t('「先听着」从你最近的喜欢出发。')],
+      nochannel: [t('还读不到你的喜欢'), t('建好 YouTube 频道，再点「再试一次」，就从你点过的喜欢开始。')],
+      error: [t('第一批电台没做成'), t('点「再试一次」重新准备，读到的喜欢都还在。')] }[st] || [t('马上就能听'), t('正在从你最近的喜欢里找第一首歌。')];
+    $('#view').innerHTML = `<div class="empty"><h2>${h}</h2><p>${p}</p></div>`;
     placeHost();
     return;
   }
@@ -1366,7 +1376,7 @@ function openJoin(why) {
     <ol class="${steps.length > 1 ? 'steps' : ''}">${steps.map((x) => `<li>${x}</li>`).join('')}</ol>
     ${invite ? `<a class="btn j-go" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`
       : `<a class="btn j-go" href="/auth/google/start?mode=join">${G_LOGO}${full ? t('用 Google 登记') : t('用 Google 继续')}</a>`}
-    ${!invite && !me.google?.verified ? `<p class="j-fine">${t('Google 会提示「Google 尚未验证此应用」。点「高级」，再点「前往 {host}」就能继续。', { host: esc(location.host) })}</p>` : ''}
+    ${!invite && !full && !me.google?.verified ? `<p class="j-fine">${t('Google 会提示「Google 尚未验证此应用」。点「高级」，再点「前往 {host}」就能继续。', { host: esc(location.host) })}</p>` : ''}
     <div class="j-alt">${invite ? '<span></span>' : `<a href="/auth/google/start?mode=login">${t('已经加入过？登录')}</a>`}<a href="/privacy">${t('知音怎么用你的数据')}</a></div>
     <div class="j-lang">${Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" ${k === LANG ? 'aria-current="true"' : ''}>${v}</button>`).join('')}</div>
   </div>`;
@@ -1697,17 +1707,21 @@ async function shareCard(btn) {
         ${!phone && window.ClipboardItem ? `<button class="tb" data-k="copycard">${I.copy}<span>${t('复制图片')}</span></button>` : ''}
         <button class="ib sm sc-x" data-k="closeshare" aria-label="${t('关闭')}">${I.close}</button>
       </div></div>`;
-    if (!d.open) d.showModal();
+    if (!d.open) { d.showModal(); ev('share_open'); }
     spare(d);
   } catch { toast(t('图片没做出来，再试一次')); }
   btn.disabled = false;
 }
 async function cardAct(k) {
   if (!card) return;
-  if (k === 'sharenow') { try { await navigator.share({ files: [card.file] }); } catch {} return; }
-  if (k === 'savecard') { Object.assign(document.createElement('a'), { href: card.url, download: 'zhiyin.png' }).click(); return; }
+  // the link rides along where the app keeps text with an image (Messages, X, LINE); ?ref=card counts who it brings
+  if (k === 'sharenow') {
+    try { await navigator.share({ files: [card.file], text: `${EAR.label || t('你的喜欢')}  ${location.origin}/?ref=card` }); ev('share_send'); } catch {}
+    return;
+  }
+  if (k === 'savecard') { Object.assign(document.createElement('a'), { href: card.url, download: 'zhiyin.png' }).click(); ev('share_save'); return; }
   const b = $('#shareD [data-k="copycard"] span');
-  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': card.blob })]); b.textContent = t('图片已复制'); } catch { b.textContent = t('没复制上，可以先保存'); }
+  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': card.blob })]); b.textContent = t('图片已复制'); ev('share_copy'); } catch { b.textContent = t('没复制上，可以先保存'); }
   setTimeout(() => { if (b.isConnected) b.textContent = t('复制图片'); }, 2400);
 }
 $('#shareD').addEventListener('click', (e) => {
