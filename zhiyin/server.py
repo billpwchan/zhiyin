@@ -604,6 +604,11 @@ def _og(lang: str) -> str:
             f'<meta name="twitter:card" content="summary_large_image">\n')
 
 
+# no-transform: a CDN in front must not rewrite the pages (Cloudflare would inject its analytics script, which the
+# privacy page says the site doesn't have)
+HTML_CACHE = "no-store, no-transform"
+
+
 def _page(name: str, lang: str) -> str:
     html = (WEB / name).read_text(encoding="utf-8")
     for f in ("style.css", "i18n.js", "app.js"):
@@ -663,7 +668,7 @@ def _gate(mode: str, request: Request, **ctx) -> HTMLResponse:
             "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1", **ctx}
     import json
     html = html.replace("__GATE__", json.dumps(data, ensure_ascii=False).replace("<", "\\u003c"))
-    return HTMLResponse(html, headers={"Cache-Control": "no-store", "Referrer-Policy": "same-origin"})
+    return HTMLResponse(html, headers={"Cache-Control": HTML_CACHE, "Referrer-Policy": "same-origin"})
 
 
 def _signed_in(resp: Response, uid: str, request: Request) -> Response:
@@ -696,7 +701,7 @@ def _doc_page(request: Request, name: str) -> HTMLResponse:
     html = re.sub(r"<!--lang:([\w-]+)-->(.*?)<!--/lang-->", lambda m: m.group(2) if m.group(1) == lang else "", html, flags=re.S)
     html = re.sub(r"<!--cdn-->(.*?)<!--/cdn-->", lambda m: m.group(1).replace("{cdn}", escape(CDN)) if CDN else "",
                   html, flags=re.S)
-    return HTMLResponse(html)
+    return HTMLResponse(html, headers={"Cache-Control": HTML_CACHE})
 
 
 @app.get("/lang")
@@ -852,7 +857,7 @@ def index(request: Request):
     # YouTube's embed player rejects requests without a Referer (error 153); keep the default
     # strict-origin-when-cross-origin policy and never send no-referrer.
     html = _page("index.html", i18n.of())
-    r = HTMLResponse(html, headers={"Referrer-Policy": "strict-origin-when-cross-origin", "Cache-Control": "no-store"})
+    r = HTMLResponse(html, headers={"Referrer-Policy": "strict-origin-when-cross-origin", "Cache-Control": HTML_CACHE})
     if store.is_sample() and not request.cookies.get("zy_r") and not _BOT.search(request.headers.get("user-agent", "")):
         ref = _ref_from(request)
         store.count("visit", ref)

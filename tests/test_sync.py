@@ -523,3 +523,5 @@ def test_what_zhiyin_is_and_does_with_google_data_reads_without_signing_in(monke
     monkeypatch.setattr(server, "CDN", "Cloudflare")
     page = c.get("/privacy", headers={"accept-language": "en-US"}).text
     assert "<b>Cloudflare</b>" in page and "{cdn}" not in page and 'href="/about"' in page
+    for path in ("/", "/about", "/privacy"):
+        assert "no-transform" in c.get(path).headers["cache-control"]   # a CDN must not inject its analytics

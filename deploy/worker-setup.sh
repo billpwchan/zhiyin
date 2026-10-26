@@ -17,7 +17,7 @@ F=/opt/zhiyin/secrets/zhiyin.env
 umask 077
 { grep -v \"^ZHIYIN_WORKER_TOKEN=\" \$F 2>/dev/null || true; echo \"ZHIYIN_WORKER_TOKEN=\$TOKEN\"; } > \$F.new
 chmod 600 \$F.new && mv \$F.new \$F
-cd /opt/zhiyin && env ZHIYIN_PUBLIC_URL=\$SITE GATEWAY_NETWORK=\$GATEWAY_NETWORK docker compose up -d --force-recreate 2>&1 | tail -1
+cd /opt/zhiyin && docker compose up -d --force-recreate 2>&1 | tail -1   # settings from .env, written by deploy.sh
 '"
 mkdir -p data
 umask 077
