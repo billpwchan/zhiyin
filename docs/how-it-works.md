@@ -26,6 +26,28 @@ Likes you mark as not your taste (a song a child asked for, a phase, a joke) sta
 of this: they don't seed stations, define them, or speak for you in the portrait. You can leave out a whole artist
 the same way.
 
+Likes aren't the only evidence. A song you keep coming back to without ever pressing ♥ says as much, so Zhiyin
+reads how each listen went (`signals.py`), the way Spotify weighs a stream by whether the listener chose the track
+([Mehrotra et al. 2021](https://www.gwern.net/doc/reinforcement-learning/exploration/2021-mehrotra.pdf)):
+
+- a song you picked yourself and heard through counts more than one that just played on, and one that played on
+  while nobody had touched the page for half an hour counts least;
+- repeats on one day saturate; coming back on different days is what makes a song a favourite. Picked and heard
+  through on three days, or saved to a playlist of yours this year, is about as strong as a like;
+- a song skipped with Next within ten seconds, on its own, is a sound you refused. A run of quick skips is you looking for
+  something else right now, and isn't held against the songs in it.
+
+These songs seed their station like likes do (the station they were played from, or the one Claude files them
+under), count as positive examples of your sound, and make their artists known rather than new. They are listed on
+**Your Ear** under "Played often, never liked", where ♥ adds one to your likes and "Not me" drops it. A Google
+Takeout export of your YouTube Music history fills the list on day one: the page reads the file in the browser and
+sends only the songs played at least twice, with how many times, on how many days, and when.
+
+With the same read-only access as the likes, Zhiyin also reads, at most once a day, the music you gave a thumbs-down
+on YouTube, the music channels you subscribe to, and the songs in playlists you made. The thumbs-down songs are
+never recommended and count as refused sounds; playlist songs count as ones you already have; a subscribed artist
+with no liked song is someone you know, not a discovery.
+
 The page opens on **Top picks**, a station of the surest songs from all of them, taking turns: every station gives one, the stations you've liked most lately give up to three, and the next song is the one that sounds closest to the last. It holds no songs of its own, so a song heard there doesn't come round again in its own station.
 
 A station is more than a mood. It has a scene, languages and lineage, plus seed songs, core artists, artists worth
@@ -38,6 +60,8 @@ For each station, Zhiyin collects about 600 candidates:
 
 - the YouTube Music radio and related songs of each seed;
 - similar artists, and the artists the editor suggested exploring;
+- artists you subscribe to on YouTube without having liked a song of theirs, when YouTube places them near the
+  station;
 - releases from the station's core artists in the last two years;
 - public playlists that already hold at least two of your likes, or many artists you know. These act as a second
   opinion from someone with overlapping taste. A song found *only* in playlists is dropped, because on its own it brings in popular songs from
@@ -45,9 +69,10 @@ For each station, Zhiyin collects about 600 candidates:
 
 ## 3. What you already know is filtered out
 
-- songs you've liked or refused;
+- songs you've liked or refused, here or with a thumbs-down on YouTube, and songs in playlists you made;
 - songs you've heard, for good: anything you played to the end, skipped, or left after the first half minute,
-  under any of its videos. Pressing play alone doesn't count;
+  under any of its videos. Pressing play alone doesn't count. Songs played twice or more in an imported YouTube Music
+  history count as heard, and so does a song YouTube won't play outside its own site;
 - songs from the last two editions, so "another edition" really brings new songs;
 - the same song in another form: live, remix, cover, sped-up or lyric uploads, a music video when you liked the
   audio, and uploads that put the artist in the title ("J Tajor & sunkis - Like I Do");
@@ -68,7 +93,8 @@ A 30-second preview of each candidate goes through [MuQ-MuLan](https://huggingfa
 which puts audio and text in one 512-dimension space. The preview is decoded in memory and thrown away; only the
 vector is kept. The vector is used to:
 
-- **veto** near-copies of sounds you refused or skipped;
+- **veto** near-copies of sounds you refused: "not for me", a thumbs-down on YouTube, or a song left within ten
+  seconds on its own;
 - **steer while you listen**: a skip pushes similar-sounding songs down the queue, a like pulls them up, and the
   "quieter", "more energy" and "more new artists" switches re-rank by sound;
 - **match words to sound** when you ask for "rainy Sunday afternoon".
@@ -94,6 +120,11 @@ Only songs the editor rates 0.7 or higher go out, up to 8 per station. A station
 if none reach 0.7, its best three go out so the station isn't empty.
 The rest become the station's reserve, which plays when the queue runs out.
 
+While a listener has heard fewer than 60 of them, each station also carries one **probe**: a song the editor would
+not have sent out, placed among the picks at random (never first) and marked in the log. Half the time it is one
+the editor rated below 0.7, half the time the best song by the graph alone that the editor passed over. How the
+probes fare next to the editor's picks says whether its judgement, and the 0.7 bar, are worth what they cost.
+
 Listeners on the server's API key get Sonnet as their editor. On the same eight shortlists, Sonnet kept 75% of the
 songs Opus kept and its reasons read as well, for a third of the price ($0.13 an edition against $0.39). Haiku cost
 $0.02 but kept only half of them and mixed Chinese into English reasons, so it isn't used for picking.
@@ -107,6 +138,12 @@ $0.02 but kept only half of them and mixed Chinese into English reasons, so it i
   forms).
 
 ## Checking it
+
+What counts is how picks fare when they play. `zhiyin quality` (and "How the picks fare" on Your Ear) takes the first
+time each recommended song played and reports how many were heard through (to the end or 80% of the way, and not
+refused) and how many were skipped with Next within ten seconds: overall, by station, by the editor's confidence, for new versus
+known artists, by place in the station, and for the probes against the editor's picks. Checks run by the operator
+are marked and left out.
 
 `zhiyin eval` hides your newest likes, rebuilds candidates from the older ones and counts how many hidden likes the
 engine would have surfaced. `zhiyin eval --audio` measures whether sound alone separates them from the engine's own

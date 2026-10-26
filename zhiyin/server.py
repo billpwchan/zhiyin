@@ -10,7 +10,7 @@ import threading
 import time
 import traceback
 from contextlib import asynccontextmanager
-from typing import Annotated
+from typing import Annotated, Literal
 from html import escape
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
@@ -21,7 +21,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import accounts, ask, audio, candidates, ear, edition, google, i18n, library, llm, lyrics, profile, settings, store, ytm
+from . import (accounts, ask, audio, candidates, ear, edition, google, i18n, library, llm, lyrics, profile, quality, settings,
+               signals, store, ytm)
 from .text import display_title, fold, is_version
 
 WEB = store.ROOT / "web"
@@ -264,9 +265,20 @@ def _auto_refresh(ed: dict | None):
         pass
 
 
+def _read_signals(log) -> None:
+    """Dislikes, followed channels and own playlists, read with the likes (at most daily). Never fails the read."""
+    try:
+        sig = signals.read_youtube(log=log)
+        if audio.REMOTE and sig.get("disliked"):   # so a refused sound can keep its near-copies out
+            audio.ensure([{"vid": d["vid"], "title": d["title"], "artists": [d["artist"]]} for d in sig["disliked"][:100]], log=log)
+    except Exception:
+        traceback.print_exc()
+
+
 def _sync_likes(log):
     r = library.sync_from_google(log=log)
     accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)   # the read worked, whatever follows
+    _read_signals(log)
     if profile.absorb_new(log=log) and audio.REMOTE:   # also likes a re-read took in while the listener was away
         audio.ensure([t for t in library.load() if not t["long"]], log=log)
     log(i18n.tr("新增 {n} 首", n=r["added"]) if r["added"] else i18n.tr("没有新的喜欢"))
@@ -301,6 +313,7 @@ def _reread_likes(log):
     away gets the list re-read and nothing else; the new likes join their stations when they come back."""
     r = library.sync_from_google(log=log)
     accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)
+    _read_signals(log)
     return r
 
 
@@ -309,7 +322,7 @@ KEEP_DAYS = 30
 FORGET_DAYS = 28    # unread this long and it goes; a hold below adds at most HOLD_DAYS, so nothing outlives KEEP_DAYS
 HOLD_DAYS = 2
 # Everything made from what YouTube's API returned for one listener. Their feedback, plays and asks are their own.
-FROM_YOUTUBE = ("LIBRARY", "GLIMPSE", "TAGS", "PROFILE", "PROFILES", "EDITION", "IDENT")
+FROM_YOUTUBE = ("LIBRARY", "GLIMPSE", "TAGS", "PROFILE", "PROFILES", "EDITION", "IDENT", "SIGNALS", "IMPLICIT")
 
 
 def _last_read(u: dict) -> float:
@@ -457,6 +470,7 @@ def _first_setup(log):
             accounts.set_status(uid, "thin")
             _milestone("thin")
             return r
+        _read_signals(log)
         if audio.REMOTE:
             audio.ensure([t for t in library.load() if not t["long"]], log=log)
         accounts.set_status(uid, "building")
@@ -924,9 +938,14 @@ def _not_me_view(tracks: list[dict]) -> dict:
     for t in tracks:
         if t["artists"]:
             named.setdefault(fold(t["artists"][0]["name"]), t["artists"][0]["name"])
-    return {"songs": [{"vid": t["vid"] if t["vid"] in songs else t["ll"], "title": t["title"],
-                       "artist": t["artists"][0]["name"] if t["artists"] else ""}
-                      for t in tracks if t["vid"] in songs or t.get("ll") in songs],
+    listed = [{"vid": t["vid"] if t["vid"] in songs else t["ll"], "title": t["title"],
+               "artist": t["artists"][0]["name"] if t["artists"] else ""}
+              for t in tracks if t["vid"] in songs or t.get("ll") in songs]
+    meta = (store.read_json(store.IMPLICIT) or {}).get("meta", {})   # songs played often, never liked, set aside
+    have = {x["vid"] for x in listed}
+    listed += [{"vid": v, "title": meta[v]["title"], "artist": (meta[v].get("artists") or [{"name": ""}])[0]["name"],
+                "played": True} for v in songs if v in meta and v not in have]
+    return {"songs": listed,
             "artists": [{"key": a, "name": named.get(a, a)} for a in artists]}
 
 
@@ -949,6 +968,11 @@ def ear_view():
     out = ear.build()
     if out["songs"]:
         _want_label()
+    nm = settings.not_me()
+    out["loves"] = [{k: r.get(k) for k in ("vid", "title", "artists", "thumb", "dur", "days", "plays", "why", "lane")}
+                    for r in signals.loves() if not settings.is_not_me(r, nm)][:60]
+    h = signals.history()
+    out["history"] = {"at": h["at"], "span": h.get("span"), "entries": h.get("entries"), "songs": len(h.get("songs", {}))} if h else None
     return out
 
 
@@ -969,7 +993,7 @@ def ear_relabel():
 
 @app.get("/api/jobs")
 def jobs():
-    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell", "label")}
+    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell", "label", "history")}
 
 
 @app.post("/api/refresh")
@@ -1029,9 +1053,22 @@ def feedback(f: Feedback):
 
 class Play(BaseModel):
     vid: Vid
-    lane: str | None = None
-    ev: str = "start"  # start | skip (left early) | left (after the first half minute) | done
-    pos: float = 0
+    lane: str | None = Field(None, max_length=80)
+    # start; how it ended: skip (Next before the half-minute mark), stop (left that early another way: a station, a
+    # song from the list, a comparison, the page closing), left (after the mark), done, error (YouTube wouldn't play
+    # it); along the way: replay (back to its start), away (the page went to the background, a checkpoint)
+    ev: Literal["start", "skip", "stop", "left", "done", "error", "replay", "away"] = "start"
+    pos: float = Field(0, ge=0, le=86400)
+    dur: float | None = Field(None, ge=0, le=86400)
+    # who chose the song: auto (the one before ended), next, prev, pick (from the list), station, ask, ear, compare
+    src: Literal["auto", "next", "prev", "pick", "station", "ask", "ear", "compare", "resume"] | None = None
+    idle: float | None = Field(None, ge=0)   # seconds since anyone touched the page
+    vis: Literal["visible", "hidden"] | None = None
+    test: bool = False   # a check run by the operator, kept out of every count
+    fit: float | None = Field(None, ge=0, le=1)   # what the page showed with the song (start only)
+    slot: int | None = Field(None, ge=-1, le=200)
+    fam: int | None = Field(None, ge=0, le=2)
+    probe: Literal["low", "graph"] | None = None
     title: str | None = Field(None, max_length=300)
     artist: str | None = Field(None, max_length=200)
 
@@ -1039,10 +1076,59 @@ class Play(BaseModel):
 @app.post("/api/play")
 def play(p: Play):
     con = store.db()
-    con.execute("insert into plays (vid, lane, ts, ev, pos, uid, title, artist) values (?,?,?,?,?,?,?,?)",
-                (p.vid, p.lane, store.now(), p.ev, p.pos, store.uid(), p.title, p.artist))
+    con.execute("insert into plays (vid, lane, ts, ev, pos, uid, title, artist, src, dur, idle, vis, test, fit, slot, fam, probe)"
+                " values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (p.vid, p.lane, store.now(), p.ev, p.pos, store.uid(), p.title, p.artist, p.src, p.dur, p.idle, p.vis,
+                 int(p.test), p.fit, p.slot, p.fam, p.probe))
     con.commit()
     return {"ok": True}
+
+
+class HistoryReq(BaseModel):
+    # per song: [vid, plays, days, first day, last day, recency-weighted days, title, artist], made in the browser
+    songs: list[list[str | int | float]] = Field(max_length=30000)
+    span: list[str] = Field(max_length=2)
+    entries: int = Field(ge=0)
+
+
+@app.post("/api/history")
+def history_import(h: HistoryReq):
+    """A YouTube Music history the listener exported with Google Takeout. The page reads the file and sends only
+    what is listed above for songs played at least twice; the file itself is never uploaded."""
+    rows = []
+    for s in h.songs:
+        if len(s) != 8 or not re.fullmatch(r"[A-Za-z0-9_-]{11}", str(s[0])):
+            continue
+        vid, n, days, first, last, rw, title, artist = s
+        try:
+            rows.append([vid, int(n), int(days), str(first)[:10], str(last)[:10], float(rw), str(title)[:200], str(artist)[:120]])
+        except (TypeError, ValueError):
+            continue
+    out = signals.save_history(rows, [str(x)[:10] for x in h.span], h.entries)
+    if store.read_json(store.PROFILE):
+        try:
+            _start("history", lambda log: {"loves": len(signals.refresh(store.read_json(store.PROFILE), log))})
+        except HTTPException:
+            pass
+    return {"ok": True, "songs": len(out["songs"]), "jobs": jobs()}
+
+
+@app.post("/api/history/delete")
+def history_delete():
+    signals.forget_history()
+    if store.read_json(store.PROFILE):
+        try:
+            _start("history", lambda log: {"loves": len(signals.refresh(store.read_json(store.PROFILE), log))})
+        except HTTPException:
+            pass
+    return {"ok": True, "jobs": jobs()}
+
+
+@app.get("/api/quality")
+def quality_view(days: int = Query(14, ge=1, le=365)):
+    prof = store.read_json(store.PROFILE) or {}
+    pl, rl = prof.get("lang", "zh-Hans"), i18n.of()
+    return {**quality.report(days), "names": {l["key"]: i18n.convert(l["name"], pl, rl) for l in prof.get("lanes", [])}}
 
 
 class LaneSetting(BaseModel):
@@ -1132,8 +1218,9 @@ def warmup():
                         or is_version(t["title"]) or known.reject(t)):
                     continue
                 seen.add(t["vid"])
-                out.append(edition._public({**t, "familiar": known.artist_familiarity(t["artists"]), "fit": 0,
-                                            "sources": ["radio"], "via": []}))
+                fam = known.artist_familiarity(t["artists"])
+                out.append(edition._public({**t, "familiar": fam, "knows": None if fam else known.artist_known(t["artists"]),
+                                            "fit": 0, "sources": ["radio"], "via": []}))
     return {"name": i18n.tr("先听着"), "sub": i18n.tr("从你最近的喜欢出发"), "tracks": out[:30],
             "seeds": [display_title(t["title"], t["artists"]) for t in tracks]}
 
@@ -1360,7 +1447,8 @@ def more(vid: Annotated[str, Query(pattern=VID)], exclude: str = ""):
         if known.reject(t) not in (None, "shown"):
             continue
         fam = known.artist_familiarity(t["artists"])
-        out.append(edition._public({**t, "familiar": fam, "fit": 0, "sources": ["radio"], "via": [],
+        out.append(edition._public({**t, "familiar": fam, "knows": None if fam else known.artist_known(t["artists"]),
+                                    "fit": 0, "sources": ["radio"], "via": [],
                                     "reason": i18n.tr("沿着〈{s}〉的电台继续", s=via) if via else ""}))
         if len(out) >= 15:
             break

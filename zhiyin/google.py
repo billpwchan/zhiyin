@@ -243,6 +243,61 @@ def likes(uid: str, log=None, pages: int | None = None) -> list[dict]:
     return out
 
 
+def _pages(uid: str, path: str, cap: int, **params) -> list[dict]:
+    out, page = [], None
+    for _ in range(cap):
+        d = _call(uid, "GET", path, 1, params={**params, "maxResults": 50, **({"pageToken": page} if page else {})}).json()
+        out += d.get("items", [])
+        page = d.get("nextPageToken")
+        if not page:
+            break
+    return out
+
+
+def disliked(uid: str, pages: int = 10) -> list[dict]:
+    """Videos the listener gave a thumbs-down on YouTube: {"vid", "title", "channel", "cat"}."""
+    return [{"vid": it["id"], "title": it["snippet"].get("title") or "", "channel": it["snippet"].get("channelTitle") or "",
+             "cat": it["snippet"].get("categoryId")}
+            for it in _pages(uid, "videos", pages, part="snippet", myRating="dislike")]
+
+
+def subscriptions(uid: str, pages: int = 20) -> list[dict]:
+    """Channels the listener follows, with YouTube's topic labels for each: {"id", "title", "topics"}."""
+    subs = [{"id": it["snippet"]["resourceId"]["channelId"], "title": it["snippet"].get("title") or ""}
+            for it in _pages(uid, "subscriptions", pages, part="snippet", mine="true")]
+    topics = {}
+    for i in range(0, len(subs), 50):
+        d = _call(uid, "GET", "channels", 1, params={"part": "topicDetails", "id": ",".join(s["id"] for s in subs[i:i + 50]),
+                                                    "maxResults": 50}).json()
+        for it in d.get("items", []):
+            topics[it["id"]] = [u.rsplit("/", 1)[-1] for u in it.get("topicDetails", {}).get("topicCategories", [])]
+    return [{**s, "topics": topics.get(s["id"], [])} for s in subs]
+
+
+def own_playlists(uid: str, cap: int = 500, lists: int = 25) -> list[dict]:
+    """Entries of the playlists the listener made, other than ones saved from Zhiyin's stations (those are its picks,
+    not the listener's): {"vid", "at", "title", "channel"}. A playlist that can't be read is left out."""
+    out = []
+    mine = [pl for pl in _pages(uid, "playlists", 2, part="snippet", mine="true")
+            if not (pl["snippet"].get("title") or "").startswith(("知音 · ", "Zhiyin · "))]
+    for pl in mine[:lists]:
+        try:
+            items = _pages(uid, "playlistItems", 4, part="snippet,contentDetails", playlistId=pl["id"])
+        except (Revoked, NotConnected, QuotaExceeded):
+            raise
+        except Exception:   # noqa: BLE001 - one playlist gone or broken: read the others
+            continue
+        for it in items:
+            sn = it["snippet"]
+            if sn.get("title") in ("Deleted video", "Private video") or not it["contentDetails"].get("videoId"):
+                continue
+            out.append({"vid": it["contentDetails"]["videoId"], "at": sn.get("publishedAt"), "title": sn.get("title") or "",
+                        "channel": sn.get("videoOwnerChannelTitle") or ""})
+            if len(out) >= cap:
+                return out
+    return out
+
+
 def _iso_dur(s: str) -> int:
     m = re.fullmatch(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", s or "")
     if not m:

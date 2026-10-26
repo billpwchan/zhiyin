@@ -25,6 +25,11 @@ def run(holdout: int = 60, seed: int = 7):
     prof_train = {**prof, "lanes": [{**l, "seeds": [r for r in l["seeds"] if r >= holdout]} for l in prof["lanes"]]}
     known = candidates.Known(train, prof_train)
     known.heard, known.recent_shown, known.just_shown, known.disliked = set(), set(), set(), set()
+    train_keys = {song_key(t["title"]) for t in train}
+    for h in hidden:   # a hidden like that also sits in a playlist of theirs is still hidden
+        known.vids.discard(h["vid"])
+        if song_key(h["title"]) not in train_keys:
+            known.songs.pop(song_key(h["title"]), None)
     rng = random.Random(seed)
 
     base = {}
@@ -36,7 +41,7 @@ def run(holdout: int = 60, seed: int = 7):
     pool, short = {}, {}
     for lane in prof_train["lanes"]:
         lane = settings.lane_view(lane)
-        seeds = candidates.lane_seeds(lane, train, prof_train, rng)
+        seeds = candidates.lane_seeds(lane, train, prof_train, rng, loves=known.loves)
         g = candidates.gather(lane, seeds, known, candidates.core_artists(lane, train, prof_train), explore=False)
         for v, c in g["cands"].items():
             pool.setdefault(v, c)

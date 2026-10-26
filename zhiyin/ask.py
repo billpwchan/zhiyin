@@ -78,8 +78,9 @@ def run(question: str, log=print) -> dict:
             for pos, t in enumerate(hits):
                 if known.reject(t) or not candidates._lang_ok(t, langs):
                     continue
-                c = cands.setdefault(t["vid"], {**t, "support": 0.0, "via": [], "sources": [],
-                                                "familiar": known.artist_familiarity(t["artists"])})
+                fam = known.artist_familiarity(t["artists"])
+                c = cands.setdefault(t["vid"], {**t, "support": 0.0, "via": [], "sources": [], "familiar": fam,
+                                                "knows": None if fam else known.artist_known(t["artists"])})
                 c["support"] += 0.8 / (1 + pos)
                 c["sources"] = sorted(set(c["sources"]) | {"search"})
     pre = candidates.shortlist(lane, cands, k=40)

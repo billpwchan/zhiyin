@@ -25,7 +25,8 @@ for d in (DATA, CACHE, USERS):
 _uid: contextvars.ContextVar[str | None] = contextvars.ContextVar("zhiyin_uid", default=None)
 _PER_USER = {"LIBRARY": "library.json", "TAGS": "tags.json", "PROFILE": "profile.json", "PROFILES": "profiles",
              "EDITION": "edition.json", "ASKS": "asks.json", "SETTINGS": "settings.json", "AUTH": "browser.json",
-             "GLIMPSE": "glimpse.json", "IDENT": "ident.json"}
+             "GLIMPSE": "glimpse.json", "IDENT": "ident.json", "SIGNALS": "youtube_signals.json",
+             "HISTORY": "history.json", "IMPLICIT": "implicit.json"}
 
 
 def uid() -> str:
@@ -88,7 +89,7 @@ def read_json(path: Path, default=None):
 
 
 def write_json(path: Path, data) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.with_suffix(f"{path.suffix}.{os.getpid()}.{threading.get_ident()}.tmp")   # two writers never share one
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     tmp.replace(path)
 
@@ -142,6 +143,15 @@ def _migrate(con: sqlite3.Connection) -> None:
     if "title" not in cols:   # a song heard under one video never comes back under another
         con.execute("alter table plays add column title text")
         con.execute("alter table plays add column artist text")
+    # how a song started and what the page showed with it (see /api/play); what the editor said, kept per edition
+    for c in ("src text", "dur real", "idle real", "vis text", "test integer not null default 0", "fit real", "slot integer",
+              "fam integer", "probe text"):
+        if c.split()[0] not in cols:
+            _add_column(con, "plays", c)
+    shown_cols = {r[1] for r in con.execute("pragma table_info(shown)")}
+    for c in ("fit real", "pos integer", "fam integer", "probe text"):
+        if c.split()[0] not in shown_cols:
+            _add_column(con, "shown", c)
     if "next_try" not in {r[1] for r in con.execute("pragma table_info(outbox)")}:
         con.execute("alter table outbox add column next_try real")
     if "mine" not in {r[1] for r in con.execute("pragma table_info(users)")}:
@@ -150,8 +160,17 @@ def _migrate(con: sqlite3.Connection) -> None:
         if "uid" not in {r[1] for r in con.execute(f"pragma table_info({t})")}:
             con.execute(f"alter table {t} add column uid text not null default '{OWNER}'")
             con.execute(f"create index if not exists {t}_uid on {t}(uid)")
+    con.execute("create index if not exists plays_uid_ts on plays(uid, ts)")
     con.execute("insert or ignore into users(id, name, created, status) values (?, ?, ?, 'ready')", (OWNER, "", time.time()))
     con.commit()
+
+
+def _add_column(con: sqlite3.Connection, table: str, col: str) -> None:
+    try:
+        con.execute(f"alter table {table} add column {col}")
+    except sqlite3.OperationalError as e:   # another process (the build, the audio child) added it a moment ago
+        if "duplicate column" not in str(e):
+            raise
 
 
 def is_sample(uid: str | None = None) -> bool:

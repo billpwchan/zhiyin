@@ -1,7 +1,7 @@
 import random
 import re
 
-from . import i18n, llm
+from . import candidates, i18n, llm
 from .text import fold, song_key
 
 PICK_SCHEMA = {
@@ -56,7 +56,10 @@ def system() -> str:
 
 def _fmt(i, c):
     arts = ", ".join(a["name"] for a in c["artists"])
-    fam = f"artist already loved ({c['familiar']} likes)" if c["familiar"] else "artist new to them"
+    fam = (f"artist already loved ({c['familiar']} likes)" if c["familiar"]
+           else "artist they follow on YouTube (no liked songs yet)" if c.get("knows") == "follow"
+           else "artist they play often without having liked a song" if c.get("knows") == "plays"
+           else "artist new to them")
     via = []
     for v in c["via"][:3]:
         if v.startswith("editor:"):
@@ -65,6 +68,8 @@ def _fmt(i, c):
             via.append("YouTube lists the artist as similar to " + v[8:])
         elif v.startswith("new:"):
             via.append("new release " + v[4:])
+        elif v.startswith("follow:"):
+            via.append("by an artist they follow, whom YouTube lists near their likes")
         else:
             via.append("from their like " + v)
     alb = f" | album {c['album']['name']}" if c.get("album") else ""
@@ -97,7 +102,7 @@ def pick(lane: dict, shortlist: list[dict], seeds: list[dict], negatives: list[s
             continue
         seen_artists.add(a)
         like = seeds[p["like"]] if 0 <= p.get("like", -1) < min(10, len(seeds)) else None
-        out.append({**c, "fit": p["fit"], "reason": clean_reason(p["reason"], c, their_keys),
+        out.append({**c, "fit": min(1.0, max(0.0, float(p["fit"]))), "reason": clean_reason(p["reason"], c, their_keys),
                     "like_vid": like["vid"] if like else None})
     return out
 
@@ -119,8 +124,8 @@ def clean_reason(reason: str, pick: dict, their_keys: set[str]) -> str:
 def enforce_quota(picks: list[dict], n: int, discovery: float) -> list[dict]:
     """The editor ranks; code holds the familiar/new balance the listener set for the lane."""
     want_new = round(n * discovery)
-    new = [p for p in picks if not p["familiar"]]
-    old = [p for p in picks if p["familiar"]]
+    new = [p for p in picks if candidates.is_new(p)]
+    old = [p for p in picks if not candidates.is_new(p)]
     take_new = new[:want_new]
     take_old = old[:n - len(take_new)]
     if len(take_new) + len(take_old) < n:

@@ -39,6 +39,8 @@ def main():
     p = sub.add_parser("about", help="tell the editor who you are (languages, where you grew up); shown in its prompts")
     p.add_argument("text", nargs="?")
     sub.add_parser("worker", help="on the Mac: hear the songs the server asks for, and run the owner's Claude calls if the server has no login")
+    p = sub.add_parser("quality", help="how the recommended songs fared on their first listen (set ZHIYIN_USER for another listener)")
+    p.add_argument("--days", type=int, default=14)
     p = sub.add_parser("eval", help="offline check: hide your newest likes and see if the engine finds them")
     p.add_argument("--holdout", type=int, default=60)
     p.add_argument("--audio", action="store_true", help="check whether sound alone predicts new likes")
@@ -158,6 +160,10 @@ def main():
         if not a.no_open:
             webbrowser.open(f"http://localhost:{a.port}")
         uvicorn.run("zhiyin.server:app", host="127.0.0.1", port=a.port, log_level="warning")
+    elif a.cmd == "quality":
+        from . import quality
+        prof = store.read_json(store.PROFILE) or {}
+        quality.print_report(quality.report(a.days), {l["key"]: l["name"] for l in prof.get("lanes", [])})
     elif a.cmd == "eval":
         from . import evaluate
         evaluate.audio_check(a.holdout) if a.audio else evaluate.run(a.holdout)

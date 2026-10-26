@@ -555,6 +555,30 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 .threads li { counter-increment: t; display: grid; grid-template-columns: 26px 1fr; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.65; color: rgba(255, 255, 255, .8); }
 .threads li::before { content: counter(t); color: var(--fg-3); font-variant-numeric: tabular-nums; }
 
+/* songs played often without a like: the same rows as the taste lanes, smaller covers, two quiet answers */
+.lv-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; }
+.lvrow { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.lvrow .lv-play { position: relative; width: 44px; height: 44px; border-radius: 7px; overflow: hidden; background: var(--raise); transition: transform var(--fast) var(--ease); }
+.lvrow .lv-play img { width: 100%; height: 100%; object-fit: cover; }
+.lvrow .lv-play::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, .45) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.5v13l11-6.5z' fill='white'/%3E%3C/svg%3E") center / 18px no-repeat; opacity: 0; transition: opacity var(--fast) var(--ease); }
+.lvrow .lv-play:hover::after { opacity: 1; }
+.lvrow .lv-play:active { transform: scale(.96); }
+.lvrow .n { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lvrow .w { font-size: 13px; color: var(--fg-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lvrow .w .sep, .fold .plain small .sep { margin: 0 6px; opacity: .6; }
+.lv-ctl { display: flex; align-items: center; gap: 2px; margin-right: -10px; }
+.lv-ctl .ib { width: 36px; height: 36px; }
+.lv-ctl .ib svg { width: 18px; height: 18px; }
+.lv-more { margin: 8px 0 0 -10px; }
+.hist { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; margin-top: 20px; padding: 16px 0 0; border-top: 1px solid var(--line); }
+.hist b { font-size: 14px; font-weight: 600; }
+.hist p { margin: 4px 0 0; max-width: 46em; font-size: 13px; line-height: 1.6; color: var(--fg-3); text-wrap: pretty; }
+.hist .busy { color: var(--fg-2); }
+.hist-acts { display: flex; gap: 4px; margin-right: -10px; }
+.hist-acts label.tb { cursor: pointer; }
+.fold-h { margin: 6px 0 2px; font-size: 12px; font-weight: 600; color: var(--fg-3); }
+details.fold .fold-h + .plain li:first-child { border-top: 0; }
+
 details.fold { border-top: 1px solid var(--line); }
 .folds { margin-top: 56px; }
 .folds details.fold:last-child { border-bottom: 1px solid var(--line); }
@@ -787,7 +811,11 @@ a.m-acct:hover { background: var(--hover); }
   .facts { margin-top: 24px; }
   .fact .lead { font-size: 22px; }
   .sec { margin-top: 48px; }
-  .lanes { grid-template-columns: minmax(0, 1fr); }
+  .lanes, .lv-list { grid-template-columns: minmax(0, 1fr); }
+  .hist { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .hist-acts { margin: 0 0 0 -10px; }
+  .lv-ctl .tb, .lv-more, .hist-acts .tb { height: 44px; }
+  .lv-ctl .ib { width: 44px; height: 44px; }
   .lrow { grid-template-columns: 52px minmax(0, 1fr); }
   .lrow .lc-play { width: 52px; height: 52px; }
   .lrow .lc-ctl { grid-column: 2; display: flex; justify-content: space-between; flex-direction: row-reverse; align-items: center; }

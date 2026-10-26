@@ -4,7 +4,7 @@ import random
 import re
 from collections import Counter, defaultdict
 
-from . import settings, store, ytm
+from . import settings, signals, store, ytm
 from .text import display_title, fold, is_version, song_key
 
 _CREDIT_SPLIT = re.compile(r"\s+(?:x|×|and|feat\.?|ft\.?)\s+|\s*[&,、/]\s*", re.I)
@@ -32,9 +32,13 @@ class Known:
         # under any of its videos. Excluding everything ever shown let each rebuild burn the best candidates, so later
         # editions were picked from leftovers (2026-10-25).
         shown_since = store.now() - SHOWN_DAYS * 86400
-        heard = con.execute("select vid, title, artist from plays where uid=? and ev in ('done', 'skip', 'left')",
+        heard = con.execute("select vid, title, artist from plays where uid=? and ev in ('done', 'skip', 'left') and test=0",
                             (store.uid(),)).fetchall()
         self.heard = {r["vid"] for r in heard}
+        # a song YouTube refused to play here would only fail again
+        self.heard |= {r["vid"] for r in con.execute("select distinct vid from plays where uid=? and ev='error' and test=0",
+                                                     (store.uid(),))}
+        self.heard |= signals.history_heard()   # played twice or more on YouTube Music (an imported Takeout file)
         self.heard_songs = defaultdict(set)
         for r in heard:
             if r["title"]:
@@ -47,6 +51,7 @@ class Known:
         self.taken = set()   # placed in another lane of the edition being built
         self.vids = {t["vid"] for t in tracks} | {t[k] for t in tracks for k in ("mv", "ll") if t.get(k)}
         self.songs = defaultdict(set)  # song_key -> folded artist names
+        self.refused_songs = defaultdict(set)
         self.artist_likes = Counter()
         self.artist_names = {}
         for t in tracks:
@@ -66,10 +71,36 @@ class Known:
             if r["action"] == "like":
                 self.songs[song_key(r["title"] or "")].add(fold(r["artist"] or ""))
         self.ledger = {fold(x) for x in settings.load().get("never", [])}
+        yt = signals.youtube()
+        for d in yt.get("disliked", []):   # a thumbs-down on YouTube, under any of the song's videos
+            self.disliked.add(d["vid"])
+            self.refused_songs[song_key(d["title"])].add(fold(d["artist"]))
+        for x in yt.get("saved", []) + list(signals.history().get("songs", {}).values()):
+            self.songs[song_key(x["title"])].add(fold(x["artist"]))   # in a playlist of theirs, or played on YouTube
+        self.vids |= {x["vid"] for x in yt.get("saved", [])}
+        self.follow_ids, self.follow_names = signals.follows()
+        self.loves = signals.loves()
+        self.played_artists = set()
+        for r in self.loves:
+            self.songs[song_key(r["title"])] |= {fold(a["name"]) for a in r["artists"]}
+            self.played_artists |= {a.get("id") or fold(a["name"]) for a in r["artists"]} | {fold(a["name"]) for a in r["artists"]}
 
     def artist_familiarity(self, artists: list[dict]) -> int:
+        """How many of the listener's likes are by these artists."""
         return max((self.artist_likes.get(a.get("id") or "", 0) or self.artist_likes.get(fold(a["name"]), 0)
                     for a in artists), default=0)
+
+    def artist_known(self, artists: list[dict]) -> str | None:
+        """Why an artist with no liked song isn't new to them: "follow" (they follow the channel on YouTube) or
+        "plays" (they play the artist's songs often without liking them)."""
+        if any((a.get("id") and a["id"] in self.follow_ids) or fold(a["name"]) in self.follow_names for a in artists):
+            return "follow"
+        if any((a.get("id") and a["id"] in self.played_artists) or fold(a["name"]) in self.played_artists for a in artists):
+            return "plays"
+        return None
+
+    def is_new(self, artists: list[dict]) -> bool:
+        return not self.artist_familiarity(artists) and not self.artist_known(artists)
 
     def reject(self, t: dict) -> str | None:
         if t["vid"] in self.vids:
@@ -93,6 +124,8 @@ class Known:
             return "same song"
         if any(k and k in self.heard_songs and self.heard_songs[k] & names for k in keys):
             return "heard"
+        if any(k and k in self.refused_songs and self.refused_songs[k] & names for k in keys):
+            return "feedback"
         if any((a.get("id") or fold(a["name"])) in self.blocked_artists or fold(a["name"]) in self.blocked_artists
                for a in t["artists"]):
             return "blocked artist"
@@ -101,7 +134,8 @@ class Known:
         return None
 
 
-def lane_seeds(lane: dict, tracks: list[dict], profile: dict, rng: random.Random, n: int = 10) -> list[dict]:
+def lane_seeds(lane: dict, tracks: list[dict], profile: dict, rng: random.Random, n: int = 10,
+               loves: list[dict] = ()) -> list[dict]:
     assign = profile.get("assign", {})
     picked_by_editor = set(lane["seeds"])
     aside = {r for s in profile.get("set_aside", []) for r in s["ranks"]}
@@ -123,6 +157,13 @@ def lane_seeds(lane: dict, tracks: list[dict], profile: dict, rng: random.Random
                                 (store.uid(), lane["key"])):
         pool.append((1.6, {"vid": r["vid"], "title": r["title"], "artists": [{"name": r["artist"], "id": r["artist_id"]}],
                            "rank": None, "type": "ATV", "liked_est": None}))
+    # Played often without a like: as strong as a like when the evidence is (signals.LOVE and up, capped at 1).
+    # Marked, so the page never calls one of these "a song you liked".
+    for r in loves:
+        if lane["key"] in (r.get("lane") or [])[:1] and not settings.is_not_me(r, nm):
+            pool.append((1.2 * signals.weight(r), {"vid": r["vid"], "title": r["title"], "artists": r["artists"],
+                                                    "rank": None, "type": r.get("type") or "ATV", "liked_est": None,
+                                                    "implicit": True}))
     # Weighted sampling without replacement (Efraimidis-Spirakis) so each edition rotates through the lane.
     keyed = sorted(pool, key=lambda p: -(rng.random() ** (1.0 / p[0])))
     out, seen_art = [], Counter()
@@ -197,19 +238,28 @@ def gather(lane: dict, seeds: list[dict], known: Known, core: list[dict], explor
         for a in page["related"][:8]:
             related_artists[(a["id"], a["name"])] += 0.5
     new_artists = [(aid, name) for (aid, name), w in related_artists.most_common(40)
-                   if aid and not known.artist_familiarity([{"id": aid, "name": name}])][:10]
+                   if aid and known.is_new([{"id": aid, "name": name}])][:10]
+    # Artists they follow on YouTube without having liked a song, where YouTube places them near this lane.
+    followed = [(aid, name) for (aid, name), w in related_artists.most_common(120)
+                if aid and not known.artist_familiarity([{"id": aid, "name": name}])
+                and known.artist_known([{"id": aid, "name": name}]) == "follow"][:6]
 
     explore_artists = []
     if explore:
         for e in lane.get("explore_artists", [])[:12]:
             hit = resolve_artist(e["name"])
-            if hit and not known.artist_familiarity([hit]):
+            if hit and known.is_new([hit]):
                 explore_artists.append((hit["id"], hit["name"], e))
     with store.Pool(4) as ex:
-        pages = list(ex.map(lambda x: (x, ytm.artist(x[0])), new_artists + [(i, n) for i, n, _ in explore_artists]))
+        pages = list(ex.map(lambda x: (x, ytm.artist(x[0])),
+                            new_artists + followed + [(i, n) for i, n, _ in explore_artists]))
     explore_by_id = {i: e for i, _, e in explore_artists}
+    followed_ids = {i for i, _ in followed}
     for (aid, name), page in pages:
-        if aid in explore_by_id:
+        if aid in followed_ids:
+            for pos, t in enumerate(page["songs"][:3]):
+                add(t, "follow", f"follow:{name}", 0.9 / (1 + pos))
+        elif aid in explore_by_id:
             e = explore_by_id[aid]
             for pos, t in enumerate(page["songs"][:4]):
                 bonus = 1.6 if fold(e["song"]) and fold(e["song"]) in fold(t["title"]) else 1.0
@@ -257,6 +307,7 @@ def gather(lane: dict, seeds: list[dict], known: Known, core: list[dict], explor
     for c in cands.values():
         c["sources"] = sorted(c["sources"])
         c["familiar"] = known.artist_familiarity(c["artists"])
+        c["knows"] = None if c["familiar"] else known.artist_known(c["artists"])
     return {"cands": cands, "rejected": dict(rejected), "new_artists": [n for _, n in new_artists], "playlists": used}
 
 
@@ -291,6 +342,11 @@ def core_artists(lane: dict, tracks: list[dict], profile: dict) -> list[dict]:
     return [{"id": i, "name": names[i]} for i in order]
 
 
+def is_new(c: dict) -> bool:
+    """An artist the listener has neither liked, followed nor played often: what the lane's discovery share counts."""
+    return not c.get("familiar") and not c.get("knows")
+
+
 def views_n(c: dict) -> float:
     views = c.get("views")
     if not isinstance(views, str):
@@ -306,7 +362,11 @@ def score(c: dict, lane: dict) -> float:
     if "explore" in c["sources"]:
         s += 0.3
     s += 0.25 * math.log1p(c.get("familiar", 0))
-    if c.get("familiar") and views_n(c) > 3e7:
+    if c.get("knows"):
+        s += 0.15
+    if "follow" in c["sources"]:
+        s += 0.3
+    if (c.get("familiar") or c.get("knows")) and views_n(c) > 3e7:
         s -= 0.5  # a big hit by an artist they already follow: probably heard it
     if c.get("shown_before"):
         s -= 0.4
@@ -325,8 +385,8 @@ def shortlist(lane: dict, cands: dict, k: int = 32) -> list[dict]:
     out, per_artist = [], Counter()
     target_new = lane.get("discovery", 0.4)
     n_new = max(1, round(k * target_new))
-    news = [c for c in ranked if not c["familiar"]]
-    olds = [c for c in ranked if c["familiar"]]
+    news = [c for c in ranked if is_new(c)]
+    olds = [c for c in ranked if not is_new(c)]
     for pool, quota in ((news, n_new), (olds, k - n_new)):
         taken = 0
         for c in pool:

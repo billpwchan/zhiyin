@@ -4,8 +4,8 @@ from collections import Counter
 
 import numpy as np
 
-from . import audio, settings, store
-from .candidates import _years_ago, score as graph_score
+from . import audio, settings, signals, store
+from .candidates import _years_ago, is_new, score as graph_score
 from .text import fold
 
 HALF_LIFE_YEARS = 2.0   # sound preferences move slower than which artists are in rotation
@@ -28,9 +28,11 @@ class Taste:
         likes = [t for t in tracks if not t["long"] and t["rank"] not in aside and not settings.is_not_me(t, nm)]
         u = store.uid()
         app_likes = [dict(r) for r in con.execute("select vid, lane, title from feedback where uid=? and action='like'", (u,))]
-        negs = {r["vid"] for r in con.execute("select vid from feedback where uid=? and action='dislike'", (u,))}
-        negs |= {r["vid"] for r in con.execute("select vid from plays where uid=? and ev='skip'", (u,))}
-        V = audio.vectors([t["vid"] for t in likes] + [r["vid"] for r in app_likes] + list(negs))
+        # Refused: "not for me", a thumbs-down on YouTube, a song left within seconds on its own. A skip later on, or
+        # one in a run of skips, is about the moment, not the sound (signals.refused).
+        negs = signals.refused()
+        loves = [r for r in signals.loves() if not settings.is_not_me(r, nm)]
+        V = audio.vectors([t["vid"] for t in likes] + [r["vid"] for r in app_likes] + [r["vid"] for r in loves] + list(negs))
         rows, w, lanes, titles = [], [], [], []
         for t in likes:
             if t["vid"] in V:
@@ -44,12 +46,18 @@ class Taste:
                 w.append(1.0)
                 lanes.append(r["lane"] or "none")
                 titles.append(r["title"] or "")
+        for r in loves:   # played often without a like
+            if r["vid"] in V:
+                rows.append(V[r["vid"]])
+                w.append(signals.weight(r))
+                lanes.append((r.get("lane") or ["none"])[0])
+                titles.append(r["title"])
         self.M = audio.unit(np.stack(rows)) if rows else np.zeros((0, audio.DIM))
         self.w = np.array(w)
         self.lane = np.array(lanes)
         self.titles = titles
         self.N = audio.unit(np.stack([V[v] for v in negs if v in V])) if any(v in V for v in negs) else np.zeros((0, audio.DIM))
-        self.coverage = len(rows) / max(1, len(likes) + len(app_likes))
+        self.coverage = len(rows) / max(1, len(likes) + len(app_likes) + len(loves))
 
     def measure(self, cands: list[dict], lane_key: str) -> None:
         """Adds c["audio"] = {lane, all, neg, near, near_sim} to every candidate that has a vector."""
@@ -116,7 +124,7 @@ def select(lane: dict, ranked: list[dict], k: int = 32, lam: float = 0.78) -> li
     while pool and len(out) < k:
         best, best_val = None, -1e9
         for c in pool:
-            new = not c.get("familiar")
+            new = is_new(c)
             if taken[new] >= quota[new] or per_artist[fold(c["artists"][0]["name"])] >= 2:
                 continue
             red = 0.0
@@ -129,7 +137,7 @@ def select(lane: dict, ranked: list[dict], k: int = 32, lam: float = 0.78) -> li
             break
         pool.remove(best)
         out.append(best)
-        taken[not best.get("familiar")] += 1
+        taken[is_new(best)] += 1
         per_artist[fold(best["artists"][0]["name"])] += 1
         if best.get("_v") is not None:
             chosen_v.append(best["_v"])

@@ -71,6 +71,11 @@ async function api(path, body) {
 }
 // counts on the way in (a first listen to the sample, a card shared): how many, never who
 const ev = (name) => api('/api/event', { name }).catch(() => {});
+// A write that has to arrive even when the page is closing (how the song in progress ended).
+function beacon(path, body) {
+  const headers = { 'Content-Type': 'application/json', ...(S?.me?.uid ? { 'X-Zhiyin-Uid': S.me.uid } : {}) };
+  fetch(path, { method: 'POST', headers, body: JSON.stringify(body), keepalive: true }).catch(() => {});
+}
 
 /* ---------- covers ---------- */
 const isGoogleArt = (u) => /googleusercontent|ggpht/.test(u || '');
@@ -114,7 +119,11 @@ function becauseHTML(p) {
   if (!p || p.mine || Q?.key === 'ear') return '';
   const out = [], b = p.because, a = p.artists?.[0]?.name;
   if (b) out.push(`<button class="bc-song" data-k="hearmine" title="${t('先放你这首，再回到这首推荐')}">${I.play}<span>${esc(b.how === 'near' ? t('像你喜欢的〈{s}〉', { s: b.title }) : t('从你喜欢的〈{s}〉找到', { s: b.title }))}</span></button>`);
-  if (a && p.familiar != null) out.push(`<span>${esc(p.familiar ? t('你收藏过 {a} 的 {n} 首', { a, n: p.familiar }) : t('你还没收藏过 {a}', { a }))}</span>`);
+  if (a && p.familiar != null) {
+    const k = p.familiar ? t('你收藏过 {a} 的 {n} 首', { a, n: p.familiar }) : p.knows === 'follow' ? t('你在 YouTube 订阅了 {a}', { a })
+      : p.knows === 'plays' ? t('你常听 {a}，还没点过喜欢', { a }) : t('你还没收藏过 {a}', { a });
+    out.push(`<span>${esc(k)}</span>`);
+  }
   return out.join('<span class="sep">·</span>');
 }
 
@@ -294,7 +303,7 @@ function selectStation(key, play = true) {
   const st = ST.find((s) => s.key === key);
   if (!st || st.pending || !st.tracks.length) return;
   const same = Q?.key === key;
-  if (!same) leaving();
+  if (!same) { leaving(); startSrc = st.group === 'ask' ? 'ask' : 'station'; }
   Q = queueOf(st);
   store.set(acct('last'), key);
   if (st.fresh && S.edition) {
@@ -345,19 +354,47 @@ function loadTrack(play) {
   trackChanged();
 }
 
-function logPlay(p, ev, pos = 0) {
-  if (p && ev !== 'start' && Q?.key !== 'ear' && !p.mine) markHeard(p.vid);
-  if (p && !SAMPLE()) api('/api/play', { vid: p.vid, lane: p.from || Q?.key, ev, pos: Math.round(pos), title: p.title, artist: p.artists?.[0]?.name }).catch(() => {});
+// Every listen is logged twice: when it starts, with who chose the song and what the page showed with it, and once
+// when it ends, however it ends (the next song, another station, a song picked from the list, the page closing).
+// What the listens say about taste is worked out on the server (signals.py); a check run by the operator is marked
+// so it stays out of every count.
+const TEST = (() => { try { return !!navigator.webdriver || localStorage.getItem('zhiyin-test') === '1'; } catch { return false; } })();
+let startSrc = 'station';   // who chose the next song to start: see Play.src on the server
+let L = null;               // the listen in progress: { p, ended }
+let touched = performance.now();
+for (const e of ['pointerdown', 'keydown']) addEventListener(e, () => { touched = performance.now(); }, { capture: true, passive: true });
+
+function logPlay(p, ev, pos = 0, extra = {}, send = api) {
+  if (p && !['start', 'away', 'replay', 'stop'].includes(ev) && Q?.key !== 'ear' && !p.mine) markHeard(p.vid);
+  if (!p || SAMPLE()) return;
+  const r = send('/api/play', { vid: p.vid, lane: p.from || Q?.key, ev, pos: Math.round(pos), title: p.title, artist: p.artists?.[0]?.name, test: TEST, ...extra });
+  r?.catch?.(() => {});
+}
+function startListen(p) {
+  const shown = p.mine || Q?.key === 'ear' ? {} : {
+    fit: typeof p.fit === 'number' ? p.fit : null, slot: Number.isInteger(p.slot) ? p.slot : null,
+    fam: p.familiar == null ? null : p.familiar ? 1 : p.knows ? 2 : 0, probe: p.probe || null };
+  L = { p, ended: false };
+  logPlay(p, 'start', 0, { src: p.mine ? 'compare' : startSrc, dur: Player.time()[1] || p.dur || null, vis: document.visibilityState, ...shown });
+  startSrc = 'auto';
+}
+function endListen(ev, send = api) {
+  if (!L || L.ended) return;
+  const [t, d] = Player.time();
+  L.ended = true;
+  logPlay(L.p, ev, ev === 'done' ? d : t, { dur: d || null, idle: Math.round((performance.now() - touched) / 1000), vis: document.visibilityState }, send);
 }
 
-// A song left after the first half minute (or half of a short one) was heard: it is never recommended again.
+// A song left after the first half minute (or half of a short one) was heard: it is never recommended again. One
+// left before then with Next is a skip; left that early any other way (another station, a song from the list, a
+// comparison, the page closing) it is only stopped, and stays new.
 const heardAt = (d) => Math.min(30, (d || 60) / 2);
-function leaving() {
-  const p = cur(), [t, d] = Player.time();
-  if (p && t > 0 && t >= heardAt(d)) logPlay(p, 'left', t);
+function leaving(send = api, skip = false) {
+  const [t, d] = Player.time();
+  if (L && !L.ended) endListen(t >= heardAt(d) ? 'left' : skip ? 'skip' : 'stop', send);
 }
 
-async function next(play = true) {
+async function next(play = true, by = 'next') {
   if (!Q) return;
   const p = cur();
   if (p) {
@@ -365,16 +402,21 @@ async function next(play = true) {
     const [t, d] = Player.time();
     // Leaving within the first half is the strongest "not now" signal a listener gives without saying anything.
     // (one of your own likes, played to compare with a pick, says nothing about the station when you leave it)
-    if (Player.playing && t < heardAt(d)) { logPlay(p, 'skip', t); if (!p.mine) adapt('neg', p); }
-    else leaving();
+    if (Player.playing && t < heardAt(d) && !p.mine) adapt('neg', p);
+    leaving(api, by === 'next');
   }
   if (Q.i >= Q.tracks.length - 1) await extend(true);
-  if (Q.i < Q.tracks.length - 1) { Q.i++; loadTrack(play); }
+  if (Q.i < Q.tracks.length - 1) { Q.i++; startSrc = by; loadTrack(play); }
 }
 function prev() {
   if (!Q) return;
-  if (Player.time()[0] > 4 || Q.i === 0) return Player.seekTo(0);
+  if (Player.time()[0] > 4 || Q.i === 0) {
+    if (Player.time()[0] > 4 && L && !L.ended && L.p.vid === cur()?.vid) logPlay(L.p, 'replay', Player.time()[0]);
+    return Player.seekTo(0);
+  }
+  leaving();
   Q.i--;
+  startSrc = 'prev';
   loadTrack(true);
 }
 
@@ -444,7 +486,7 @@ function adapt(event, p) {
     let sc = inReserve ? -0.45 - 0.02 * k : -0.04 * k;
     sc += 3 * Math.max(0, near(v, s.pos) - NEAR) - 4 * Math.max(0, near(v, s.neg) - NEAR);
     if (s.steer && typeof c.en === 'number') sc += 0.55 * s.steer * clamp(c.en, -2.5, 2.5);
-    if (s.fresh) sc += c.familiar ? -0.5 : 0.35;
+    if (s.fresh) sc += c.familiar || c.knows ? -0.5 : 0.35;
     return sc;
   };
   const pool = [...upcoming.map((c, k) => [c, score(c, k, false)]), ...Q.reserve.map((c, k) => [c, score(c, k, true)])];
@@ -507,7 +549,7 @@ const Player = {
             if (this.want) { const w = this.want; this.want = null; this.load(w.p, w.play); }
           },
           onStateChange: (e) => this.onState(e.data),
-          onError: () => this.onError(),
+          onError: (e) => this.onError(e.data),
         },
       });
     };
@@ -548,10 +590,12 @@ const Player = {
     this.ending = true;
     this.fadeTo(0, Math.max(400, (d - t) * 1000));
   },
-  onError() {
+  onError(code) {
     this.steady();
     toast(t('〈{s}〉不允许在网页里播放，已跳过', { s: cur()?.title || '' }));
-    setTimeout(() => next(!this.cued), 400);   // a song only loaded, not started, is replaced by one only loaded
+    // gone, private, or not allowed in other sites: it never will play here, so it isn't recommended again
+    if ([100, 101, 150].includes(code)) logPlay(cur(), 'error', 0, { src: startSrc });
+    setTimeout(() => next(!this.cued, 'auto'), 400);   // a song only loaded, not started, is replaced by one only loaded
   },
   onState(s) {
     if (this.playing && s !== 1 && s !== 3) this.stopped = performance.now();
@@ -572,14 +616,14 @@ const Player = {
     tick();
     Lyr.run();
     const p = cur();
-    if (s === 1 && p && this.logged !== p.vid) {
+    if (s === 1 && p && (this.logged !== p.vid || (L?.ended && L.p.vid === p.vid))) {   // (or the same song again)
       if (SAMPLE() && !this.logged) ev('sample_play');
-      this.logged = p.vid; logPlay(p, 'start'); Lyr.prefetch();
+      this.logged = p.vid; startListen(p); Lyr.prefetch();
     }
     if (s === 0 && p) {
-      logPlay(p, 'done', this.time()[1]);
+      endListen('done');
       Q.played.add(p.vid);
-      next().then(() => adapt('pos', p));   // only after the next song is fixed, or the queue could move under it
+      next(true, 'auto').then(() => adapt('pos', p));   // only after the next song is fixed, or the queue could move under it
     }
   },
   toggle() {
@@ -613,10 +657,16 @@ const Player = {
 // page goes to the background. Coming back, one tap carries on from where it stopped.
 let awayPlaying = false;
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { awayPlaying = Player.playing || performance.now() - (Player.stopped || -1e9) < 1500; return; }
+  if (document.hidden) {
+    awayPlaying = Player.playing || performance.now() - (Player.stopped || -1e9) < 1500;
+    if (L && !L.ended) logPlay(L.p, 'away', Player.time()[0], { dur: Player.time()[1] || null, vis: 'hidden' }, beacon);
+    return;
+  }
   if (awayPlaying && !Player.playing && cur()) toast(t('离开页面时，YouTube 会暂停播放'), [[t('接着放'), () => Player.play()]], 8000);
   awayPlaying = false;
 });
+
+addEventListener('pagehide', () => leaving(beacon));
 
 function tick() {
   const [t, d] = Player.time();
@@ -1172,6 +1222,7 @@ function hearMine(p) {
   const i = Q.tracks.indexOf(p);
   if (i < 0) return;
   leaving();
+  startSrc = 'compare';
   Q.tracks.splice(i, 0, { vid: b.vid, title: b.title, artists: [{ name: b.artist }], mine: true });
   Q.i = i;
   renderQueue();
@@ -1394,7 +1445,7 @@ function accountHTML() {
   } else {
     const busy = S.jobs?.sync?.running;
     rows.push(`<li><span>YouTube Music<small>${esc(g.email || t('已连接'))}${me.synced ? ` · ${ls?.added ? t('{when} 读过一次，新增 {n} 首', { when: ago(me.synced), n: ls.added }) : t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
-    const state = !me.writes_back ? t('现在只读你的喜欢。打开时 Google 会再问一次，允许知音把这里的 ♥ 写回 YouTube Music') : sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
+    const state = !me.writes_back ? t('现在只读不写。打开时 Google 会再问一次，允许知音把这里的 ♥ 写回 YouTube Music') : sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
     rows.push(`<li><span>${t('把这里的喜欢同步到 YouTube Music')}<small>${esc(state)}${t('。「不要」只记在知音，不会变成 YouTube 上的踩。')}</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="${t('同步喜欢')}"></button></li>`);
   }
   if (me.mine && me.claude) {
@@ -1480,7 +1531,7 @@ function openJoin(why) {
     : { like: t('点一下喜欢，它就更懂你一点'), nope: t('说「不要」，它就更懂你一点'), ask: t('用自己的话点歌，要先有你自己的知音') }[why] || t('用你自己的收藏开始');
   const steps = full ? [t('每个人的电台都由 Claude 来挑，名额跟着额度走。先用 Google 登记，空出位置之后，再来就能直接进。')]
     : invite ? [t('已经加入的话，用 Google 登录就能回到你的电台。')]
-    : [t('连上你的 YouTube Music：知音只读取你点过的喜欢，不改动任何东西。'), t('几分钟后出第一批电台，等的时候可以先听着。'), t('不用安装，也不用你自己的 Claude。')];
+    : [t('连上你的 YouTube Music：知音只读你的喜欢和不喜欢、订阅、歌单，不改动任何东西。'), t('几分钟后出第一批电台，等的时候可以先听着。'), t('不用安装，也不用你自己的 Claude。')];
   d.innerHTML = `<div class="j-in" tabindex="-1" autofocus>
     <button class="ib sm j-x" data-k="closejoin" aria-label="${t('关闭')}">${I.close}</button>
     <svg class="j-mark" viewBox="8 26 84 52" aria-hidden="true"><path d="M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33"/><circle cx="69" cy="52" r="7"/></svg>
@@ -1952,6 +2003,245 @@ function quotaReset() {
 }
 
 const DISC = () => [[t('少'), 0.2], [t('中'), 0.4], [t('多'), 0.6]];
+/* ---------- what the listening says: songs played often without a like, a YouTube Music history, how picks fare ---------- */
+const LOVES_SHOWN = 8;
+let lovesAll = false, histBusy = '', QUAL = null, qualAt = 0;
+
+function listenedHTML() {
+  const loves = EAR?.loves || [];
+  if (SAMPLE() && !loves.length) return '';
+  const shown = lovesAll ? loves : loves.slice(0, LOVES_SHOWN);
+  const head = loves.length
+    ? `<h2>${t('常听，但没点喜欢')}<small>${t('从你的播放和歌单里读出来的，已经算进你的口味。点 ♥ 收进喜欢；不是的，点「不算」。')}</small></h2>`
+    : `<h2>${t('从播放里读口味')}<small>${t('没点喜欢、却一直在听的歌，会列在这里，也算进你的口味。在知音里听得越多越准；导入 YouTube Music 的播放记录，马上就有。')}</small></h2>`;
+  return `<section class="sec" id="listened">${head}
+    ${loves.length ? `<div class="lv-list">${shown.map((r, i) => loveRow(r, i)).join('')}</div>
+      ${loves.length > LOVES_SHOWN ? `<button class="tb lv-more" data-k="lovesmore">${lovesAll ? t('收起') : t('再看 {n} 首', { n: loves.length - LOVES_SHOWN })}</button>` : ''}` : ''}
+    ${historyHTML(EAR?.history)}</section>`;
+}
+
+function loveRow(r, i) {
+  const a = r.artists?.[0]?.name || '';
+  const note = r.days ? t('{n} 天里放过', { n: r.days }) : t('在你自己的歌单里');
+  return `<div class="lvrow">
+    <button class="lv-play" data-love="${i}" aria-label="${t('放{name}', { name: esc(r.title) })}"><img src="${px(cover(r, 120))}" alt="" loading="lazy"></button>
+    <div class="lc-t"><div class="n">${esc(r.title)}</div><div class="w">${esc(a)}<span class="sep">·</span>${note}</div></div>
+    <div class="lv-ctl"><button class="ib like" data-love-like="${i}" title="${t('收进喜欢')}" aria-label="${t('收进喜欢')}">${I.heart}</button><button class="tb" data-love-drop="${i}">${t('不算')}</button></div>
+  </div>`;
+}
+
+const monthOf = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString(LANG, { year: 'numeric', month: 'short' }) : '');
+function historyHTML(h) {
+  if (SAMPLE()) return '';
+  const pick = `<label class="tb">${h ? t('重新导入') : t('选择文件')}<input type="file" data-hist accept=".zip,.json,.html,application/zip,application/json,text/html" hidden></label>`;
+  const busy = histBusy || (S.jobs?.history?.running ? t('正在从播放记录里找你常听的歌') : '');
+  if (busy) return `<div class="hist"><div><b>${t('YouTube Music 播放记录')}</b><p class="busy">${esc(busy)}</p></div></div>`;
+  if (h) {
+    const n = (h.entries || 0).toLocaleString(LANG), m = (h.songs || 0).toLocaleString(LANG);
+    const said = h.span?.[0] ? t('{a} 至 {b}，{n} 次播放，其中 {s} 首放过两次以上。这些歌不会再推给你。', { a: monthOf(h.span[0]), b: monthOf(h.span[1]), n, s: m })
+      : t('{n} 次播放，其中 {s} 首放过两次以上。这些歌不会再推给你。', { n, s: m });
+    return `<div class="hist"><div><b>${t('已导入 YouTube Music 播放记录')}</b><p>${said}</p></div>
+      <div class="hist-acts">${pick}<button class="tb" data-k="histdel">${t('删除')}</button></div></div>`;
+  }
+  return `<div class="hist"><div><b>${t('导入 YouTube Music 播放记录')}</b><p>${t('在 Google Takeout 只选「YouTube 和 YouTube Music」里的历史记录，导出后把下载的 zip 放进来。文件只在你的浏览器里读；知音只收到放过两次以上的歌：歌名、歌手、放了几次、在几天里放过、第一次和最近一次的日期。')}</p></div>
+    <div class="hist-acts">${pick}<a class="tb" href="https://takeout.google.com/settings/takeout/custom/youtube" target="_blank" rel="noopener">${t('打开 Google Takeout')}</a></div></div>`;
+}
+
+function playLove(i) {
+  const loves = EAR?.loves || [];
+  if (!loves[i]) return;
+  leaving();
+  const tracks = loves.map((r) => ({ ...r }));
+  const st = { key: 'ear', group: 'ear', name: t('常听，但没点喜欢'), sub: t('从你的播放里读出来的'), when: '', tracks, reserve: [] };
+  Q = { key: 'ear', st, tracks, reserve: [], i, played: new Set() };
+  startSrc = 'ear';
+  placeHost();
+  loadTrack(true);
+}
+
+async function likeLove(i, btn) {
+  const r = EAR?.loves?.[i];
+  if (!r) return;
+  btn.classList.add('on');
+  btn.disabled = true;
+  const lane = r.lane?.[0] && r.lane[0] !== 'none' ? r.lane[0] : null;
+  try {
+    const res = await api('/api/feedback', { vid: r.vid, action: 'like', lane, title: r.title, artist: r.artists?.[0]?.name, artist_id: r.artists?.[0]?.id });
+    fb.set(r.vid, 'like');
+    EAR.loves.splice(EAR.loves.indexOf(r), 1);
+    renderEar();
+    toast(res.sync === 'queued' ? t('收进喜欢了，也会出现在 YouTube Music') : t('收进喜欢了'));
+  } catch {
+    btn.classList.remove('on');
+    btn.disabled = false;
+    toast(t('没保存上，稍后再试'));
+  }
+}
+
+async function dropLove(i) {
+  const r = EAR?.loves?.[i];
+  if (!r) return;
+  try {
+    S.not_me = (await api('/api/notme', { vid: r.vid, on: true })).not_me;
+    const at = EAR.loves.indexOf(r);
+    EAR.loves.splice(at, 1);
+    renderEar();
+    toast(t('以后不当成你的口味了'), [[t('撤销'), async () => {
+      S.not_me = (await api('/api/notme', { vid: r.vid, on: false })).not_me;
+      EAR.loves.splice(at, 0, r);
+      renderEar();
+    }]]);
+  } catch (err) { toast(err.message); }
+}
+
+// A Google Takeout export of YouTube Music history is read here, in the browser. What goes to the server is, for each
+// song played at least twice: [vid, plays, days, first day, last day, recency-weighted days, title, artist].
+async function importHistory(file) {
+  histBusy = t('正在读 {name}', { name: file.name });
+  renderEar();
+  let r = null;
+  try { r = await readTakeout(file); } catch (err) { console.warn('takeout', err); }
+  if (!r?.songs.length) {
+    histBusy = '';
+    renderEar();
+    toast(r?.entries ? t('这份记录里没有放过两次以上的歌') : t('这个文件里没有找到 YouTube Music 的播放记录'), [], 7000);
+    return;
+  }
+  histBusy = t('发送 {n} 首歌的统计', { n: r.songs.length.toLocaleString(LANG) });
+  renderEar();
+  try {
+    const res = await api('/api/history', r);
+    S.jobs = res.jobs;
+    EAR.history = { at: Date.now() / 1000, span: r.span, entries: r.entries, songs: res.songs };
+    poll();
+    toast(t('读到 {e} 次播放，正在找你常听的歌', { e: r.entries.toLocaleString(LANG) }), [], 6000);
+  } catch (err) { toast(err.message); }
+  histBusy = '';
+  renderEar();
+}
+
+async function readTakeout(file) {
+  const texts = /\.zip$/i.test(file.name) || /zip/.test(file.type) ? await zipTexts(file) : [await file.text()];
+  let best = null;
+  for (const txt of texts) {
+    const r = parseHistory(txt);
+    if (r.entries && (!best || r.entries > best.entries)) best = r;
+  }
+  return best;
+}
+
+// The few lines of ZIP a Takeout archive needs: the central directory, then each JSON or HTML file under YouTube,
+// inflated by the browser. (No ZIP64: a history-only export is far from 4 GB.)
+async function zipTexts(file) {
+  const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+  let e = buf.length - 22;
+  while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('not a zip');
+  const n = dv.getUint16(e + 10, true), dec = new TextDecoder();
+  let o = dv.getUint32(e + 16, true);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const method = dv.getUint16(o + 10, true), size = dv.getUint32(o + 20, true), nl = dv.getUint16(o + 28, true);
+    const xl = dv.getUint16(o + 30, true), cl = dv.getUint16(o + 32, true), at = dv.getUint32(o + 42, true);
+    const name = dec.decode(buf.subarray(o + 46, o + 46 + nl));
+    o += 46 + nl + xl + cl;
+    if (!/youtube/i.test(name) || !/\.(json|html?)$/i.test(name) || (method !== 0 && method !== 8)) continue;
+    const start = at + 30 + dv.getUint16(at + 26, true) + dv.getUint16(at + 28, true);
+    const raw = buf.subarray(start, start + size);
+    out.push(method === 0 ? dec.decode(raw) : await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text());
+  }
+  return out;
+}
+
+const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+const DAY = 864e5, DAY_START = 5 * 3600e3;   // a listening day starts at 5 am, so a late night counts with its evening
+// A date as the HTML export prints it, in whatever language: "Oct 25, 2026, …", "25 Oct 2026, …", "2026年10月25日 …".
+function htmlDay(x) {
+  x = x.replace(/&nbsp;|[  ]/g, ' ');
+  let m = /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/.exec(x) || /(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(x);
+  if (m) return Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / DAY);
+  m = /\b([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/.exec(x);
+  if (m && m[1].toLowerCase() in MON) return Math.floor(Date.UTC(+m[3], MON[m[1].toLowerCase()], +m[2]) / DAY);
+  m = /\b(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})/.exec(x);
+  if (m && m[2].toLowerCase() in MON) return Math.floor(Date.UTC(+m[3], MON[m[2].toLowerCase()], +m[1]) / DAY);
+  return NaN;
+}
+const unhtml = (x) => new DOMParser().parseFromString(x, 'text/html').documentElement.textContent;
+const channelArtist = (c) => c.replace(/\s*-\s*(Topic|主題|主题)$/, '').replace(/VEVO$/, '').trim();
+
+function parseHistory(txt) {
+  const items = [];   // [vid, title, channel, day]
+  const s = txt.trimStart();
+  if (s[0] === '[') {
+    let arr;
+    try { arr = JSON.parse(s); } catch { return { entries: 0, songs: [] }; }
+    const music = arr.filter((e) => /^https:\/\/music\.youtube\.com\/watch/.test(e.titleUrl || '') || e.header === 'YouTube Music');
+    // titles read "Watched <title>" or "<title> を視聴しました" in the export's language: cut the words every entry
+    // starts or ends with, once there are enough different songs to tell them from a title's own words
+    const sample = [...new Set(music.slice(0, 600).map((e) => e.title || ''))].slice(0, 300);
+    let cut = 0, cutEnd = 0;
+    for (let k = 1; k <= 24 && sample.length >= 12; k++) {
+      const pre = sample[0].slice(0, k), suf = sample[0].slice(-k);
+      if (/\s$/.test(pre) && sample.filter((x) => x.startsWith(pre)).length >= sample.length * 0.95) cut = k;
+      if (/^\s/.test(suf) && sample.filter((x) => x.endsWith(suf)).length >= sample.length * 0.95) cutEnd = k;
+    }
+    const words = (x) => (sample.length >= 12 ? x.slice(cut, x.length - cutEnd)
+      : x.replace(/^(Watched|已观看|已觀看|观看了|觀看了)\s+/, '').replace(/\s+(を視聴しました|을\(를\) 시청했습니다)$/, ''));
+    for (const e of music) {
+      const m = /[?&]v=([\w-]{11})/.exec(e.titleUrl || '');
+      if (!m) continue;
+      const ms = Date.parse(e.time);
+      items.push([m[1], words(e.title || ''), e.subtitles?.[0]?.name || '',
+        Number.isNaN(ms) ? NaN : Math.floor((ms - new Date(ms).getTimezoneOffset() * 6e4 - DAY_START) / DAY)]);
+    }
+  } else {
+    const re = /href="https:\/\/music\.youtube\.com\/watch\?v=([\w-]{11})[^"]*">([^<]*)<\/a>(?:<br>\s*<a href="[^"]*">([^<]*)<\/a>)?<br>([^<]{6,80})<br>/g;
+    for (const m of s.matchAll(re)) items.push([m[1], unhtml(m[2]), unhtml(m[3] || ''), htmlDay(m[4])]);
+  }
+  const by = new Map();
+  let lo = Infinity, hi = -Infinity;
+  for (const [v, title, ch, day] of items) {
+    let x = by.get(v);
+    if (!x) by.set(v, (x = { n: 0, days: new Set(), title, ch }));
+    x.n++;
+    if (Number.isFinite(day)) { x.days.add(day); lo = Math.min(lo, day); hi = Math.max(hi, day); }
+  }
+  const today = Math.floor(Date.now() / DAY), iso = (d) => (Number.isFinite(d) ? new Date(d * DAY).toISOString().slice(0, 10) : '');
+  const songs = [...by].filter(([, x]) => x.n >= 2).map(([v, x]) => {
+    const ds = [...x.days];
+    const rw = ds.reduce((a, d) => a + 0.5 ** (Math.max(0, today - d) / 365), 0);
+    return [v, x.n, ds.length, iso(ds.length ? Math.min(...ds) : NaN), iso(ds.length ? Math.max(...ds) : NaN), +rw.toFixed(3),
+      x.title.slice(0, 200), channelArtist(x.ch).slice(0, 120)];
+  }).sort((a, b) => b[5] - a[5] || b[1] - a[1]).slice(0, 30000);
+  return { songs, span: [iso(lo), iso(hi)], entries: items.length };
+}
+
+async function loadQuality() {
+  if (SAMPLE() || Date.now() - qualAt < 60e3) return;
+  qualAt = Date.now();
+  try { QUAL = await api('/api/quality?days=14'); } catch { return; }
+  const f = $('#qualFold');
+  if (f && view === 'ear') f.outerHTML = qualityHTML();
+}
+
+// How the recommendations fared, from the first time each one played: the evidence for changing the engine.
+function qualityHTML() {
+  const g = QUAL?.groups, all = g?.all?.all;
+  const known = (x) => x.n - x.unknown - x.error;
+  if (!all || known(all) < 5) return '<div id="qualFold"></div>';
+  const pct = (x, k = 'good') => (known(x) > 0 ? Math.round((100 * x[k]) / known(x)) : null);
+  const row = (name, x) => `<li><span>${esc(name)}<small>${t('{n} 首', { n: x.n })}<span class="sep">·</span>${t('早跳 {p}%', { p: pct(x, 'early') ?? 0 })}${x.like ? `<span class="sep">·</span>${t('点了喜欢 {n}', { n: x.like })}` : ''}</small></span><span class="num">${pct(x) ?? '–'}%</span></li>`;
+  const block = (title, rows) => (rows.length ? `<h4 class="fold-h">${title}</h4><ul class="plain">${rows.join('')}</ul>` : '');
+  const lanes = Object.entries(g.lane || {}).filter(([k]) => QUAL.names[k]).sort((a, b) => b[1].n - a[1].n).map(([k, x]) => row(QUAL.names[k], x));
+  const FIT = { '0.9+': t('编辑很有把握（0.9 以上）'), '0.8-0.9': t('比较有把握（0.8–0.9）'), '0.7-0.8': t('值得一试（0.7–0.8）'), probe: t('编辑本来不会推的（对照）'), unvetted: t('备用的歌，没经过编辑') };
+  const ART = { new: t('没收藏过的歌手'), liked: t('收藏过的歌手'), known: t('订阅过或常听的歌手') };
+  const fits = Object.keys(FIT).filter((k) => g.fit?.[k]).map((k) => row(FIT[k], g.fit[k]));
+  const arts = Object.keys(ART).filter((k) => g.artist?.[k]).map((k) => row(ART[k], g.artist[k]));
+  return `<details class="fold" id="qualFold"><summary><b>${t('推荐准不准')}</b><span>${t('最近 {d} 天第一次听的 {n} 首推荐里，{p}% 听完了', { d: QUAL.days, n: all.n, p: pct(all) })}</span>${I.down}</summary>
+    <p class="fold-note">${t('听完：放完或听到八成，没按「不要」。早跳：十秒内按了下一首。每首只算第一次听；右边是听完的比例。')}</p>
+    ${block(t('按电台'), lanes)}${block(t('按编辑的把握'), fits)}${block(t('按歌手'), arts)}</details>`;
+}
+
 function laneRow(l, sec) {
   const covers = (sec?.covers || l.covers || []).slice(0, 4).map((v) => `<img src="${px(`https://i.ytimg.com/vi/${v}/mqdefault.jpg`)}" alt="" loading="lazy">`).join('');
   const lv = DISC().reduce((a, b) => (Math.abs(b[1] - l.discovery) < Math.abs(a[1] - l.discovery) ? b : a))[1];
@@ -2019,6 +2309,7 @@ function renderEar() {
     </header>
     ${full ? `<section class="sec"><h2>${t('你的口味')}<small>${t('{n} 种在推荐里。点封面就放这个口味的电台；关掉的下一批起不再出现；新面孔是没收藏过的歌手占多少。', { n: on })}</small></h2>
       <div class="lanes">${S.lanes.map((l) => laneRow(l, sec(l.key))).join('')}</div></section>
+    ${listenedHTML()}
     <section class="sec"><h2>${t('完整的画像')}</h2>
       <div class="portrait">
         <div><div class="prose" id="prose">${po.paragraphs.map((x) => `<p>${playable(x)}</p>`).join('')}</div>
@@ -2026,6 +2317,7 @@ function renderEar() {
         ${po.threads.length ? `<div class="threads"><h3>${t('一直没变的')}</h3><ol class="threads">${po.threads.map((x) => `<li>${playable(x)}</li>`).join('')}</ol></div>` : ''}
       </div></section>
     <section class="sec folds">
+      ${qualityHTML()}
       <details class="fold"><summary><b>${t('不算进口味的')}</b><span>${asideN ? t('{n} 首，留在你的喜欢里，但不拿来推歌', { n: asideN }) : t('留在你的喜欢里，但不拿来推歌')}</span>${I.down}</summary>
         <p class="fold-note">${t('在这页放你自己的歌时按「不要」，那首（或那位歌手）就不再代表你的口味，但仍在你的喜欢里。')}</p>
         <ul class="plain">${S.set_aside.map((x) => `<li><span>${esc(x.what)}<small>${esc(x.why)}</small></span><span class="num">${t('{n} 首', { n: x.n })}</span></li>`).join('')}${nm.artists.map((x) => `<li><span>${esc(x.name)}<small>${t('你说这位歌手的歌不算你的口味')}</small></span><button class="tb" data-notme-artist="${esc(x.key)}">${t('放回来')}</button></li>`).join('')}${nm.songs.map((x) => `<li><span>${esc(x.title)}<small>${esc(x.artist)} · ${t('你说这首不算你的口味')}</small></span><button class="tb" data-notme-song="${esc(x.vid)}">${t('放回来')}</button></li>`).join('')}</ul></details>
@@ -2037,6 +2329,7 @@ function renderEar() {
   if (songs) mountDisc();
   paintNow();
   placeHost();
+  if (full) loadQuality();
 }
 
 // the re-roll button rides on the name's last word (or character), so it never wraps onto a line by itself
@@ -2363,6 +2656,7 @@ function playFromDisc(p) {
   const sec = EAR.sectors.find((s) => s.key === p.s.lane);
   const st = { key: 'ear', group: 'ear', name: t('{lane} · 从〈{s}〉放起', { lane: sec?.name || t('你的喜欢'), s: p.s.title }), sub: t('你自己的喜欢'), when: t('在「你的耳朵」里点的，接着放它附近的喜欢'), tracks, reserve: [] };
   Q = { key: 'ear', st, tracks, reserve: [], i: 0, played: new Set() };
+  startSrc = 'ear';
   placeHost();
   loadTrack(true);
   hoverDot(null);
@@ -2443,6 +2737,10 @@ function route() {
   scrollTo(0, 0);
 }
 addEventListener('hashchange', route);
+document.addEventListener('change', (e) => {
+  const f = e.target.closest?.('input[data-hist]');
+  if (f?.files?.[0]) importHistory(f.files[0]);
+});
 
 /* ---------- actions ---------- */
 async function act(k, btn) {
@@ -2497,6 +2795,10 @@ async function act(k, btn) {
     location.href = '/login';
   }
   else if (k === 'replay') replay();
+  else if (k === 'lovesmore') { lovesAll = !lovesAll; renderEar(); }
+  else if (k === 'histdel') {
+    try { const r = await api('/api/history/delete', {}); S.jobs = r.jobs; EAR.history = null; renderEar(); poll(); toast(t('播放记录删掉了')); } catch (err) { toast(err.message); }
+  }
   else if (k === 'menu') accountMenu(btn);
   else if (k === 'stmenu') stationMenu(btn);
   else if (k === 'settings') openSettings();
@@ -2527,6 +2829,12 @@ document.addEventListener('click', async (e) => {
     if (!Player.playing) Player.play();
     return;
   }
+  const lv = e.target.closest('[data-love],[data-love-like],[data-love-drop]');
+  if (lv) {
+    if (lv.dataset.loveLike != null) return likeLove(+lv.dataset.loveLike, lv);
+    if (lv.dataset.loveDrop != null) return dropLove(+lv.dataset.loveDrop);
+    return playLove(+lv.dataset.love);
+  }
   const tr = e.target.closest('.tr');
   if (tr) {
     const p = Q.tracks[+tr.dataset.i];
@@ -2537,6 +2845,7 @@ document.addEventListener('click', async (e) => {
     leaving();
     Q.played.add(cur()?.vid);
     Q.i = +tr.dataset.i;
+    startSrc = 'pick';
     return loadTrack(true);
   }
   const pl = e.target.closest('[data-play]');
@@ -2714,6 +3023,12 @@ async function finished(done) {
       continue;
     }
     if (k === 'sync' && !j.error) { if (view === 'ear') renderEar(); continue; }
+    if (k === 'history') {
+      if (j.error) toast(t('没读完播放记录：{e}', { e: j.error.slice(0, 60) }));
+      else toast(j.result?.loves ? t('找到 {n} 首你常听、没点喜欢的歌', { n: j.result.loves }) : t('播放记录里没有特别常听、又没点喜欢的歌'), [], 6000);
+      loadEar();
+      continue;
+    }
     if (k === 'retell') {
       if (j.error) toast(t('没改写成功：{e}', { e: j.error.slice(0, 60) }));
       else { EAR = null; route(); renderSheet(); toast(t('改写好了')); }
@@ -2788,7 +3103,7 @@ async function boot() {
   if (first) {
     Q = queueOf(first);
     const pos = store.get(acct('pos'));
-    if (pos?.ed === S.edition?.id && pos.key === Q.key) Q.i = Math.max(0, Q.tracks.findIndex((p) => p.vid === pos.vid));
+    if (pos?.ed === S.edition?.id && pos.key === Q.key) { Q.i = Math.max(0, Q.tracks.findIndex((p) => p.vid === pos.vid)); startSrc = 'resume'; }
   }
   Player.init();
   // a listener who just joined lands on their record, which is drawn within seconds; stations take a while

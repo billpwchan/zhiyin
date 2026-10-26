@@ -1,12 +1,14 @@
 import datetime as dt
 import os
 import random
+import statistics
 import threading
 import time
+import traceback
 
 import numpy as np
 
-from . import audio, candidates, i18n, library, llm, rank, settings, store, taste, ytm
+from . import audio, candidates, i18n, library, llm, quality, rank, settings, signals, store, taste, ytm
 from .text import display_title, fold, song_key
 
 FOCUS_MIN_S = 20 * 60
@@ -15,8 +17,8 @@ RESERVE = 12
 
 
 def _public(c: dict) -> dict:
-    keep = ("vid", "title", "artists", "album", "year", "thumb", "dur", "type", "reason", "fit", "familiar", "sources",
-            "because")
+    keep = ("vid", "title", "artists", "album", "year", "thumb", "dur", "type", "reason", "fit", "familiar", "knows",
+            "sources", "because", "probe", "slot")
     out = {k: c.get(k) for k in keep}
     out.update({k: c[k] for k in ("v", "en", "mv") if c.get(k) is not None})
     out["title"] = display_title(c.get("title") or "", c.get("artists") or [])
@@ -89,7 +91,7 @@ def because(p: dict, theirs: list[dict], index: tuple[dict, dict] | None = None)
     """The one song of the listener's own that a pick is shown next to: the one the editor found closest ("near"),
     else the like whose radio turned it up ("from"). Always a real like, so the listener can play it and judge.
     `index` (from `_index`) saves rebuilding the lookups for every pick."""
-    by_vid, by_label = index or _index(theirs)
+    by_vid, by_label = index or _index([t for t in theirs if not t.get("implicit")])
     t, how = by_vid.get(p.get("like_vid")), "near"
     if not t:
         t, how = next((by_label[v] for v in p.get("via", []) if v in by_label), None), "from"
@@ -137,14 +139,15 @@ def negatives() -> list[str]:
     rows = store.db().execute(
         "select title, artist, reason from feedback where uid=? and action='dislike' order by ts desc limit 20",
         (store.uid(),)).fetchall()
-    return [f"{r['title']} — {r['artist']}" + (f" ({r['reason']})" if r["reason"] else "") for r in rows]
+    out = [f"{r['title']} — {r['artist']}" + (f" ({r['reason']})" if r["reason"] else "") for r in rows]
+    return out + [f"{d['title']} — {d['artist']} (thumbs-down on YouTube)" for d in signals.youtube().get("disliked", [])[:8]]
 
 
 PRE_K = 64   # graph-ranked candidates per lane that get listened to before the final shortlist
 
 
-def build_lane(lane, tracks, prof, known, rng, n, log):
-    seeds = candidates.lane_seeds(lane, tracks, prof, rng)
+def build_lane(lane, tracks, prof, known, rng, n, log, loves=()):
+    seeds = candidates.lane_seeds(lane, tracks, prof, rng, loves=loves)
     g = candidates.gather(lane, seeds, known, candidates.core_artists(lane, tracks, prof))
     for c in g["cands"].values():
         c["shown_before"] = c["vid"] in known.recent_shown
@@ -213,7 +216,7 @@ def played_since(ed: dict | None) -> set[str]:
     """Stations the listener actually played from since this edition came out."""
     if not ed:
         return set()
-    rows = store.db().execute("select distinct lane from plays where uid=? and ts>? and lane is not null",
+    rows = store.db().execute("select distinct lane from plays where uid=? and ts>? and lane is not null and test=0",
                               (store.uid(), ed["created"])).fetchall()
     return {r["lane"] for r in rows}
 
@@ -228,6 +231,11 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
     s = settings.load()
     n = s.get("picks_per_lane", 8)
     tracks = library.load()
+    try:
+        loves = signals.refresh(prof, log)
+    except Exception:   # what their plays say can wait a day; the edition can't
+        traceback.print_exc()
+        loves = signals.loves()
     known = candidates.Known(tracks, prof)
     edition_id = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     rng = random.Random(edition_id)
@@ -244,7 +252,7 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
     try:
         built = []
         for lane in [l for l in active if l["key"] not in kept]:
-            built.append(build_lane(lane, tracks, prof, known, rng, n, log))
+            built.append(build_lane(lane, tracks, prof, known, rng, n, log, loves))
             # A track surfaced in one lane shouldn't reappear in the next.
             for c in built[-1][3]:
                 known.taken.add(c["vid"])
@@ -255,6 +263,7 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
 
     negs = negatives()
     log(i18n.tr("编辑精选中（{n} 条线并行）", n=len(built)))
+    probing = quality.probing()
 
     def choose(b):
         lane, seeds, g, sl = b
@@ -268,6 +277,8 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
         reserve = [p for p in picks if p["vid"] not in ids]
         ids |= {p["vid"] for p in reserve}
         reserve += [{**c, "fit": 0, "reason": ""} for c in sl if c["vid"] not in ids]
+        if probing:
+            probe(lane, chosen, reserve, picks, random.Random(f"{edition_id}|{lane['key']}"))
         for p in chosen + reserve:
             p["because"] = because(p, seeds)
         return lane, seeds, g, chosen, reserve[:RESERVE]
@@ -285,6 +296,10 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
     out_lanes = []
     con = store.db()
     for lane, seeds, g, picks, reserve in chosen:
+        for i, p in enumerate(picks):
+            p["slot"] = i
+        for p in reserve:
+            p["slot"] = -1
         out_lanes.append({
             "key": lane["key"], "name": lane["name"], "english": lane["english"], "blurb": lane["blurb"],
             "when": lane["when"], "discovery": lane["discovery"],
@@ -293,10 +308,13 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
             "picks": [_public(p) for p in picks],
             "reserve": [_public(p) for p in reserve],
             "stats": {"candidates": len(g["cands"]), "rejected": g["rejected"], "playlists": g.get("playlists", 0),
-                      "heard": sum(1 for p in picks if p.get("audio"))},
+                      "heard": sum(1 for p in picks if p.get("audio")),
+                      # does the editor lean towards hits? median views of what it sent out vs what it was offered
+                      "views": [_median_views(p for p in picks if not p.get("probe")), _median_views(g["cands"].values())]},
         })
-        con.executemany("insert into shown (vid, edition, lane, ts, uid) values (?,?,?,?,?)",
-                        [(v, edition_id, lane["key"], store.now(), store.uid()) for p in picks for v in (p["vid"], p.get("mv")) if v])
+        con.executemany("insert into shown (vid, edition, lane, ts, uid, fit, pos, fam, probe) values (?,?,?,?,?,?,?,?,?)",
+                        [(v, edition_id, lane["key"], store.now(), store.uid(), p.get("fit"), i, fam_code(p), p.get("probe"))
+                         for i, p in enumerate(picks) for v in (p["vid"], p.get("mv")) if v])
     fresh = {l["key"] for l in out_lanes}
     order = [l["key"] for l in active]
     out_lanes = sorted([*out_lanes, *({**l, "fresh": False} for k, l in kept.items() if k in order)],
@@ -313,6 +331,40 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
     store.write_json(store.EDITION, ed)
     log(i18n.tr("完成，用时 {s} 秒", s=ed["took"]))
     return ed
+
+
+def fam_code(p: dict) -> int:
+    """0 an artist new to them, 1 one with liked songs, 2 one they follow or play without a like."""
+    return 1 if p.get("familiar") else 2 if p.get("knows") else 0
+
+
+def _median_views(cands) -> float | None:
+    v = [candidates.views_n(c) for c in cands]
+    v = [x for x in v if x]
+    return round(statistics.median(v)) if v else None
+
+
+def probe(lane: dict, chosen: list[dict], reserve: list[dict], picks: list[dict], rng: random.Random) -> None:
+    """One song per station the editor would not have sent out, placed among its picks and marked, so the listens
+    show whether its judgement is worth what it costs: "low" is one it returned below the bar (rank.MIN_FIT),
+    "graph" the best song by the YouTube graph alone that it passed over. Stops by itself once quality.PROBE_ENOUGH
+    of them have been heard."""
+    if len(chosen) < 5:
+        return
+    returned = {p["vid"] for p in picks}
+    artists = {fold(p["artists"][0]["name"]) for p in chosen if p.get("artists")}
+    other = [p for p in reserve if p.get("artists") and fold(p["artists"][0]["name"]) not in artists]
+    # (a pick the editor rated above the bar but lost to the station's size or quota is no test of its judgement)
+    low = [p for p in other if p["vid"] in returned and 0.5 <= (p.get("fit") or 0) < rank.MIN_FIT]
+    graph = [p for p in other if p["vid"] not in returned]
+    kinds = [k for k, xs in (("low", low), ("graph", graph)) if xs]
+    if not kinds:
+        return
+    kind = rng.choice(kinds)
+    p = (low if kind == "low" else graph)[0]
+    reserve.remove(p)
+    p["probe"] = kind
+    chosen.insert(rng.randint(2, len(chosen)), p)
 
 
 def redecorate() -> bool:

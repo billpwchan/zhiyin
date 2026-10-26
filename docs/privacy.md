@@ -9,7 +9,16 @@ the server itself (below).
 On the machine running Zhiyin:
 
 - your liked songs and when they were liked (if Google says so), the profile built from them, and each edition;
-- what you did in Zhiyin: plays, skips, likes, refusals, songs you asked for;
+- read from YouTube with the same read-only access, at most once a day along with the likes: the music you gave a
+  thumbs-down, the music channels you subscribe to, and the songs in playlists you made (not the ones saved from
+  Zhiyin's stations);
+- what you did in Zhiyin: plays, skips, likes, refusals, songs you asked for. Each play records how it started (you
+  chose the song, or it played on), how far it got and how long it was, how long since the page was last touched,
+  whether the page was in front, and what the page showed with it (the editor's confidence, its place in the
+  station); from these, the songs you play often without having liked them (`signals.py`);
+- if you import a YouTube Music history from Google Takeout: the file is read in the browser, and only the songs
+  played at least twice reach the server, as video id, title, artist, number of plays, number of days, first and
+  latest day, and a recency-weighted count of days. It is deleted from Your Ear, or with the account;
 - for listeners who signed in with Google: your Google account id, email and name, and the access tokens, encrypted with
   a key kept on the server;
 - how many Claude calls each listener made per day, and what they would cost on an API key;
@@ -39,6 +48,8 @@ including its Limited Use requirements, and YouTube's rule that data from its AP
   again starts over. The server prints each one it deletes. When more than a quarter of the listeners can't be read
   at once (the connection breaking, not people leaving), it waits up to 2 more days for the operator to fix it,
   then deletes anyway, so nothing outlives 30 days;
+- the dislikes, subscriptions and own-playlist songs are re-read with the likes, at most once a day, and deleted
+  with them; if they can't be re-read for 28 days they are deleted on their own;
 - the first quick list of liked videos, used to draw the record before the library exists, is deleted as soon as
   the library is written;
 - facts about a video from YouTube's API (category, length, channel), shared by all listeners, are fetched again
@@ -53,8 +64,8 @@ says so.
 | Sent to | What | Why |
 |---|---|---|
 | YouTube Music (unauthenticated) | song and artist ids | radio, related songs, artist pages, playlists, cover art |
-| YouTube Data API, with your Google token | your likes; the songs you like in Zhiyin, once you turn on writing likes back | read likes, like songs back |
-| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them) and the candidates, station descriptions, songs you refused and why, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
+| YouTube Data API, with your Google token | your likes, thumbs-down music, subscriptions and own playlists; the songs you like in Zhiyin, once you turn on writing likes back | read likes and the other signals, like songs back |
+| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
 | The YouTube embedded player, in your browser | the video being played | playback, under YouTube's own terms |
