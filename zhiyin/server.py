@@ -774,7 +774,8 @@ def google_start(request: Request, mode: str = "connect", write: int = 0, yt: in
                                     "lang": i18n.from_request(request), "write_on": asked_write})
     named = "" if connect else as_
     hint = named or ((accounts.get(uid) or {}).get("email") if uid else None)
-    r = RedirectResponse(google.auth_url(state, challenge, connect, hint, pick=not named, write=write), 303)
+    lang = i18n.of(uid) if uid else i18n.from_request(request)
+    r = RedirectResponse(google.auth_url(state, challenge, connect, hint, pick=not named, write=write, lang=lang), 303)
     r.set_cookie("zy_o", state, max_age=900, httponly=True, samesite="lax", secure=google.public_url().startswith("https"))
     return r
 

@@ -79,6 +79,8 @@ def test_a_bookmark_signs_in_as_the_named_account_in_one_click(monkeypatch):
     q = parse_qs(urlparse(google.auth_url("s", "x", False, "me@example.com", pick=False)).query)
     assert q["login_hint"] == ["me@example.com"] and "prompt" not in q
     assert parse_qs(urlparse(google.auth_url("s", "x", False)).query)["prompt"] == ["select_account"]
+    assert parse_qs(urlparse(google.auth_url("s", "x", True, lang="zh-Hant")).query)["hl"] == ["zh-TW"]
+    assert "hl" not in parse_qs(urlparse(google.auth_url("s", "x", True)).query)
 
 
 def test_starting_a_sign_in_leaves_the_database_writable(monkeypatch):

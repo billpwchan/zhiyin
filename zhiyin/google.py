@@ -88,8 +88,11 @@ def pkce() -> tuple[str, str]:
     return verifier, challenge
 
 
+HL = {"zh-Hans": "zh-CN", "zh-Hant": "zh-TW", "en": "en"}   # Google's page in the language the app is shown in
+
+
 def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None, pick: bool = True,
-             write: bool = True) -> str:
+             write: bool = True, lang: str | None = None) -> str:
     c = client()
     q = {"client_id": c["id"], "redirect_uri": redirect_uri(), "response_type": "code", "state": state,
          "code_challenge": challenge, "code_challenge_method": "S256", "include_granted_scopes": "true"}
@@ -101,6 +104,8 @@ def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None,
         q |= {"scope": BASE_SCOPES} | ({"prompt": "select_account"} if pick else {})
     if hint:
         q["login_hint"] = hint
+    if lang in HL:
+        q["hl"] = HL[lang]
     return AUTH_URL + "?" + urllib.parse.urlencode(q)
 
 
