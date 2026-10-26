@@ -111,7 +111,7 @@ _QUOTED = re.compile(r"[《〈“\"]([^》〉”\"]{1,80})[》〉”\"]")
 _SENTENCE = re.compile(r"[^。！？.!?]+[。！？.!?]?\s*")
 # Whether they have an artist is said by the page, from their data; the same claim in the reason repeats it.
 _ABOUT_THEM = re.compile(r"(没|沒|没有|沒有|从没|從沒|未曾?)(收藏|点过喜欢|點過喜歡|听过|聽過)|你的收藏|"
-                         r"new to (you|them)|(you|they) (haven't|have not|never) (liked|saved|heard)|"
+                         r"new to (you|them)|(you|they) (haven['’]t|have not|never) (liked|saved|heard)|"
                          r"(your|their) likes|in (your|their) library", re.I)
 
 

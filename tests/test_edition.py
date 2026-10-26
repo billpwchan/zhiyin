@@ -31,6 +31,7 @@ def test_a_reason_leaves_whether_they_know_the_artist_to_the_page():
     from zhiyin.rank import about_them
     assert about_them("低声吟唱的英国灵魂乐，很适合深夜。你还没收藏过 Cleo Sol。") == "低声吟唱的英国灵魂乐，很适合深夜。"
     assert about_them("A slow soul groove. Cleo Sol is new to you.") == "A slow soul groove."
+    assert about_them("Pedal steel and sleepy vocals. An artist you haven’t saved yet.") == "Pedal steel and sleepy vocals."
     assert about_them("你还没收藏过的歌手：林宥嘉唱了一首克制的抒情歌。") == "你还没收藏过的歌手：林宥嘉唱了一首克制的抒情歌。"
     assert about_them("適合深夜，你沒聽過也會喜歡的那種。慢。") == "慢。"
 
