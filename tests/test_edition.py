@@ -27,6 +27,14 @@ def test_a_reason_drops_sentences_about_the_listeners_songs_but_never_breaks_one
     assert clean_reason("“Hatachi No Koi” is Lamp at their softest. Warm.", pick, theirs) == "“Hatachi No Koi” is Lamp at their softest. Warm."
 
 
+def test_a_reason_leaves_whether_they_know_the_artist_to_the_page():
+    from zhiyin.rank import about_them
+    assert about_them("低声吟唱的英国灵魂乐，很适合深夜。你还没收藏过 Cleo Sol。") == "低声吟唱的英国灵魂乐，很适合深夜。"
+    assert about_them("A slow soul groove. Cleo Sol is new to you.") == "A slow soul groove."
+    assert about_them("你还没收藏过的歌手：林宥嘉唱了一首克制的抒情歌。") == "你还没收藏过的歌手：林宥嘉唱了一首克制的抒情歌。"
+    assert about_them("適合深夜，你沒聽過也會喜歡的那種。慢。") == "慢。"
+
+
 def test_a_pick_is_shown_next_to_a_real_like_of_theirs():
     from zhiyin import edition
     theirs = [{"vid": "like0000001", "title": "Drifter", "artists": [{"name": "KIRINJI"}], "liked_est": "2024-03-02"},

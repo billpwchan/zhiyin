@@ -109,6 +109,16 @@ def pick(lane: dict, shortlist: list[dict], seeds: list[dict], negatives: list[s
 
 _QUOTED = re.compile(r"[《〈“\"]([^》〉”\"]{1,80})[》〉”\"]")
 _SENTENCE = re.compile(r"[^。！？.!?]+[。！？.!?]?\s*")
+# Whether they have an artist is said by the page, from their data; the same claim in the reason repeats it.
+_ABOUT_THEM = re.compile(r"(没|沒|没有|沒有|从没|從沒|未曾?)(收藏|点过喜欢|點過喜歡|听过|聽過)|你的收藏|"
+                         r"new to (you|them)|(you|they) (haven't|have not|never) (liked|saved|heard)|"
+                         r"(your|their) likes|in (your|their) library", re.I)
+
+
+def about_them(reason: str) -> str:
+    """Drops the sentences on whether they know or have liked the artist, if another sentence is left."""
+    keep = [x for x in _SENTENCE.findall(reason) if not _ABOUT_THEM.search(x)]
+    return "".join(keep).strip() or reason
 
 
 def clean_reason(reason: str, pick: dict, their_keys: set[str]) -> str:
@@ -118,7 +128,7 @@ def clean_reason(reason: str, pick: dict, their_keys: set[str]) -> str:
     ("a gentle, unhurried ballad as “X”") leaves a broken one."""
     mine = their_keys - {song_key(pick["title"])}
     keep = [x for x in _SENTENCE.findall(reason) if not any(song_key(m) in mine for m in _QUOTED.findall(x))]
-    return "".join(keep).strip() or reason
+    return about_them("".join(keep).strip() or reason)
 
 
 def enforce_quota(picks: list[dict], n: int, discovery: float) -> list[dict]:

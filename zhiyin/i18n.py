@@ -161,7 +161,8 @@ RETELL_SYSTEM = """You rewrite the text of one listener's private music recommen
 Each input line is "index<TAB>text": a taste portrait, the names and descriptions of their listening lanes, and the
 one-line reason given for each recommended song. Return each line in natural @LANG@ with the same index and meaning,
 about as long as the original, plain and specific. Song titles, album names and artist names stay exactly as written.
-@TITLES@ Lane names stay short (@NAME@). Chinese takes full-width punctuation (，。：；？！)."""
+@TITLES@ Lane names stay short (@NAME@). Chinese takes full-width punctuation (，。：；？！). Add nothing about the
+listener, such as whether an artist is new to them: the page says that itself."""
 
 _CJK = "\u3400-\u9fff\u3040-\u30ff"
 _HALF = re.compile(rf"(?<=[{_CJK}》」』）])\s*([,;:?!])\s*|\s*([,;:?!])\s*(?=[{_CJK}《「『（])")
@@ -176,7 +177,7 @@ def zh_punct(text: str) -> str:
 
 def retell(log) -> dict:
     """Rewrite what Claude already wrote (portrait, lanes, reasons) in the listener's language, without rebuilding."""
-    from . import llm
+    from . import llm, rank
     lang = of()
     w = WRITE[lang]
     system = (RETELL_SYSTEM.replace("@LANG@", w["lang"]).replace("@TITLES@", w["titles"]).replace("@NAME@", w["name"]))
@@ -194,6 +195,8 @@ def retell(log) -> dict:
             if 0 <= x["i"] < len(chunk) and x["x"].strip():
                 _, c, k = chunk[x["i"]]
                 c[k] = x["x"].strip() if lang == "en" else zh_punct(x["x"].strip())
+                if k == "reason":
+                    c[k] = rank.about_them(c[k])
     with store.Pool(3) as ex:   # each call bills the listener whose job this is
         list(ex.map(run, chunks))
     for d in units:
