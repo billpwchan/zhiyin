@@ -1073,6 +1073,11 @@ def state():
         for k in ("portrait", "lanes", "focus", "set_aside"):
             out[k] = i18n.convert_tree(out[k], pl, rl)
         out["edition"] = i18n.convert_tree(ed, (ed or {}).get("lang", "zh-Hans"), rl)
+        # editions before 10-27 copied the profile's script into a station's name and lines under the reader's label
+        for l in (out["edition"] or {}).get("lanes", []) + [x for x in [(out["edition"] or {}).get("focus")] if x]:
+            for k in ("name", "blurb", "when"):
+                if k in l:
+                    l[k] = i18n.convert(l[k], pl, rl)
         out["asks"] = [i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in out["asks"]]
     return out
 

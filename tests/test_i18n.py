@@ -71,6 +71,9 @@ def test_each_account_keeps_its_own_language_and_reads_its_own_script(monkeypatc
     for uid in (a, b):
         with store.as_user(uid):
             store.write_json(store.PROFILE, {"lang": "zh-Hans", "lanes": [], "portrait": {"headline": "从〈后来〉开始的听感", "paragraphs": []}})
+            # written for a Traditional reader by the editor, but the station's name copied from the profile as is
+            store.write_json(store.EDITION, {"id": "e", "lang": "zh-Hant", "focus": None, "lanes": [
+                {"key": "k", "name": "日光律动", "blurb": "白天听", "when": "想动一动的时候", "picks": [], "reserve": []}]})
     c = TestClient(server.app)
     c.cookies.set(accounts.COOKIE, accounts.new_session(b))
     r = c.post("/api/account/lang", json={"lang": "zh-Hant"}, headers={"X-Zhiyin-Uid": b})
@@ -78,6 +81,7 @@ def test_each_account_keeps_its_own_language_and_reads_its_own_script(monkeypatc
     assert accounts.prefs(b)["lang"] == "zh-Hant" and accounts.prefs(a).get("lang") != "zh-Hant"
     st = c.get("/api/state").json()
     assert st["me"]["lang"] == "zh-Hant" and st["portrait"]["headline"] == "從〈后来〉開始的聽感"
+    assert (st["edition"]["lanes"][0]["name"], st["edition"]["lanes"][0]["when"]) == ("日光律動", "想動一動的時候")
     assert '<html lang="zh-Hant" data-lang="zh-Hant">' in c.get("/").text
     c.cookies.set(accounts.COOKIE, accounts.new_session(a))
     assert c.get("/api/state", headers={"X-Zhiyin-Uid": a}).json()["portrait"]["headline"] == "从〈后来〉开始的听感"

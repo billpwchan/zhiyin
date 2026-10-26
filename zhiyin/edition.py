@@ -206,7 +206,12 @@ def build_focus(prof, known, rng, log, n=4):
         if len(picks) >= n:
             break
     log(i18n.tr("专注: {n} 个长歌单候选", n=len(found)))
-    return {"blurb": focus["blurb"], "when": focus["when"], "picks": [_public(c) for c in picks]}
+    return {"blurb": _script(prof, focus["blurb"]), "when": _script(prof, focus["when"]), "picks": [_public(c) for c in picks]}
+
+
+def _script(prof: dict, text: str) -> str:
+    """Profile text in the script the edition is written in (its reasons follow the reader; the profile may not)."""
+    return i18n.convert(text, prof.get("lang", "zh-Hans"), i18n.of())
 
 
 # Gathering candidates leans on YouTube Music from one address, so only a few listeners gather at once. The editor
@@ -319,8 +324,8 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
         for p in reserve:
             p["slot"] = -1
         out_lanes.append({
-            "key": lane["key"], "name": lane["name"], "english": lane["english"], "blurb": lane["blurb"],
-            "when": lane["when"], "discovery": lane["discovery"],
+            "key": lane["key"], "name": _script(prof, lane["name"]), "english": lane["english"],
+            "blurb": _script(prof, lane["blurb"]), "when": _script(prof, lane["when"]), "discovery": lane["discovery"],
             "seeds": [{"vid": x["vid"], "title": x["title"], "artists": x["artists"],
                        "thumb": (ytm.track(x["vid"]) or {}).get("thumb")} for x in seeds[:6]],
             "picks": [_public(p) for p in picks],
