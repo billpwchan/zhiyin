@@ -180,3 +180,19 @@ def test_the_roast_is_asked_with_the_numbers_it_may_lean_on(monkeypatch):
     assert (label, roast) == ("周杰伦的回头客", "《晴天》存了三个版本。")     # the likes' script doesn't leak into the card
     assert seen["model"] == "haiku" and "大众度" in seen["prompt"] and "Most liked artists: Artist" in seen["prompt"]
     assert "roast" in seen["system"] and "@" not in seen["system"]
+
+
+def test_a_roast_too_long_for_the_card_is_asked_again_then_cut_at_a_sentence(monkeypatch):
+    from zhiyin import llm
+    _fake(monkeypatch, 40)
+    long = "James Bay 十三首，Ed Sheeran 七首，2017 年 3 月一口气存了一大把。之后就再没出来过，耳朵停在 2017，像是路过顺手点了个赞。"
+    calls = []
+
+    def call(prompt, system, schema, **k):
+        calls.append(prompt)
+        return {"label": "停在2017", "roast": long}
+    monkeypatch.setattr(llm, "call", call)
+    tracks = netease.likes("https://music.163.com/playlist?id=3")["tracks"]
+    label, roast = cards.verdict(tracks, 40, "zh-Hans")
+    assert len(calls) == 3 and "too long" in calls[-1]
+    assert roast == "James Bay 十三首，Ed Sheeran 七首，2017 年 3 月一口气存了一大把。"

@@ -37,9 +37,11 @@ table laugh, the line they will screenshot and post.
   they never left, how mainstream they are (大众度 below), the guilty pleasure sitting next to the serious stuff.
 - Tease the music and the habit, never the person: nothing about looks, age, gender, love life, where they are from,
   money or mental health. Calling the songs emo is fine.
+- One idea and one punchline. Don't stack several facts or recite the numbers; pick the one that lands.
 - Funny over clever: spoken rhythm, plain words. No compliment dressed up as a roast, no "but deep down" turn, no
   advice, no question to the reader.
 - Don't reuse the label's words. No emoji or hashtags."""
+ROAST_MAX = {"zh-Hans": (99, 48), "zh-Hant": (99, 48), "en": (32, 999)}   # (words, characters) a card can hold
 ROAST_LEN = {"zh-Hans": "one or two sentences, at most 40 Chinese characters",
              "zh-Hant": "one or two sentences, at most 40 Chinese characters",
              "en": "one or two sentences, at most 26 words"}
@@ -106,6 +108,24 @@ def _about(tracks: list[dict], total: int) -> str:
     return " ".join(out)
 
 
+def _short(text: str, lang: str, words: int, chars: int) -> bool:
+    return len(text.split()) <= words if lang == "en" else len(text) <= chars
+
+
+def _clip(roast: str, lang: str) -> str:
+    """A roast that is still too long ends at its last full sentence that fits: the card has room for three lines."""
+    words, chars = ROAST_MAX[lang]
+    if _short(roast, lang, words, chars):
+        return roast
+    if lang == "en":
+        head = " ".join(roast.split()[:words])
+        cut = max(head.rfind(p) for p in ".!?")
+    else:
+        head = roast[:chars]
+        cut = max(head.rfind(p) for p in "。！？")
+    return head[:cut + 1] if cut > 0 else roast
+
+
 def verdict(tracks: list[dict], total: int, lang: str, model: str = "haiku") -> tuple[str, str]:
     """(label, roast) for a card: the taste's name, and one line teasing it."""
     rows = profile.sample([((t["liked_est"] or "")[:7], t["title"], ", ".join(a["name"] for a in t["artists"][:2]))
@@ -115,12 +135,16 @@ def verdict(tracks: list[dict], total: int, lang: str, model: str = "haiku") -> 
         .replace("@SERVICE@", "NetEase Cloud Music").replace("@ROAST@", ROAST_LEN[lang])
     prompt = "About them: " + _about(tracks, total) + "\n\nTheir likes:\n" + "\n".join(" | ".join(r) for r in rows)
     label = roast = ""
-    for _ in range(2):
+    for _ in range(3):
         out = llm.call(prompt, system, VERDICT_SCHEMA, model=model, timeout=180, retries=1)
         label, roast = out["label"].strip().rstrip("。.!！"), out["roast"].strip()
-        if len(label.split()) <= 7 if lang == "en" else len(label) <= 18:
+        long = [f"\"{v}\" is too long: {rule}." for v, ok, rule in (
+            (label, _short(label, lang, 7, 18), w["label"]), (roast, _short(roast, lang, ROAST_MAX[lang][0], ROAST_MAX[lang][1]), ROAST_LEN[lang]))
+            if not ok]
+        if not long:
             break
-        prompt += f"\n\n(\"{label}\" is too long: {w['label']}.)"
+        prompt += "\n\n(" + " ".join(long) + ")"
+    roast = _clip(roast, lang)
     if lang != "en":   # the script of the likes can leak in (粵語 for a Simplified reader)
         other = "zh-Hant" if lang == "zh-Hans" else "zh-Hans"
         label, roast = (i18n.zh_punct(i18n.convert(v, other, lang)) for v in (label, roast))
