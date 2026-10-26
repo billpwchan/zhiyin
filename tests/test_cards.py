@@ -22,7 +22,7 @@ def test_a_netease_link_is_read_whichever_way_it_was_copied():
 
 def _song(i, year=2015):
     return {"id": i, "name": f"Song {i}", "ar": [{"name": f"Artist {i % 7}"}], "al": {"name": "Album", "picUrl": f"https://p1.music.126.net/{i}.jpg"},
-            "dt": 200000, "publishTime": int(time.mktime((year, 6, 1, 0, 0, 0, 0, 0, 0)) * 1000)}
+            "dt": 200000, "publishTime": int(time.mktime((year, 6, 1, 0, 0, 0, 0, 0, 0)) * 1000), "pop": 40 + i % 41}
 
 
 def _fake(monkeypatch, n, code=200, gone=()):
@@ -88,14 +88,14 @@ def test_a_token_carries_what_the_server_said_and_nothing_else():
 
 def test_a_card_made_without_an_account_shares_once_and_comes_down_by_its_key(monkeypatch):
     from fastapi.testclient import TestClient
-    from zhiyin import profile
     _fake(monkeypatch, 50)
-    monkeypatch.setattr(profile, "name_taste", lambda *a, **k: "钢琴和雨天")
+    monkeypatch.setattr(cards, "verdict", lambda *a, **k: ("钢琴和雨天", "七首德彪西轮着放，雨都被你听停了。"))
     c = TestClient(server.app, headers={"Accept-Language": "zh-CN"})
     r = c.post("/api/card/make", json={"link": "https://music.163.com/playlist?id=5"})
     assert r.status_code == 200, r.text
     d = r.json()
     assert d["label"] == "钢琴和雨天" and d["n"] == 50 and len(d["pics"]) == 50
+    assert d["roast"].startswith("七首") and d["pop"] == round(sum(40 + i % 41 for i in range(1, 51)) / 50) and d["facts"][0]["key"] == "pop"
     bad = c.post("/api/card/make", json={"link": "https://example.com/"})
     assert bad.status_code == 422 and "网易云" in bad.json()["detail"]
 
@@ -108,6 +108,7 @@ def test_a_card_made_without_an_account_shares_once_and_comes_down_by_its_key(mo
 
     page = c.get(f"/c/{link['id']}")
     assert page.status_code == 200 and 'property="og:title" content="钢琴和雨天"' in page.text
+    assert 'content="「七首德彪西轮着放，雨都被你听停了。」让 Claude' in page.text
     assert f"/c/{link['id']}.jpg" in page.text and "__" not in page.text
     assert c.get(f"/c/{link['id']}.jpg").content == _jpeg()
     bare = TestClient(server.app).get(f"/c/{link['id']}", headers={"accept-language": ""})
@@ -120,10 +121,9 @@ def test_a_card_made_without_an_account_shares_once_and_comes_down_by_its_key(mo
 
 
 def test_a_name_for_a_playlist_is_kept_for_the_day_and_tries_are_counted(monkeypatch):
-    from zhiyin import profile
     _fake(monkeypatch, 30)
     names = iter(["一", "二", "三", "四"])
-    monkeypatch.setattr(profile, "name_taste", lambda *a, **k: next(names))
+    monkeypatch.setattr(cards, "verdict", lambda *a, **k: (next(names), "roast"))
     link = "https://music.163.com/playlist?id=9"
     assert cards.make(link, "zh-Hans")["label"] == "一"
     assert cards.make(link, "zh-Hans")["label"] == "一"           # the same list again: no new call
@@ -151,3 +151,19 @@ def test_the_operator_can_take_down_a_card_nobody_signed_in_made(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["zhiyin", "cards", "--rm", c["id"]])
     cli.main()
     assert cards.get(c["id"]) is None
+
+
+def test_the_roast_is_asked_with_the_numbers_it_may_lean_on(monkeypatch):
+    from zhiyin import llm
+    _fake(monkeypatch, 40)
+    seen = {}
+
+    def call(prompt, system, schema, **k):
+        seen.update(prompt=prompt, system=system, model=k.get("model"))
+        return {"label": "周杰倫的回頭客", "roast": "《晴天》存了三個版本。"}
+    monkeypatch.setattr(llm, "call", call)
+    tracks = netease.likes("https://music.163.com/playlist?id=3")["tracks"]
+    label, roast = cards.verdict(tracks, 40, "zh-Hans")
+    assert (label, roast) == ("周杰伦的回头客", "《晴天》存了三个版本。")     # the likes' script doesn't leak into the card
+    assert seen["model"] == "haiku" and "大众度" in seen["prompt"] and "Most liked artists: Artist" in seen["prompt"]
+    assert "roast" in seen["system"] and "@" not in seen["system"]

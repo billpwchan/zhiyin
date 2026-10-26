@@ -159,6 +159,12 @@ def _migrate(con: sqlite3.Connection) -> None:
             _add_column(con, "shown", c)
     if "next_try" not in {r[1] for r in con.execute("pragma table_info(outbox)")}:
         con.execute("alter table outbox add column next_try real")
+    if "roast" not in {r[1] for r in con.execute("pragma table_info(card_names)")}:
+        _add_column(con, "card_names", "roast text")
+    card_cols = {r[1] for r in con.execute("pragma table_info(cards)")}
+    for c in ("roast text", "pop integer"):
+        if c.split()[0] not in card_cols:
+            _add_column(con, "cards", c)
     if "mine" not in {r[1] for r in con.execute("pragma table_info(users)")}:
         con.execute("alter table users add column mine integer not null default 0")
     for t in ("feedback", "shown", "plays"):

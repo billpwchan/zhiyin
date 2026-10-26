@@ -606,16 +606,19 @@ def _me() -> dict:
 # What a link to the site shows when it is pasted into a chat or a post
 OG_TITLE = "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片"
 OG_TEXT = "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每天几首你没听过的歌，每首都写着为什么挑它。"
+CARD_TITLE = "让 Claude 锐评你的网易云歌单"
+CARD_TEXT = "贴一个歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句，顺便算出你有多大众。"
 
 
-def _og(lang: str) -> str:
+def _og(lang: str, card: bool = False) -> str:
     from html import escape
     base = google.public_url()
-    title, text = escape(i18n.tr(OG_TITLE, lang)), escape(i18n.tr(OG_TEXT, lang))
+    title, text = (escape(i18n.tr(v, lang)) for v in ((CARD_TITLE, CARD_TEXT) if card else (OG_TITLE, OG_TEXT)))
+    img = f"og-card-{lang}.png" if card else f"og-{lang}.png"
     return (f'<meta name="description" content="{text}">\n'
             f'<meta property="og:type" content="website">\n<meta property="og:site_name" content="{escape(i18n.tr("知音", lang))}">\n'
             f'<meta property="og:title" content="{title}">\n<meta property="og:description" content="{text}">\n'
-            f'<meta property="og:url" content="{base}/">\n<meta property="og:image" content="{base}/static/og-{lang}.png">\n'
+            f'<meta property="og:url" content="{base}/{"card" if card else ""}">\n<meta property="og:image" content="{base}/static/{img}">\n'
             f'<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n'
             f'<meta name="twitter:card" content="summary_large_image">\n')
 
@@ -625,13 +628,14 @@ def _og(lang: str) -> str:
 HTML_CACHE = "no-store, no-transform"
 
 
-def _page(name: str, lang: str) -> str:
+def _page(name: str, lang: str, card: bool = False) -> str:
     html = (WEB / name).read_text(encoding="utf-8")
     for f in ("style.css", "i18n.js", "app.js"):
         html = html.replace(f"/static/{f}", f"/static/{f}?v={int((WEB / f).stat().st_mtime)}")
     # pages are written in Simplified Chinese; the language decided here is the one the page starts in
     return html.replace('<html lang="zh-Hans">', f'<html lang="{lang}" data-lang="{lang}">').replace(
-        "<title>知音</title>", f"<title>{i18n.tr('知音', lang)}</title>").replace("</head>", _og(lang) + "</head>", 1)
+        "<title>知音</title>", f"<title>{i18n.tr(CARD_TITLE, lang) + ' · ' if card else ''}{i18n.tr('知音', lang)}</title>").replace(
+        "</head>", _og(lang, card) + "</head>", 1)
 
 
 # Where a visitor came from: ?ref= or utm_source on the link, else the site that sent them. Kept in a cookie for a
@@ -748,7 +752,7 @@ async def card_share(request: Request, token: str = ""):
             raise HTTPException(429, i18n.tr("今天分享得够多了，明天再来", d["lang"]))
         seen.append(now)
         c, nonce, uid = d, d["nonce"], None
-    out = cards.save(img, c["label"], c["lang"], c["n"], c["since"], uid, nonce)
+    out = cards.save(img, c["label"], c["lang"], c["n"], c["since"], uid, nonce, c.get("roast") or None, c.get("pop"))
     store.count("card_shared", _ref_of_user() if uid else _ref_cookie(request))
     return {"url": f"{google.public_url()}/c/{out['id']}", **out}
 
@@ -768,7 +772,7 @@ def card_delete(b: CardDel, request: Request):
 
 @app.get("/card")
 def card_maker(request: Request):
-    return index(request)
+    return index(request, card=True)
 
 
 @app.get("/c/{cid}.jpg")
@@ -787,7 +791,8 @@ def card_page(cid: str, request: Request):
     if c:
         cl = c["lang"] or lang
         title = c["label"] or i18n.tr("我的知音唱片", cl)
-        text = i18n.tr("{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。", cl, n=c["n"], y=c["since"])
+        text = (f'{i18n.tr("「{r}」", cl, r=c["roast"])}{i18n.tr("让 Claude 也锐评一下你的网易云歌单。", cl)}' if c.get("roast")
+                else i18n.tr("{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。", cl, n=c["n"], y=c["since"]))
         og = (f'<meta name="description" content="{escape(text)}">\n<meta property="og:type" content="website">\n'
               f'<meta property="og:site_name" content="{escape(i18n.tr("知音", cl))}">\n'
               f'<meta property="og:title" content="{escape(title)}">\n<meta property="og:description" content="{escape(text)}">\n'
@@ -1003,12 +1008,14 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
 
 
 @app.get("/")
-def index(request: Request):
+def index(request: Request, card: bool = False):
     if not store.is_sample() and not accounts.prefs(store.uid()).get("lang"):
         accounts.set_prefs(store.uid(), lang=i18n.from_request(request))   # a new listener starts in their browser's language
     # YouTube's embed player rejects requests without a Referer (error 153); keep the default
     # strict-origin-when-cross-origin policy and never send no-referrer.
-    html = _page("index.html", i18n.of())
+    # the NetEase card is for Chinese readers: a link preview (no language sent) shows it in Chinese
+    lang = "zh-Hans" if card and not request.headers.get("accept-language") else i18n.of()
+    html = _page("index.html", lang, card)
     r = HTMLResponse(html, headers={"Referrer-Policy": "strict-origin-when-cross-origin", "Cache-Control": HTML_CACHE})
     if store.is_sample() and not request.cookies.get("zy_r") and not _BOT.search(request.headers.get("user-agent", "")):
         ref = _ref_from(request)
@@ -1156,6 +1163,17 @@ def ask_(body: Ask):
         raise HTTPException(503, why)
     _start("ask", lambda log: ask.run(q, log=log) and None)
     return jobs()
+
+
+class AskDel(BaseModel):
+    created: float | None = None   # None: all of them
+
+
+@app.post("/api/ask/delete")
+def ask_delete(b: AskDel):
+    keep = [a for a in store.read_json(store.ASKS) or [] if b.created is not None and a.get("created") != b.created]
+    store.write_json(store.ASKS, keep)
+    return {"asks": keep}
 
 
 class Feedback(BaseModel):

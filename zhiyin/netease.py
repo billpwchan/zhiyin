@@ -146,7 +146,7 @@ def likes(text: str) -> dict:
                        "artists": [{"name": a["name"]} for a in s.get("ar") or [] if a.get("name")],
                        "album": {"name": al["name"]} if al.get("name") else None, "dur": (s.get("dt") or 0) // 1000,
                        "liked_est": _date(x.get("at")), "source": "163", "long": False,
-                       "pic": al.get("picUrl") or "", "year": int(pub[:4]) if pub else 0})
+                       "pic": al.get("picUrl") or "", "year": int(pub[:4]) if pub else 0, "pop": s.get("pop")})
     if len(tracks) < MIN_SONGS:
         raise Unreadable("few", len(tracks))
     return {"key": f"163:{pid}", "tracks": tracks, "total": total}

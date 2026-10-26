@@ -103,6 +103,14 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
   transition: background-color var(--fast) var(--ease), transform var(--fast) var(--ease);
 }
 .st:hover { background: var(--hover); }
+.st-w { position: relative; }
+.st-w .st { padding-right: 36px; }
+.st-x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px;
+  border-radius: 7px; color: var(--fg-3); opacity: 0; transition: opacity var(--fast, .15s) var(--ease, ease); }
+.st-x svg { width: 13px; height: 13px; }
+.st-w:hover .st-x, .st-x:focus-visible { opacity: 1; }
+.st-x:hover { color: var(--fg); background: var(--hover); }
+@media (pointer: coarse) { .st-x { opacity: .7; } }
 .st:active { transform: scale(.985); }
 .st[aria-current] { background: var(--sel); }
 .st .txt { display: grid; min-width: 0; }
@@ -438,6 +446,9 @@ img.lb { transform: scale(1.34); }
 .ear h1 { margin: 0; font-size: 32px; line-height: 1.34; font-weight: 600; letter-spacing: -.015em; line-break: strict; overflow-wrap: break-word; text-wrap: balance; }
 :lang(en) .ear h1 { font-size: 28px; line-height: 1.28; }
 .ear .lede { margin: 18px 0 0; font-size: 16px; line-height: 1.75; color: var(--fg-2); line-break: strict; overflow-wrap: break-word; text-wrap: pretty; }
+/* Claude's roast of a NetEase record: the line people screenshot, so it reads louder than a portrait */
+.ear .lede.roast { font-size: 19px; line-height: 1.6; color: var(--fg); max-width: 34em; }
+.ear .lede .rk { display: block; margin-bottom: 4px; font-size: 12px; letter-spacing: .02em; color: var(--fg-3); }
 .ear .meta-line { margin: 0; font-size: 13px; color: var(--fg-3); }
 .ear .meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 14px; }
 .ear .meta-row .share { margin-left: -2px; height: 30px; padding: 0 10px 0 8px; color: var(--fg); background: rgba(255, 255, 255, .08); }
@@ -697,7 +708,6 @@ a.m-acct:hover { background: var(--hover); }
 .join .steps li { position: relative; padding-left: 24px; counter-increment: s; }
 .join .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; font-variant-numeric: tabular-nums; color: var(--fg-3); }
 .j-go { width: 100%; height: 46px; font-size: 15px; }
-.j-fine { margin: 14px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-3); text-wrap: pretty; }
 .j-163 { margin: 16px 0 0; font-size: 13px; color: var(--fg-3); }
 .j-alt { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; margin-top: 18px; font-size: 13px; }
 .j-alt a { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
@@ -784,6 +794,9 @@ a.m-acct:hover { background: var(--hover); }
   .join[open] { animation: up 420ms var(--drawer); }
   .stations { display: flex; gap: 2px; overflow-x: auto; padding: 0 10px 8px; scroll-snap-type: x proximity; -webkit-mask-image: none; mask-image: none; }
   .st-h { display: none; }
+  .st-w { display: contents; }
+  .st-x { display: none; }
+  .st-w .st { padding-right: 2px; }
   .st { width: 76px; flex: none; grid-template-columns: 1fr; justify-items: center; gap: 5px; padding: 6px 2px; text-align: center; scroll-snap-align: start; }
   .st .mosaic { width: 56px; height: 56px; border-radius: 10px; }
   .st .nm { font-size: 12px; max-width: 72px; }
@@ -841,6 +854,7 @@ a.m-acct:hover { background: var(--hover); }
   .ear-hero { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .ear h1 { font-size: 24px; }
   .ear .lede { font-size: 15px; }
+  .ear .lede.roast { font-size: 17px; }
   /* the button keeps to the right of the line instead of taking a row of its own, so the record stays on the first screen */
   .ear .meta-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
   .facts { margin-top: 24px; }

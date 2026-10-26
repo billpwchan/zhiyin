@@ -313,6 +313,12 @@ EN = {
     "这张卡过期了，重新做一张再分享": "This card has expired. Draw it again to share it",
     "我的知音唱片": "My Zhiyin record",
     "{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。": "{n} liked songs since {y}, one ring a year. Make your own.",
+    "「{r}」": "“{r}” ",
+    "让 Claude 也锐评一下你的网易云歌单。": "Let Claude roast your NetEase Cloud Music likes too.",
+    "让 Claude 锐评你的网易云歌单": "Let Claude roast your NetEase Cloud Music likes",
+    "贴一个歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句，顺便算出你有多大众。":
+        "Paste a playlist link and get a record in ten seconds: Claude names your taste, roasts it in one line, and works out how mainstream you are.",
+    "大众度：你喜欢的歌在网易云的平均热度是 {p}，热歌榜是 100。": "How mainstream: the songs you like average {p} on NetEase's popularity scale, where the hot chart is 100.",
 }
 # Taiwan and Hong Kong wording the converter doesn't know.
 HANT = {

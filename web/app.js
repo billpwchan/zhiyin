@@ -239,6 +239,22 @@ function stHTML(s) {
     <span class="txt"><span class="nm">${esc(s.name)}${s.fresh ? `<i class="new" title="${t('今天换了新歌')}"></i>` : ''}</span><span class="sb">${esc(s.sub)}</span></span><span class="eqs"><i></i><i></i><i></i></span></button>`;
 }
 
+// a station they asked for can go again: × beside it on a wide screen, the station menu everywhere
+function askHTML(s) {
+  return `<div class="st-w">${stHTML(s)}<button class="st-x" data-k="unask" data-c="${esc(s.key.slice(4))}" title="${t('删掉这个点歌')}" aria-label="${t('删掉这个点歌')}">${I.close}</button></div>`;
+}
+let unaskArmed = 0;
+async function unask(created) {
+  // clearing them all takes a second click within a few seconds
+  if (created === null && Date.now() - unaskArmed > 4000) { unaskArmed = Date.now(); toast(t('再点一次，清空你点的')); return; }
+  try {
+    const r = await api('/api/ask/delete', { created });
+    S.asks = r.asks;
+    buildStations();
+    renderStations();
+  } catch (e) { toast(e.message); }
+}
+
 const STEPS = () => [t('读取你的喜欢'), t('了解你的口味'), t('挑第一批电台')];
 function prepHTML() {
   const me = S.me;
@@ -264,7 +280,7 @@ function renderStations() {
     return;
   }
   $('#stations').innerHTML = `${prepHTML()}
-    ${asks.length ? `<div class="st-h"><span>${t('你点的')}</span></div>${asks.map(stHTML).join('')}` : ''}
+    ${asks.length ? `<div class="st-h"><span>${t('你点的')}</span><button data-k="unaskall" title="${t('清空你点的')}" aria-label="${t('清空你点的')}">${I.close}</button></div>${asks.map(askHTML).join('')}` : ''}
     <div class="st-h"><span>${label}</span>${SAMPLE() ? '' : `<button class="${busy ? 'busy' : ''}" data-k="refresh" title="${t('现在重新挑一批')}" ${busy ? 'disabled' : ''}>${I.refresh}</button>`}</div>
     ${lanes.map(stHTML).join('')}
     ${warm.length ? `<div class="st-h"><span>${t('先听着')}</span></div>${warm.map(stHTML).join('')}` : ''}`;
@@ -1276,7 +1292,7 @@ function welcomeHTML() {
       <dt>${t('可以写回')}</dt><dd>${t('你在这里点的喜欢。要你在设置里打开，Google 会再问一次')}</dd>
       <dt>${t('不会')}</dt><dd>${t('发布、评论、删除，或碰你的其他 Google 数据')}</dd>
     </dl>
-    <p class="fine">${t('Google 会提示「Google 尚未验证此应用」。这是{owner}自己做的小工具，没有拿去申请审核。点「高级」，再点「前往 {host}」就能继续。你的喜欢和反馈存在{owner}的服务器上，随时可以在设置里断开并全部删除。', { owner: esc(owner), host: esc(location.host) })}</p>
+    <p class="fine">${t('你的喜欢和反馈存在{owner}的服务器上，随时可以在设置里断开并全部删除。', { owner: esc(owner) })}</p>
   </div>`;
 }
 
@@ -1550,7 +1566,6 @@ function openJoin(why) {
     <ol class="${steps.length > 1 ? 'steps' : ''}">${steps.map((x) => `<li>${x}</li>`).join('')}</ol>
     ${invite ? `<a class="btn j-go" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`
       : `<a class="btn j-go" href="/auth/google/start?mode=join">${G_LOGO}${full ? t('用 Google 登记') : t('用 Google 继续')}</a>`}
-    ${!invite && !full && !me.google?.verified ? `<p class="j-fine">${t('Google 会提示「Google 尚未验证此应用」。点「高级」，再点「前往 {host}」就能继续。', { host: esc(location.host) })}</p>` : ''}
     ${SAMPLE() ? `<p class="j-163">${t('不用 YouTube Music？')}<button class="lnk" data-k="tomaker">${t('用网易云歌单画一张唱片')}</button></p>` : ''}
     <div class="j-alt">${invite ? '<span></span>' : `<a href="/auth/google/start?mode=login">${t('已经加入过？登录')}</a>`}<a href="/about">${t('知音是什么')}</a><a href="/privacy">${t('知音怎么用你的数据')}</a></div>
     <div class="j-lang">${Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" ${k === LANG ? 'aria-current="true"' : ''}>${v}</button>`).join('')}</div>
@@ -1662,7 +1677,8 @@ function stationMenu(anchor) {
   openMenu(anchor, `
     <button class="m-item" role="menuitem" data-k="ytm">${I.ext}${t('在 YouTube Music 里接着放')}</button>
     ${S.me?.writes_back ? `<button class="m-item" role="menuitem" data-k="save">${I.plus}${t('把这个电台存成歌单')}</button>` : ''}
-    <button class="m-item" role="menuitem" data-k="radio">${I.branch}${t('沿着这首继续')}</button>`);
+    <button class="m-item" role="menuitem" data-k="radio">${I.branch}${t('沿着这首继续')}</button>
+    ${Q.key.startsWith('ask:') && !Q.key.endsWith(':pending') ? `<button class="m-item" role="menuitem" data-k="unaskcur">${I.close}${t('删掉这个点歌')}</button>` : ''}`);
 }
 
 /* ---------- share card: the record, the name of the taste, and a number a friend can hold against their own ---------- */
@@ -1670,7 +1686,7 @@ const LOGO = new Path2D('M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 
 const NO_START = /^[，。、；：！？）」』》〉,.;:!?)’”]/;
 
 // A headline on two balanced lines at most, broken between words (Chinese words too), preferring a pause.
-function headLines(x, text, maxW) {
+function headLines(x, text, maxW, prose = false) {
   const toks = [];
   for (const { segment: g } of new Intl.Segmenter(LANG, { granularity: 'word' }).segment(text)) {
     if (toks.length && (NO_START.test(g) || /^\s+$/.test(g))) toks[toks.length - 1] += g; else toks.push(g);
@@ -1681,11 +1697,25 @@ function headLines(x, text, maxW) {
   for (let i = 1; i < toks.length; i++) {
     const a = toks.slice(0, i).join('').trim(), b = toks.slice(i).join('').trim(), m = Math.max(w(a), w(b));
     if (m > maxW) continue;
-    // a pause reads best; then a break before 的 or after 和, which Chinese readers take as a joint, not a cut
-    const k = m * (/[，、；：,;:\s]$/.test(toks[i - 1]) ? 0.8 : /^[的之]/.test(toks[i]) || /[和与跟或]$/.test(toks[i - 1]) ? 0.9 : 1);
+    // a pause reads best; in a name, then a break before 的 or after 和, which Chinese readers take as a joint, not a
+    // cut. A sentence (prose) breaks at its pause whenever the pause leaves both lines fitting.
+    const pause = /[，、；：。,;:.\s]$/.test(toks[i - 1]);
+    const k = prose ? m * (pause ? 0.6 : 1) : m * (pause ? 0.8 : /^[的之]/.test(toks[i]) || /[和与跟或]$/.test(toks[i - 1]) ? 0.9 : 1);
     if (!best || k < best[0]) best = [k, [a, b]];
   }
   return best?.[1] || null;
+}
+
+// Text on as many lines as it needs, broken between words (Chinese words too).
+function wrapLines(x, text, maxW) {
+  const out = [];
+  let cur = '';
+  for (const { segment: g } of new Intl.Segmenter(LANG, { granularity: 'word' }).segment(text)) {
+    if (cur.trim() && !NO_START.test(g) && x.measureText((cur + g).trim()).width > maxW) { out.push(cur.trim()); cur = g; }
+    else cur += g;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
 }
 
 // The hue the covers share, for the light behind the record.
@@ -1764,14 +1794,28 @@ async function cardCanvas() {
   for (const l of lines) { y += size * 0.96; x.fillText(l, M, y); y += size * 0.2; }
   const songs = EAR.list.length, first = yearOf(EAR.span[0]), liked = EAR.n ?? (S.library.songs || songs);
   const kinds = EAR.sectors.length ? S.lanes.length : 0;
-  font(400, 28);
-  x.fillStyle = INK3;
-  y += 50;
-  x.fillText([t('{n} 首喜欢', { n: liked }), t('{y} 年至今', { y: first }), kinds ? t('{n} 种口味', { n: kinds }) : ''].filter(Boolean).join('  ·  '), M, y);
+  if (EAR.roast) {
+    // Claude's line about the taste takes the counts' place: the record's centre and rings carry those
+    y += 58;
+    font(500, 24);
+    x.fillStyle = INK3;
+    x.fillText(t('Claude 锐评'), M, y);
+    let rl = null, rs = 38;
+    for (rs of [38, 34]) { font(400, rs); if ((rl = headLines(x, EAR.roast, W - 2 * M, true))) break; }
+    if (!rl) { font(400, rs = 32); rl = wrapLines(x, EAR.roast, W - 2 * M).slice(0, 3); }
+    x.fillStyle = INK2;
+    for (const l of rl) { y += rs * 1.45; x.fillText(l, M, y); }
+  } else {
+    font(400, 28);
+    x.fillStyle = INK3;
+    y += 50;
+    x.fillText([t('{n} 首喜欢', { n: liked }), t('{y} 年至今', { y: first }), kinds ? t('{n} 种口味', { n: kinds }) : ''].filter(Boolean).join('  ·  '), M, y);
+  }
 
-  // the number, at the foot
-  const lead = EAR.center || first;
-  const said = EAR.center ? t('你喜欢的歌，有一半是这一年或更早的') : t('这一年点了第一首喜欢');
+  // the number, at the foot: how mainstream a NetEase record is, else the year half the songs had come out by
+  const pop = EAR.pop ?? null;
+  const lead = pop !== null ? `${pop}%` : EAR.center || first;
+  const said = pop !== null ? t('歌单大众度，热歌榜是 100%') : EAR.center ? t('你喜欢的歌，有一半是这一年或更早的') : t('这一年点了第一首喜欢');
   const footY = H - M;
   font(600, 112);
   x.fillStyle = INK;
@@ -1870,7 +1914,7 @@ const WECHAT = /MicroMessenger/i.test(navigator.userAgent);
 const myLinks = () => store.get('cards') || [];
 // The link already made for the card on screen: per name for an account, per record for a NetEase one.
 const linkFor = () => (guest() ? GUEST.shared : myLinks().find((c) => c.uid === S.me?.uid && c.label === EAR.label)) || null;
-function linkHTML(l) {
+function cardLinkHTML(l) {
   return l ? `<div class="sc-link"><span class="sc-url">${esc(l.url.replace(/^https?:\/\//, ''))}</span>
       <button class="tb" data-k="copylink">${I.copy}<span>${t('复制链接')}</span></button>
       <button class="tb" data-k="unlink">${t('收回')}</button></div>`
@@ -1895,7 +1939,7 @@ async function shareCard(btn) {
         ${phone ? `<button class="btn" data-k="sharenow">${I.share}<span>${t('分享')}</span></button>` : ''}
         ${WECHAT ? '' : `<button class="${phone ? 'tb' : 'btn'}" data-k="savecard">${I.save}<span>${t('保存图片')}</span></button>`}
         ${!phone && !WECHAT && window.ClipboardItem ? `<button class="tb" data-k="copycard">${I.copy}<span>${t('复制图片')}</span></button>` : ''}
-        ${linkable ? `<span class="sc-ln" id="scLn">${linkHTML(linkFor())}</span>` : ''}
+        ${linkable ? `<span class="sc-ln" id="scLn">${cardLinkHTML(linkFor())}</span>` : ''}
         <button class="ib sm sc-x" data-k="closeshare" aria-label="${t('关闭')}">${I.close}</button>
       </div></div>`;
     if (!d.open) { d.showModal(); ev('share_open'); }
@@ -1916,7 +1960,7 @@ async function makeLink(b) {
     const l = { id: d.id, key: d.key, url: d.url, label: EAR.label || '', uid: g ? null : S.me?.uid };
     store.set('cards', [l, ...myLinks()].slice(0, 40));
     if (g) { GUEST.shared = l; store.set('guest', GUEST); }
-    $('#scLn').innerHTML = linkHTML(l);
+    $('#scLn').innerHTML = cardLinkHTML(l);
   } catch (e) {
     if (b.isConnected) { b.disabled = false; $('span', b).textContent = t('生成链接'); }
     toast(e.message);
@@ -1927,7 +1971,7 @@ async function cardAct(k, btn) {
   const l = linkFor();
   // the link rides along where the app keeps text with an image (Messages, X, LINE); ?ref=card counts who it brings
   if (k === 'sharenow') {
-    try { await navigator.share({ files: [card.file], text: `${EAR.label || t('你的喜欢')}  ${l ? l.url : `${location.origin}/card?ref=card`}` }); ev('share_send'); } catch {}
+    try { await navigator.share({ files: [card.file], text: `${EAR.label || t('你的喜欢')}${guest() && EAR.roast ? `\n${t('Claude 锐评')}：${EAR.roast}` : ''}\n${l ? l.url : `${location.origin}/card?ref=card`}` }); ev('share_send'); } catch {}
     return;
   }
   if (k === 'cardlink') return makeLink(btn);
@@ -1942,7 +1986,7 @@ async function cardAct(k, btn) {
     } catch (e) { if (!/card/.test(e.message)) return toast(e.message); }   // already gone is gone
     store.set('cards', myLinks().filter((c) => c.id !== l.id));
     if (guest()) { delete GUEST.shared; store.set('guest', GUEST); }
-    $('#scLn').innerHTML = linkHTML(null);
+    $('#scLn').innerHTML = cardLinkHTML(null);
     toast(t('链接收回了，打开它只会看到「这张卡已经收回」'));
     return;
   }
@@ -2080,31 +2124,32 @@ function noYouTube() {
 
 function makerHTML() {
   return `<form class="maker" id="maker" autocomplete="off">
-    <div class="mk-t"><p class="mk-k">${t('这是一位示例听众的唱片')}</p><h2>${t('画一张你自己的')}</h2>
-      <p class="mk-sub">${t('在网易云音乐打开「我喜欢的音乐」，点分享，复制链接贴在这里。不用登录，也不保存你的歌单。')}</p></div>
+    <div class="mk-t"><p class="mk-k">${t('下面是一位示例听众的唱片')}</p><h2>${t('让 Claude 锐评你的网易云歌单')}</h2>
+      <p class="mk-sub">${t('在网易云打开「我喜欢的音乐」，点分享，复制链接贴进来。十秒出一张唱片：名字、锐评、你有多大众。')}</p></div>
     <div class="mk-f"><div class="mk-row"><input id="mkLink" name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false"
-      placeholder="${t('粘贴网易云的歌单或主页链接')}" aria-label="${t('网易云的歌单或主页链接')}" value="${esc(MK.link)}"><button class="btn" type="submit"${MK.busy ? ' disabled' : ''}>${esc(MK.busy || t('画出来'))}</button></div>
+      placeholder="${t('粘贴网易云的歌单或主页链接')}" aria-label="${t('网易云的歌单或主页链接')}" value="${esc(MK.link)}"><button class="btn" type="submit"${MK.busy ? ' disabled' : ''}>${esc(MK.busy || t('锐评一下'))}</button></div>
       <p class="mk-err" id="mkErr" role="alert">${esc(MK.err)}</p>
       <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="join">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每天还有几首新歌。')}</p></div>
   </form>`;
 }
 
 function guestNextHTML() {
-  return `<section class="sec g-next"><h2>${t('只在这个浏览器里')}<small>${t('知音没有保存你的歌单。分享出去的只有这张卡，随时可以收回。')}</small></h2>
-    <div class="g-acts"><button class="tb" data-k="gnew">${I.swap}<span>${t('换一份歌单')}</span></button>
+  return `<section class="sec g-next"><h2>${t('发给朋友，看谁更大众')}<small>${t('朋友点开你的卡，就能锐评他自己的。')}</small></h2>
+    <div class="g-acts"><button class="btn" data-k="share">${I.share}<span>${t('分享这张卡')}</span></button>
+      <button class="tb" data-k="gnew">${I.swap}<span>${t('换一份歌单')}</span></button>
       <button class="tb" data-k="join">${I.go}<span>${t('用 YouTube Music 每天听新歌')}</span></button></div></section>`;
 }
 
 function paintMaker() {
   const b = $('#maker button[type=submit]'), err = $('#mkErr');
-  if (b) { b.disabled = !!MK.busy; b.textContent = MK.busy || t('画出来'); }
+  if (b) { b.disabled = !!MK.busy; b.textContent = MK.busy || t('锐评一下'); }
   if (err) err.textContent = MK.err;
 }
 
 async function makeCard(link, again) {
   if (!again) Object.assign(MK, { link, err: '', busy: t('正在读你的歌单…') });
   paintMaker();
-  const slow = setTimeout(() => { if (MK.busy) { MK.busy = t('正在给你的口味起名字…'); paintMaker(); } }, 2600);
+  const slow = setTimeout(() => { if (MK.busy) { MK.busy = t('Claude 正在听…'); paintMaker(); } }, 2600);
   try {
     const d = await api('/api/card/make', { link, again: !!again });
     MK.link = '';
@@ -2425,7 +2470,7 @@ function renderEar() {
   // without one) the portrait's first sentence heads it, as it always did.
   const name = EAR?.label;
   const songs = EAR?.list.length || 0, n = g ? EAR.n : S.library.songs || songs;
-  let head = name || '', lede = name && !g ? po?.headline || '' : '';
+  let head = name || '', lede = !name ? '' : g ? EAR.roast || '' : po?.headline || '';
   if (g && !name) { head = t('你的喜欢'); lede = EAR.why || ''; }
   else if (!name && po) {
     const cut = po.headline.search(/[。！？]|[.!?](?=\s)/);   // the first sentence is the heading, in either script
@@ -2453,7 +2498,7 @@ function renderEar() {
     <header class="ear-hero">
       <div class="hero-t">
         <h1 class="${naming ? 'sk' : ''}">${naming ? t('正在给你的口味起个名字') : name && g ? relabelable(name, 'grelabel') : name && !SAMPLE() ? relabelable(name) : esc(head || t('你的喜欢'))}</h1>
-        ${lede ? `<p class="lede">${esc(lede)}</p>` : ''}
+        ${lede ? `<p class="lede${g && EAR.roast ? ' roast' : ''}">${g && EAR.roast ? `<span class="rk">${t('Claude 锐评')}</span>` : ''}${esc(lede)}</p>` : ''}
         <div class="meta-row"><p class="meta-line num">${meta}</p>${canShare ? `<button class="tb share" data-k="share">${I.share}<span>${t('分享')}</span></button>` : ''}</div>
       </div>
       <div class="facts" id="facts">${EAR?.list.length ? factsHTML() : earFailed ? '' : skeleton}</div>
@@ -2934,6 +2979,7 @@ async function act(k, btn) {
   else if (k === 'share') shareCard(btn);
   else if (k === 'relabel') relabel(btn);
   else if (k === 'radio') { closeMenu(); continueFrom(null); }
+  else if (k === 'unaskcur') { closeMenu(); unask(+Q.key.slice(4)); }
   else if (k === 'lyrics') toggleLyrics();
   else if (k === 'tab-lyr') toggleLyrics(true);
   else if (k === 'tab-q') { if (Lyr.data) toggleLyrics(false); }
@@ -2948,6 +2994,8 @@ async function act(k, btn) {
     Lyr.sync(true);
   } else if (k === 'extend') { btn.disabled = true; await extend(false); btn.disabled = false; }
   else if (k === 'refresh') startRefresh();
+  else if (k === 'unask') unask(+btn.dataset.c);
+  else if (k === 'unaskall') unask(null);
   else if (k === 'setup') { try { await api('/api/setup', {}); await reload(); poll(); } catch (err) { toast(err.message); } }
   else if (k === 'resync') { try { S.jobs = await api('/api/sync', {}); renderSheet(); poll(); } catch (err) { toast(err.message); } }
   else if (k === 'synclikes') {

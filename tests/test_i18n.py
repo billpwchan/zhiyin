@@ -116,3 +116,9 @@ def test_accounts_from_before_the_choice_keep_the_language_they_were_written_in(
     i18n.migrate()
     assert accounts.prefs(en)["lang"] == "en" and accounts.prefs(old)["lang"] == "zh-Hans"
     assert "lang" not in accounts.prefs(fresh)        # their browser decides on the first visit
+
+
+def test_no_two_functions_share_a_name_in_the_page_script():
+    # a second top-level `function x` silently replaces the first everywhere (the settings page went blank that way)
+    names = re.findall(r"^(?:async )?function (\w+)\(", (WEB / "app.js").read_text(), re.M)
+    assert not [n for n in set(names) if names.count(n) > 1]

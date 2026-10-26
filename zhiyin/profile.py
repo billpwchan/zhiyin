@@ -287,15 +287,21 @@ def label() -> str:
     return name_taste(rows, i18n.of())
 
 
+def sample(rows: list, lines: int) -> list:
+    """The newest in full, then an even sample of the years before."""
+    if len(rows) <= lines:
+        return rows
+    head = lines * 2 // 3
+    old = rows[head:]
+    return rows[:head] + old[::max(1, len(old) // (lines - head))][:lines - head]
+
+
 def name_taste(rows: list[tuple[str, str, str]], lang: str, lines: int = LABEL_LINES, model: str = "sonnet",
                service: str = "YouTube") -> str:
     """The label from (month liked, title, artists) rows, newest first."""
     if not rows:
         return ""
-    if len(rows) > lines:   # the newest in full, then an even sample of the years before
-        head = lines * 2 // 3
-        old = rows[head:]
-        rows = rows[:head] + old[::max(1, len(old) // (lines - head))][:lines - head]
+    rows = sample(rows, lines)
     w = i18n.WRITE[lang]
     system = LABEL_SYSTEM.replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"]).replace("@SERVICE@", service)
     prompt = "\n".join(" | ".join(r) for r in rows)

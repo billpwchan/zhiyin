@@ -527,3 +527,13 @@ def test_what_zhiyin_is_and_does_with_google_data_reads_without_signing_in(monke
     assert "<b>Cloudflare</b>" in page and "{cdn}" not in page and 'href="/about"' in page
     for path in ("/", "/about", "/privacy"):
         assert "no-transform" in c.get(path).headers["cache-control"]   # a CDN must not inject its analytics
+
+
+def test_a_request_can_be_taken_off_the_list_one_or_all():
+    from fastapi.testclient import TestClient
+    with store.as_user(store.OWNER):
+        store.write_json(store.ASKS, [{"created": 3.5, "q": "c", "picks": []}, {"created": 2.25, "q": "b", "picks": []},
+                                      {"created": 1.0, "q": "a", "picks": []}])
+    c = TestClient(server.app)
+    assert [a["q"] for a in c.post("/api/ask/delete", json={"created": 2.25}).json()["asks"]] == ["c", "a"]
+    assert c.post("/api/ask/delete", json={}).json()["asks"] == []

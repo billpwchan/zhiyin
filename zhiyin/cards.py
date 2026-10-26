@@ -1,6 +1,7 @@
 """Cards made without an account (from someone's public NetEase likes), and every card anyone chooses to share by link.
 
-A shared card is only the picture plus the few words its page shows (the name, how many likes, since when). The likes it
+A shared card is only the picture plus the few words its page shows (the name, the roast, how many likes, since when,
+how mainstream). The likes it
 was drawn from are never stored: the record goes back to the browser that asked for it and is gone from here."""
 import base64
 import hashlib
@@ -9,6 +10,7 @@ import json
 import secrets
 import struct
 import time
+from collections import Counter
 
 from . import ear, i18n, llm, netease, profile, store
 
@@ -21,8 +23,26 @@ NAMES_A_DAY = 3      # names for one playlist per day: the first and two more tr
 MAKES = (12, 600)    # imports from one address per ten minutes
 SHARES_A_DAY = 20    # links one account or address makes in a day
 NAME_LINES = 600
+MIN_POP = 20       # songs with a popularity before 大众度 means anything
 
 _recent: dict[str, list[float]] = {}
+
+VERDICT_SCHEMA = {"type": "object", "properties": {"label": {"type": "string"}, "roast": {"type": "string"}},
+                  "required": ["label", "roast"]}
+ROAST = """
+
+Then write `roast`, @ROAST@ in @LANG@: what a friend with sharp ears would say out loud about this taste to make the
+table laugh, the line they will screenshot and post.
+- Hang it on something the list really shows: an artist they can't stop liking, a run of the same kind of song, a year
+  they never left, how mainstream they are (大众度 below), the guilty pleasure sitting next to the serious stuff.
+- Tease the music and the habit, never the person: nothing about looks, age, gender, love life, where they are from,
+  money or mental health. Calling the songs emo is fine.
+- Funny over clever: spoken rhythm, plain words. No compliment dressed up as a roast, no "but deep down" turn, no
+  advice, no question to the reader.
+- Don't reuse the label's words. No emoji or hashtags."""
+ROAST_LEN = {"zh-Hans": "one or two sentences, at most 40 Chinese characters",
+             "zh-Hant": "one or two sentences, at most 40 Chinese characters",
+             "en": "one or two sentences, at most 26 words"}
 
 
 def _key() -> bytes:
@@ -63,44 +83,89 @@ def may_make(ip: str) -> bool:
     return True
 
 
-def _name(tracks: list[dict], key: str, lang: str, again: bool) -> tuple[str | None, str | None]:
-    """(label, why there is none). A playlist named today keeps its name unless they ask for another."""
+def popularity(tracks: list[dict]) -> int | None:
+    """大众度: the mean of NetEase's own 0-100 popularity over the likes (its hot chart is 100, a little-known indie
+    list about 20, a typical listener's likes 70-80)."""
+    pops = [t["pop"] for t in tracks if t.get("pop") is not None]
+    return round(sum(pops) / len(pops)) if len(pops) >= MIN_POP else None
+
+
+def _about(tracks: list[dict], total: int) -> str:
+    """The numbers the roast may lean on, in the prompt's own words."""
+    first = min((t["liked_est"] for t in tracks if t["liked_est"]), default="")[:4]
+    top = Counter(t["artists"][0]["name"] for t in tracks if t["artists"]).most_common(3)
+    years = sorted(t["year"] for t in tracks if t["year"] > 1950)
+    out = [f"{total} liked songs" + (f", the first liked in {first}" if first else "") + "."]
+    if (pop := popularity(tracks)) is not None:
+        out.append(f"大众度 (mean NetEase popularity, 0-100; the hot chart scores 100, a little-known indie list about "
+                   f"20, most people's likes 70-80): {pop}.")
+    if len(years) >= 30:
+        out.append(f"Half the songs came out in {years[(len(years) - 1) // 2]} or before.")
+    if top:
+        out.append("Most liked artists: " + ", ".join(f"{a} ({n})" for a, n in top) + ".")
+    return " ".join(out)
+
+
+def verdict(tracks: list[dict], total: int, lang: str, model: str = "haiku") -> tuple[str, str]:
+    """(label, roast) for a card: the taste's name, and one line teasing it."""
+    rows = profile.sample([((t["liked_est"] or "")[:7], t["title"], ", ".join(a["name"] for a in t["artists"][:2]))
+                           for t in tracks], NAME_LINES)
+    w = i18n.WRITE[lang]
+    system = (profile.LABEL_SYSTEM + ROAST).replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"]) \
+        .replace("@SERVICE@", "NetEase Cloud Music").replace("@ROAST@", ROAST_LEN[lang])
+    prompt = "About them: " + _about(tracks, total) + "\n\nTheir likes:\n" + "\n".join(" | ".join(r) for r in rows)
+    label = roast = ""
+    for _ in range(2):
+        out = llm.call(prompt, system, VERDICT_SCHEMA, model=model, timeout=180, retries=1)
+        label, roast = out["label"].strip().rstrip("。.!！"), out["roast"].strip()
+        if len(label.split()) <= 7 if lang == "en" else len(label) <= 18:
+            break
+        prompt += f"\n\n(\"{label}\" is too long: {w['label']}.)"
+    if lang != "en":   # the script of the likes can leak in (粵語 for a Simplified reader)
+        other = "zh-Hant" if lang == "zh-Hans" else "zh-Hans"
+        label, roast = (i18n.zh_punct(i18n.convert(v, other, lang)) for v in (label, roast))
+    return label, roast
+
+
+def _verdict(tracks: list[dict], total: int, key: str, lang: str, again: bool) -> tuple[str | None, str | None, str | None]:
+    """(label, roast, why there are none). A playlist read today keeps its verdict unless they ask for another."""
     k = hashlib.sha256(f"{key}|{lang}".encode()).hexdigest()[:24]
     today = time.strftime("%Y-%m-%d")
     con = store.db()
-    row = con.execute("select label, day, rolls from card_names where k=?", (k,)).fetchone()
+    row = con.execute("select label, roast, day, rolls from card_names where k=?", (k,)).fetchone()
     rolls = row["rolls"] if row and row["day"] == today else 0
+    kept = (row["label"], row["roast"]) if row else (None, None)
     if row and row["label"] and (not again or rolls >= NAMES_A_DAY):
-        return row["label"], i18n.tr("今天换了好几次了，明天再换", lang) if again else None
+        return *kept, i18n.tr("今天换了好几次了，明天再换", lang) if again else None
     with store.as_user(store.CARDS):
         if llm.unavailable():
             cap = llm.spent(store.CARDS, days=1) >= llm.CARD_DAILY_USD
-            return (row["label"] if row else None), i18n.tr(
-                "今天起名字的额度用完了，明天再来起名" if cap else "现在起不了名字，唱片先画好了", lang)
-        rows = [((t["liked_est"] or "")[:7], t["title"], ", ".join(a["name"] for a in t["artists"][:2])) for t in tracks]
+            return *kept, i18n.tr("今天起名字的额度用完了，明天再来起名" if cap else "现在起不了名字，唱片先画好了", lang)
         try:
-            label = profile.name_taste(rows, lang, NAME_LINES, model="haiku", service="NetEase Cloud Music")
+            label, roast = verdict(tracks, total, lang)
         except llm.LLMError:
-            return (row["label"] if row else None), i18n.tr("起名字的时候出了点问题，再试一次", lang)
-    con.execute("insert or replace into card_names values (?, ?, ?, ?)", (k, label, today, rolls + 1))
+            return *kept, i18n.tr("起名字的时候出了点问题，再试一次", lang)
+    con.execute("insert or replace into card_names(k, label, day, rolls, roast) values (?, ?, ?, ?, ?)",
+                (k, label, today, rolls + 1, roast))
     con.execute("delete from card_names where day < ?", (time.strftime("%Y-%m-%d", time.localtime(time.time() - 7 * 86400)),))
     con.commit()
-    return label, None
+    return label, roast, None
 
 
 def make(link: str, lang: str, again: bool = False) -> dict:
     got = netease.likes(link)
     tracks = got["tracks"]
-    label, why = _name(tracks, got["key"], lang, again)
+    label, roast, why = _verdict(tracks, got["total"], got["key"], lang, again)
     rec = ear.from_tracks(tracks, lang)
-    rec["label"] = label
-    rec["n"] = got["total"]
-    rec["pics"] = {t["vid"]: t["pic"] for t in tracks if t["pic"]}
-    rec["source"] = "163"
-    rec["why"] = why
+    pop = popularity(tracks)
+    if pop is not None:
+        rec["facts"].insert(0, {"key": "pop", "lead": f"{pop}%",
+                                "text": i18n.tr("大众度：你喜欢的歌在网易云的平均热度是 {p}，热歌榜是 100。", lang, p=pop), "vids": []})
+    rec.update(label=label, roast=roast, pop=pop, n=got["total"], source="163", why=why,
+               pics={t["vid"]: t["pic"] for t in tracks if t["pic"]})
     since = int(rec["span"][0])
-    rec["token"] = sign({"label": label or "", "n": got["total"], "since": since, "lang": lang,
-                         "exp": time.time() + TOKEN_S, "nonce": secrets.token_hex(8)})
+    rec["token"] = sign({"label": label or "", "roast": roast or "", "pop": pop, "n": got["total"], "since": since,
+                         "lang": lang, "exp": time.time() + TOKEN_S, "nonce": secrets.token_hex(8)})
     return rec
 
 
@@ -133,13 +198,15 @@ def shares_today(who: str) -> int:
     return store.db().execute("select count(*) from cards where uid=? and created>?", (who, since)).fetchone()[0]
 
 
-def save(img: bytes, label: str, lang: str, n: int, since: int, who: str, nonce: str | None) -> dict:
+def save(img: bytes, label: str, lang: str, n: int, since: int, who: str | None, nonce: str | None,
+         roast: str | None = None, pop: int | None = None) -> dict:
     cid = secrets.token_urlsafe(6).replace("-", "x").replace("_", "y")
     key = secrets.token_urlsafe(18)
     (DIR / f"{cid}.jpg").write_bytes(img)
     con = store.db()
-    con.execute("insert into cards(id, created, label, lang, n, since, uid, del, nonce) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (cid, time.time(), label, lang, n, since, who, hashlib.sha256(key.encode()).hexdigest(), nonce))
+    con.execute("insert into cards(id, created, label, lang, n, since, uid, del, nonce, roast, pop) "
+                "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (cid, time.time(), label, lang, n, since, who, hashlib.sha256(key.encode()).hexdigest(), nonce, roast, pop))
     con.commit()
     return {"id": cid, "key": key}
 
