@@ -1,4 +1,5 @@
-# Installed at /opt/zhiyin/compose.yaml. ./current is the release being run, ./data holds every listener's data,
+# Installed at /opt/zhiyin/compose.yaml, with the settings that aren't secret in /opt/zhiyin/.env (written by
+# deploy.sh). ./current is the release being run, ./data holds every listener's data,
 # ./secrets/zhiyin.env holds ZHIYIN_WORKER_TOKEN and, optionally, CLAUDE_CODE_OAUTH_TOKEN and ANTHROPIC_API_KEY
 # (see docs/self-hosting.md, "Whose Claude").
 services:
@@ -11,6 +12,8 @@ services:
     environment:
       ZHIYIN_PUBLIC_URL: ${ZHIYIN_PUBLIC_URL:?set ZHIYIN_PUBLIC_URL}
       ZHIYIN_YT_LANGUAGE: ${ZHIYIN_YT_LANGUAGE:-en}
+      ZHIYIN_SEATS: ${ZHIYIN_SEATS:-0}
+      ZHIYIN_CDN: ${ZHIYIN_CDN:-}
     volumes:
       - ./data:/data
     # one uvicorn process (~150 MB) plus up to two `claude -p` processes (~255 MB each) when Claude runs here

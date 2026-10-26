@@ -647,7 +647,7 @@ a.m-acct:hover { background: var(--hover); }
 .join .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; font-variant-numeric: tabular-nums; color: var(--fg-3); }
 .j-go { width: 100%; height: 46px; font-size: 15px; }
 .j-fine { margin: 14px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-3); text-wrap: pretty; }
-.j-alt { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 13px; }
+.j-alt { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; margin-top: 18px; font-size: 13px; }
 .j-alt a { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
 .j-alt a:hover { color: var(--fg); }
 .j-lang { display: flex; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; }

@@ -18,6 +18,7 @@ let LANG = detectLang();
 
 const STRINGS = {
   en: {
+    "知音是什么": "What Zhiyin is",
     "还读不到你的喜欢": "Your likes can't be read yet",
     "建好 YouTube 频道，再点「再试一次」，就从你点过的喜欢开始。": "Make a YouTube channel, then press Try again, and it starts from the songs you've liked.",
     "第一批电台没做成": "Your first stations didn't come through",
@@ -393,6 +394,7 @@ const STRINGS = {
     "这个链接是给{name}的": "This link is for {name}",
   },
   'zh-Hant': {
+    "知音是什么": "知音是什麼",
     "还读不到你的喜欢": "還讀不到你的喜歡",
     "建好 YouTube 频道，再点「再试一次」，就从你点过的喜欢开始。": "建好 YouTube 頻道，再按「再試一次」，就從你按過的喜歡開始。",
     "第一批电台没做成": "第一批電台沒做成",

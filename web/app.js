@@ -1377,7 +1377,7 @@ function openJoin(why) {
     ${invite ? `<a class="btn j-go" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`
       : `<a class="btn j-go" href="/auth/google/start?mode=join">${G_LOGO}${full ? t('用 Google 登记') : t('用 Google 继续')}</a>`}
     ${!invite && !full && !me.google?.verified ? `<p class="j-fine">${t('Google 会提示「Google 尚未验证此应用」。点「高级」，再点「前往 {host}」就能继续。', { host: esc(location.host) })}</p>` : ''}
-    <div class="j-alt">${invite ? '<span></span>' : `<a href="/auth/google/start?mode=login">${t('已经加入过？登录')}</a>`}<a href="/privacy">${t('知音怎么用你的数据')}</a></div>
+    <div class="j-alt">${invite ? '<span></span>' : `<a href="/auth/google/start?mode=login">${t('已经加入过？登录')}</a>`}<a href="/about">${t('知音是什么')}</a><a href="/privacy">${t('知音怎么用你的数据')}</a></div>
     <div class="j-lang">${Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" ${k === LANG ? 'aria-current="true"' : ''}>${v}</button>`).join('')}</div>
   </div>`;
   if (!d.open) d.showModal();
@@ -1486,7 +1486,7 @@ function stationMenu(anchor) {
   if (!Q) return;
   openMenu(anchor, `
     <button class="m-item" role="menuitem" data-k="ytm">${I.ext}${t('在 YouTube Music 里接着放')}</button>
-    ${S.me?.google?.connected ? `<button class="m-item" role="menuitem" data-k="save">${I.plus}${t('把这个电台存成歌单')}</button>` : ''}
+    ${S.me?.writes_back ? `<button class="m-item" role="menuitem" data-k="save">${I.plus}${t('把这个电台存成歌单')}</button>` : ''}
     <button class="m-item" role="menuitem" data-k="radio">${I.branch}${t('沿着这首继续')}</button>`);
 }
 

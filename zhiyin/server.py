@@ -11,6 +11,7 @@ import time
 import traceback
 from contextlib import asynccontextmanager
 from typing import Annotated
+from html import escape
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
@@ -84,7 +85,7 @@ async def _lifespan(_app):
 app = FastAPI(lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
-OPEN = ("/login", "/privacy", "/lang", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
+OPEN = ("/login", "/privacy", "/about", "/lang", "/i/", "/auth/google/", "/healthz", "/static/", "/api/worker/")
 # A YouTube video id. It names cache files, so nothing else gets through.
 VID = r"^[A-Za-z0-9_-]{1,64}$"
 Vid = Annotated[str, Field(pattern=VID)]
@@ -674,13 +675,27 @@ def _signed_in(resp: Response, uid: str, request: Request) -> Response:
     return resp
 
 
+@app.get("/about")
+def about(request: Request):
+    return _doc_page(request, "about.html")
+
+
 @app.get("/privacy")
 def privacy(request: Request):
+    return _doc_page(request, "privacy.html")
+
+
+CDN = os.environ.get("ZHIYIN_CDN", "")   # the service in front of the site, if any, named on the privacy page
+
+
+def _doc_page(request: Request, name: str) -> HTMLResponse:
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
     lang = i18n.of(uid) if uid else i18n.from_request(request)
-    html = _page("privacy.html", lang)
+    html = _page(name, lang)
     # one block per language: <!--lang:xx--> … <!--/lang-->
     html = re.sub(r"<!--lang:([\w-]+)-->(.*?)<!--/lang-->", lambda m: m.group(2) if m.group(1) == lang else "", html, flags=re.S)
+    html = re.sub(r"<!--cdn-->(.*?)<!--/cdn-->", lambda m: m.group(1).replace("{cdn}", escape(CDN)) if CDN else "",
+                  html, flags=re.S)
     return HTMLResponse(html)
 
 
@@ -1052,6 +1067,8 @@ def playlist(p: PlaylistReq):
     uid = store.uid()
     if not (google.configured() and google.connected(uid)):
         raise HTTPException(400, i18n.tr("先在设置里连接 YouTube Music"))
+    if not google.writes_back(uid):
+        raise HTTPException(400, i18n.tr("先在设置里打开「同步喜欢」，知音才能往 YouTube 写歌单"))
     vids = list(dict.fromkeys(p.vids))[:25]
     now, lang = dt.datetime.now(), i18n.of()
     date = now.strftime("%b %-d") if lang == "en" else f"{now.month}月{now.day}日"

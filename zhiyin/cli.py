@@ -31,6 +31,7 @@ def main():
     p.add_argument("--owner", action="store_true")
     p.add_argument("--mine", action="store_true", help="another account of yours: it runs on your Claude")
     sub.add_parser("users", help="who has joined")
+    sub.add_parser("check-key", help="one tiny call on the server's API key, the way listeners' calls are made")
     p = sub.add_parser("stats", help="the way in, counted per day and by where people came from")
     p.add_argument("--days", type=int, default=7)
     p = sub.add_parser("waitlist", help="who asked to join while the seats were full (ZHIYIN_SEATS)")
@@ -92,6 +93,16 @@ def main():
             seen = __import__("time").strftime("%m-%d %H:%M", __import__("time").localtime(u["last_seen"])) if u["last_seen"] else "-"
             print(f"{u['id']:10} {u['name'] or '-':12} {u['status']:9} {u.get('email') or '-':28} last seen {seen}  "
                   f"claude {llm.source(u['id']) or 'none'}, ${llm.spent(u['id']):.2f} in 7 days")
+    elif a.cmd == "check-key":
+        from . import llm
+        if not llm.API_KEY:
+            sys.exit("no ANTHROPIC_API_KEY on this server")
+        try:
+            print(llm.run_api("Reply with the single word: ready", "Answer in JSON.",
+                              {"type": "object", "properties": {"word": {"type": "string"}}, "required": ["word"]},
+                              "haiku", 60, 0)["data"]["word"])
+        except llm.LLMError as e:
+            sys.exit(str(e))
     elif a.cmd == "stats":
         import time
         since = time.strftime("%Y-%m-%d", time.localtime(time.time() - (a.days - 1) * 86400))

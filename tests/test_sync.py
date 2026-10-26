@@ -509,3 +509,17 @@ def test_an_account_without_a_youtube_channel_is_told_what_to_do(monkeypatch):
             server._setup(lambda *a, **k: None)
         me = server._me()
     assert me["status"] == "error" and me["setup_issue"] == "nochannel"
+
+
+def test_what_zhiyin_is_and_does_with_google_data_reads_without_signing_in(monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setattr(server, "AUTH", True)
+    c = TestClient(server.app)
+    for lang, word in (("en-US", "youtube.readonly"), ("zh-TW", "唯讀"), ("zh-CN", "只读")):
+        page = c.get("/about", headers={"accept-language": lang}).text
+        assert word in page and 'href="/privacy"' in page and "<!--lang" not in page
+    monkeypatch.setattr(server, "CDN", "")
+    assert "{cdn}" not in c.get("/privacy").text and "Cloudflare" not in c.get("/privacy").text
+    monkeypatch.setattr(server, "CDN", "Cloudflare")
+    page = c.get("/privacy", headers={"accept-language": "en-US"}).text
+    assert "<b>Cloudflare</b>" in page and "{cdn}" not in page and 'href="/about"' in page
