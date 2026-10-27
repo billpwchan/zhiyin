@@ -173,7 +173,7 @@ def listen(built, taste_args, log, itunes_budget=None, text=None, orders=None):
         t.measure(pre, lane.get("audio_lane") or lane["key"])
         if tv is None:
             # Sound barely predicts what they will like (AUC 0.55-0.61 on held-out likes), and choosing by it pulled
-            # mellow Mandopop into the jazz lane. For the daily edition it only vetoes near-copies of refused sounds.
+            # mellow Mandopop into the jazz lane. For the weekly edition it only vetoes near-copies of refused sounds.
             keep = {c["vid"]: c for c in pre if not (c.get("audio") and c["audio"]["neg"] > taste.NEG_FLOOR)}
             order = (orders or {}).get(lane["key"])
             out.append((lane, seeds, g, candidates.shortlist(lane, keep, k=EDITOR_K[order is not None], order=order)))

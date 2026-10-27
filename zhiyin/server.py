@@ -173,8 +173,8 @@ def _leave_line(j: dict) -> None:
     with _line_cv:
         _line[:] = [x for x in _line if x is not j]
         _line_cv.notify_all()
-STALE_AFTER_H = 20
-ACTIVE_DAYS = 3   # a listener away longer gets the next edition when they come back, not every morning meanwhile
+EDITION_DAYS = 7   # a new edition a week (the owner's call, 2026-10-27), at FRESH_HOUR of that day
+ACTIVE_DAYS = 14   # a listener away longer gets the next edition when they come back, not every week meanwhile
 FRESH_HOUR = 5
 
 
@@ -241,9 +241,8 @@ def _edition_stale(ed: dict | None) -> bool:
     if not ed:
         return True
     created = dt.datetime.fromtimestamp(max(ed["created"], ed.get("checked", 0)))
-    now = dt.datetime.now()
-    today_fresh = now.replace(hour=FRESH_HOUR, minute=0, second=0, microsecond=0)
-    return (now - created).total_seconds() > STALE_AFTER_H * 3600 or (now >= today_fresh > created)
+    due = (created + dt.timedelta(days=EDITION_DAYS)).replace(hour=FRESH_HOUR, minute=0, second=0, microsecond=0)
+    return dt.datetime.now() >= due
 
 
 def _auto_refresh(ed: dict | None):
@@ -605,7 +604,7 @@ def _me() -> dict:
 # ---------- sign-in ----------
 # What a link to the site shows when it is pasted into a chat or a post
 OG_TITLE = "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片"
-OG_TEXT = "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每天几首你没听过的歌，每首都写着为什么挑它。"
+OG_TEXT = "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每周几组你没听过的歌，每首都写着为什么挑它。"
 CARD_TITLE = "让 Claude 锐评你的网易云歌单"
 CARD_TEXT = "贴一个歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句，顺便算出你有多大众。"
 
@@ -1529,6 +1528,7 @@ def worker_llm(request: Request, wait: float = 25, have: str | None = None):
 class WorkerAnswer(BaseModel):
     data: dict | None = None
     usd: float = Field(0, ge=0, le=50, allow_inf_nan=False)
+    tok: list[Annotated[int, Field(ge=0, le=10_000_000)]] | None = Field(None, min_length=4, max_length=4)
     error: str | None = None
 
 
@@ -1538,7 +1538,7 @@ def worker_llm_answer(request: Request, jid: str, body: WorkerAnswer):
     if body.error is not None or body.data is None:
         llm.answer(jid, {"error": body.error or "empty answer from the worker", "usd": body.usd})
     else:
-        llm.answer(jid, {"data": body.data, "usd": body.usd})
+        llm.answer(jid, {"data": body.data, "usd": body.usd, "tok": body.tok})
     return {"ok": True}
 
 

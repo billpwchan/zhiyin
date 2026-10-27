@@ -1,4 +1,4 @@
-"""Run from login with launchd: the app itself (the page is always there and the daily edition is built at 05:00),
+"""Run from login with launchd: the app itself (the page is always there and a new edition is built each week, at 05:00),
 or, once the app lives on the server, the worker that listens (and runs the owner's Claude calls) for it."""
 import os
 import plistlib

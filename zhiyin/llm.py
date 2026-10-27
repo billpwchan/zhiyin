@@ -17,8 +17,9 @@ from . import i18n, store
 BASE = ["claude", "-p", "--tools", "", "--setting-sources", "", "--strict-mcp-config",
         "--no-session-persistence", "--output-format", "json"]
 
-# Whose Claude runs a call. Anthropic's terms keep a Claude subscription to its owner's own use, so on a server it
-# serves only the owner (logged in on the server, or on the Mac worker); everyone else runs on the operator's API key.
+# Whose Claude runs a call. The owner's own accounts run on the API key when the server has one (the owner's choice,
+# 2026-10-27: keep the subscription for their own work), else on their subscription (logged in on the server, or on
+# the Mac worker), which Anthropic's terms keep to its owner's own use; everyone else runs on the operator's API key.
 HOSTED = os.environ.get("ZHIYIN_AUTH") == "1"
 OAUTH = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
 API_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
@@ -50,8 +51,8 @@ _background = contextvars.ContextVar("llm_background", default=False)
 
 @contextlib.contextmanager
 def background():
-    """Work nobody is waiting for (the scheduled morning edition): the owner's waits for the Mac rather than spending
-    the shared key, and anyone's waits a day rather than run ahead of the pool's pace."""
+    """Work nobody is waiting for (the scheduled weekly edition): on the key it goes as a batch at half price, and a
+    listener's waits a day rather than run ahead of the pool's pace."""
     t = _background.set(True)
     try:
         yield
@@ -114,11 +115,11 @@ def source(uid: str | None = None) -> str | None:
     if not HOSTED:
         return "here"
     if store.is_owners(uid):
+        if API_KEY:
+            return "key"
         if OAUTH:
             return "subscription"
-        if WORKER and (worker_online() or not API_KEY or _background.get()):
-            return "worker"
-        return "key" if API_KEY else None
+        return "worker" if WORKER else None
     return "key" if API_KEY else None
 
 
@@ -131,7 +132,7 @@ def unavailable(uid: str | None = None) -> str | None:
         return i18n.tr("服务器上还没有配置 Claude" if mine else "主人还没有为其他听众配置 Claude API key", i18n.of(uid))
     if src == "worker" and not worker_online():
         return i18n.tr("Mac 不在线（睡着或关机了）", i18n.of(uid))
-    if src == "key":
+    if src == "key" and not mine:   # the owner's calls are theirs, outside the pool shared with listeners
         if pool_spent(30) >= POOL_USD:
             return i18n.tr("这个月大家共用的 Claude 额度用完了，过几天会恢复", i18n.of(uid))
         if _background.get() and pool_spent(1) >= 2 * POOL_USD / 30:
@@ -157,24 +158,30 @@ def require(uid: str | None = None) -> None:
 
 def view(uid: str) -> dict:
     src = source(uid)
-    return {"source": src, "online": worker_online() if src == "worker" else src is not None, "others": API_KEY}
+    out = {"source": src, "online": worker_online() if src == "worker" else src is not None, "others": API_KEY}
+    if store.is_owners(uid):   # what their own Claude use came to: they pay for it
+        out["used"] = {k: used(uid, d) for k, d in (("today", 1), ("week", 7))}
+    return out
 
 
 def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout: int = 600, retries: int = 2) -> dict:
     uid = store.uid()
     require(uid)
     src = source(uid)
-    if src == "key" and not store.is_owners(uid):
+    mine = store.is_owners(uid)
+    if src == "key" and not mine:
         model = KEY_MODEL[model]
+    # the owner asked for the best picks whatever they cost (2026-10-27): more thinking on their own calls
+    effort = "high" if mine else "medium"
     try:
         if src == "worker":
             req = {"prompt": prompt, "system": system, "schema": schema, "model": model, "timeout": timeout,
                    "retries": retries}
             out = _via_worker(req, wait=timeout * (retries + 1) + PICKUP_S)
         elif src == "key" and _background.get():
-            out = run_batch(prompt, system, schema, model)
+            out = run_batch(prompt, system, schema, model, effort)
         elif src == "key":
-            out = run_api(prompt, system, schema, model, timeout, retries)
+            out = run_api(prompt, system, schema, model, timeout, retries, effort)
         else:
             out = run_here(prompt, system, schema, model, timeout, retries, env=_env(src))
     except NoClaude:
@@ -182,12 +189,14 @@ def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout:
     except LLMError as e:
         _record(uid, _tally(uid, src), e.usd)
         raise
-    _record(uid, _tally(uid, src), out.get("usd") or 0)
+    _record(uid, _tally(uid, src), out.get("usd") or 0, out.get("tok"))
     return out["data"]
 
 
 def _tally(uid: str, src: str) -> str:
-    return "key:first" if src == "key" and _first_run.get() is not None and not store.is_owners(uid) else src
+    if src == "key" and store.is_owners(uid):
+        return "key:owner"   # not the listeners' pool (pool_spent)
+    return "key:first" if src == "key" and _first_run.get() is not None else src
 
 
 def _env(src: str) -> dict | None:
@@ -232,7 +241,7 @@ def run_here(prompt: str, system: str, schema: dict, model: str, timeout: int, r
             data = out.get("structured_output")
             if data is None:
                 data = json.loads(out["result"])
-            return {"data": data, "usd": usd}
+            return {"data": data, "usd": usd, "tok": _tokens(out.get("usage") or {})}
         except (subprocess.TimeoutExpired, json.JSONDecodeError, LLMError, KeyError) as e:
             last = e
             time.sleep(3 * (attempt + 1))
@@ -266,13 +275,20 @@ def _api():
     return _client[0]
 
 
+def _tokens(u) -> list[int]:
+    """input, output, cache write, cache read: from the SDK's usage or the CLI's JSON."""
+    g = (lambda k: u.get(k)) if isinstance(u, dict) else (lambda k: getattr(u, k, None))
+    return [int(g(k) or 0) for k in ("input_tokens", "output_tokens", "cache_creation_input_tokens",
+                                     "cache_read_input_tokens")]
+
+
 def cost(model: str, u) -> float:
     i, o, w, r = PRICES[model]
     return ((u.input_tokens or 0) * i + (u.output_tokens or 0) * o + (u.cache_creation_input_tokens or 0) * w
             + (u.cache_read_input_tokens or 0) * r) / 1e6
 
 
-def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, retries: int) -> dict:
+def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, retries: int, effort: str = "medium") -> dict:
     import anthropic
     last, usd = None, 0.0
     for attempt in range(retries + 1):
@@ -282,13 +298,13 @@ def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, re
                     model=MODELS[model], max_tokens=32000, timeout=timeout,
                     system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                     messages=[{"role": "user", "content": prompt}],
-                    output_config={"effort": "medium", "format": {"type": "json_schema", "schema": strict(schema)}}) as st:
+                    output_config={"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}) as st:
                 msg = st.get_final_message()
             usd += cost(model, msg.usage)
             if msg.stop_reason in ("refusal", "max_tokens"):
                 raise LLMError(f"stopped: {msg.stop_reason}")
             text = next(b.text for b in msg.content if b.type == "text")
-            return {"data": json.loads(text), "usd": usd}
+            return {"data": json.loads(text), "usd": usd, "tok": _tokens(msg.usage)}
         except anthropic.APIStatusError as e:
             last = e
             if e.status_code in (400, 401, 403, 404):
@@ -305,14 +321,14 @@ def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, re
 BATCH_WAIT_S = 6 * 3600
 
 
-def run_batch(prompt: str, system: str, schema: dict, model: str) -> dict:
+def run_batch(prompt: str, system: str, schema: dict, model: str, effort: str = "medium") -> dict:
     """Half price for work nobody is waiting on; most batches come back within the hour."""
     api = _api()
     b = api.messages.batches.create(requests=[{"custom_id": "1", "params": {
         "model": MODELS[model], "max_tokens": 32000,
         "system": [{"type": "text", "text": system}],
         "messages": [{"role": "user", "content": prompt}],
-        "output_config": {"effort": "medium", "format": {"type": "json_schema", "schema": strict(schema)}}}}])
+        "output_config": {"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}}}])
     deadline = time.time() + BATCH_WAIT_S
     while api.messages.batches.retrieve(b.id).processing_status != "ended":
         if time.time() > deadline:
@@ -328,14 +344,27 @@ def run_batch(prompt: str, system: str, schema: dict, model: str) -> dict:
         err = LLMError(f"stopped: {msg.stop_reason}")
         err.usd = usd
         raise err
-    return {"data": json.loads(next(x.text for x in msg.content if x.type == "text")), "usd": usd}
+    return {"data": json.loads(next(x.text for x in msg.content if x.type == "text")), "usd": usd, "tok": _tokens(msg.usage)}
 
 
-def _record(uid: str, src: str, usd: float) -> None:
+def _record(uid: str, src: str, usd: float, tok: list[int] | None = None) -> None:
+    i, o, w, r = tok or (0, 0, 0, 0)
     con = store.db()
-    con.execute("insert into usage values (?, ?, ?, 1, ?) on conflict(uid, day, source) do update "
-                "set calls = calls + 1, usd = usd + excluded.usd", (uid, dt.date.today().isoformat(), src, usd))
+    con.execute("insert into usage(uid, day, source, calls, usd, in_tok, out_tok, cw_tok, cr_tok) values (?,?,?,1,?,?,?,?,?) "
+                "on conflict(uid, day, source) do update set calls = calls + 1, usd = usd + excluded.usd, "
+                "in_tok = in_tok + excluded.in_tok, out_tok = out_tok + excluded.out_tok, "
+                "cw_tok = cw_tok + excluded.cw_tok, cr_tok = cr_tok + excluded.cr_tok",
+                (uid, dt.date.today().isoformat(), src, usd, i, o, w, r))
     con.commit()
+
+
+def used(uid: str, days: int) -> dict:
+    """Calls, tokens (input incl. cache writes and reads, output) and dollars over the last `days` days, all sources."""
+    since = (dt.date.today() - dt.timedelta(days=days - 1)).isoformat()
+    r = store.db().execute("select coalesce(sum(calls), 0), coalesce(sum(in_tok + cw_tok + cr_tok), 0), "
+                           "coalesce(sum(out_tok), 0), coalesce(sum(usd), 0) from usage where uid=? and day>=?",
+                           (uid, since)).fetchone()
+    return {"calls": r[0], "in": r[1], "out": r[2], "usd": round(r[3], 2)}
 
 
 def spent(uid: str, days: int = 7, source: str | None = None) -> float:

@@ -165,6 +165,10 @@ def _migrate(con: sqlite3.Connection) -> None:
     for c in ("roast text", "pop integer"):
         if c.split()[0] not in card_cols:
             _add_column(con, "cards", c)
+    usage_cols = {r[1] for r in con.execute("pragma table_info(usage)")}
+    for c in ("in_tok", "out_tok", "cw_tok", "cr_tok"):
+        if c not in usage_cols:
+            _add_column(con, "usage", f"{c} integer not null default 0")
     if "mine" not in {r[1] for r in con.execute("pragma table_info(users)")}:
         con.execute("alter table users add column mine integer not null default 0")
     for t in ("feedback", "shown", "plays"):

@@ -25,25 +25,28 @@ own users.
 | Who is listening | Whose Claude runs their calls |
 |---|---|
 | you, on your Mac | your `claude` login there, a subscription or an API key |
-| you, on your server | your subscription: a token on the server if you added one, otherwise the Mac worker |
+| you, on your server | your API key if the server has one; otherwise your subscription (a token on the server, or the Mac worker) |
 | another account of yours (a second YouTube library) | the same as you: it is still you listening |
 | anyone you invite, or who joins on an open seat | your API key on the server, billed to you per use |
 
 The server holds to this. Your subscription only ever runs your own calls, and inviting someone stays closed until
-the server has an API key. Without a token on the server, your calls go to the Mac worker, which runs them on the
-`claude` login there, even when the server has an API key (that key is for the people you invite). While the Mac
-sleeps, the morning edition waits for it. With no worker either, your calls use the API key.
+the server has an API key. With a key on the server, your own calls run on it too, so your subscription stays free
+for your own work and nothing waits for the Mac; they are counted apart from the listeners' monthly budget, against
+your own daily ceiling, run at a higher effort, and your weekly edition goes as a batch at half price. Settings
+shows what your calls came to today and over the week, in calls, tokens and dollars. Without a key, your calls go to
+a token on the server if you added one, otherwise to the Mac worker, which runs them on the `claude` login there;
+while the Mac sleeps, the morning edition waits for it.
 
 Listeners on the API key get Sonnet where you get Opus. On the same shortlists Sonnet kept 75% of Opus's picks and
 wrote reasons as good, at a third of the price: an edition of eight stations cost $0.13 against $0.39 (Haiku, at
-$0.02, kept half and slipped into the wrong language). Each morning only the stations a listener played from are
-rebuilt, and those builds go through the Batch API at half price; a listener who hasn't opened Zhiyin for three days
-gets no new edition until they come back. A first setup for a library of about 800 likes costs about $2.
+$0.02, kept half and slipped into the wrong language). A new edition comes once a week, at 05:00 seven days after
+the last one; only the stations a listener played from are rebuilt, and those builds go through the Batch API at half
+price. A listener who hasn't opened Zhiyin for two weeks gets no new edition until they come back. A first setup for a library of about 800 likes costs about $2.
 
 Three limits keep the key's bill where you set it:
 
 - the key's monthly budget (`ZHIYIN_KEY_MONTHLY_USD`, default 100), counted over the last 30 days;
-- morning rebuilds may run at no more than twice the even daily pace of that budget;
+- scheduled rebuilds may run at no more than twice the even daily pace of that budget;
 - each listener's own day (`ZHIYIN_LISTENER_DAILY_USD`, default 0.5); past that, their asks and rebuilds wait for
   the next day;
 - each listener's first setup (`ZHIYIN_LISTENER_FIRST_RUN_USD`, default 4 per 800 liked songs, at most
@@ -71,7 +74,7 @@ uv run zhiyin serve          # http://localhost:8817
 and reasons are written in your system language (set `ZHIYIN_LANG=en`, `zh-Hans` or `zh-Hant` to choose) and can be
 switched in Settings.
 
-To keep it running from login, run `uv run zhiyin service install`. It builds a fresh edition every morning at
+To keep it running from login, run `uv run zhiyin service install`. It builds a fresh edition every week, at
 05:00. In Chrome you can install the page as an app.
 
 The headers that `zhiyin auth` saves expire every few weeks. When `sync` starts failing, save them again.
@@ -204,7 +207,7 @@ Claude calls, and only yours. Run one worker, not two. Those calls reach it thro
 (or let the morning schedule do it); a separate `docker exec zhiyin zhiyin refresh` can't reach the worker.
 
 Once the server is your home, the Mac is only its worker. Don't also keep `zhiyin serve` running there: it is a
-separate copy with its own history, and builds its own, different edition every morning.
+separate copy with its own history, and builds its own, different edition every week.
 
 ## Data
 

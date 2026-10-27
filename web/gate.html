@@ -41,7 +41,7 @@ if (G.mode === 'switch') {
   const main = open && retry
     ? `<a class="btn" href="/auth/google/start?mode=join">${G_LOGO}${t('用 Google 继续')}</a>`
     : `<a class="btn" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`;
-  const pitch = t('它从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')
+  const pitch = t('它从你在 YouTube Music 点过的喜欢出发，每周挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')
     + (G.join === 'invite' ? t('需要邀请才能进来。') : '');
   const note = open && retry ? ''
     : open ? `${t('第一次来？')}<a href="/auth/google/start?mode=join">${t('用 Google 加入')}</a>`

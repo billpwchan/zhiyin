@@ -27,14 +27,24 @@ def test_a_subscription_only_serves_its_owner(hosted):
     assert llm.source("u1") == "key"
 
 
-def test_the_owner_borrows_the_key_while_the_mac_sleeps_but_their_morning_edition_waits(hosted, monkeypatch):
-    hosted(worker=True, key=True)
+def test_the_owner_runs_on_the_key_when_there_is_one_and_outside_the_listeners_pool(hosted, monkeypatch):
+    hosted(oauth=True, worker=True, key=True)
     monkeypatch.setattr(llm, "worker_online", lambda: True)
-    assert llm.source(store.OWNER) == "worker"
-    monkeypatch.setattr(llm, "worker_online", lambda: False)
-    assert llm.source(store.OWNER) == "key"
+    assert llm.source(store.OWNER) == "key"      # the subscription is kept for the owner's own work
     with llm.background():
-        assert llm.source(store.OWNER) == "worker"
+        assert llm.source(store.OWNER) == "key"  # the weekly edition goes as a batch
+    calls = []
+    monkeypatch.setattr(llm, "run_api", lambda prompt, system, schema, model, timeout, retries, effort:
+                        calls.append((model, effort)) or {"data": {}, "usd": 3.0, "tok": [50_000, 2_000, 0, 0]})
+    monkeypatch.setattr(llm, "POOL_USD", 2.0)
+    pool = llm.pool_spent(30)
+    with store.as_user(store.OWNER):
+        llm.call("p", "s", {}, model="opus")
+        assert llm.unavailable() is None                # the pool being spent doesn't stop the owner
+    assert calls == [("opus", "high")] and llm.pool_spent(30) == pool
+    u = llm.used(store.OWNER, 1)
+    assert (u["in"], u["out"]) >= (50_000, 2_000) and u["usd"] >= 3.0
+    assert llm.view(store.OWNER)["used"]["today"] == u and "used" not in llm.view("u1")
 
 
 def test_the_shared_key_keeps_to_its_pool_and_its_pace(hosted, monkeypatch):
@@ -55,8 +65,10 @@ def test_another_account_of_the_owners_runs_on_the_owners_claude(hosted):
     friend = accounts.redeem(accounts.invite("Ming"))
     hosted(worker=True)
     assert llm.source(mine) == "worker" and llm.source(friend) is None
+    hosted(oauth=True)
+    assert llm.source(mine) == "subscription" and llm.source(friend) is None
     hosted(oauth=True, key=True)
-    assert llm.source(mine) == "subscription" and llm.source(friend) == "key"
+    assert llm.source(mine) == "key" and llm.source(friend) == "key"
 
 
 def test_on_the_mac_it_is_whatever_claude_is_signed_in_with():

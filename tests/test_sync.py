@@ -556,3 +556,40 @@ def test_a_station_keeps_their_words_and_can_be_repicked_alone(monkeypatch):
     c.post("/api/refresh")
     started["fn"](print)
     assert started["only"] is None
+
+
+def test_a_new_edition_comes_a_week_after_the_last_at_five(monkeypatch):
+    import datetime as dt
+    made = dt.datetime(2026, 10, 20, 9, 30)
+    ed = {"created": made.timestamp()}
+
+    class Now(dt.datetime):
+        at = None
+
+        @classmethod
+        def now(cls, tz=None):
+            return cls.at
+    monkeypatch.setattr(server.dt, "datetime", Now)
+    for at, stale in ((dt.datetime(2026, 10, 21, 6), False), (dt.datetime(2026, 10, 27, 4, 59), False),
+                      (dt.datetime(2026, 10, 27, 5), True)):
+        Now.at = at
+        assert server._edition_stale(ed) is stale, at
+    Now.at = dt.datetime(2026, 10, 28, 6)
+    assert not server._edition_stale({**ed, "checked": dt.datetime(2026, 10, 27, 5, 30).timestamp()})   # nothing played: checked, wait another week
+    assert server._edition_stale(None)
+
+
+def test_only_the_owner_sees_who_else_listens(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts
+    monkeypatch.setattr(server, "AUTH", True)
+    friend = accounts.redeem(accounts.invite("Ming"))
+    second = accounts.redeem(accounts.invite("", mine=True))
+    for uid in (friend, second):   # the owner's own second account is a listener too, not the admin
+        c = TestClient(server.app)
+        c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+        assert c.get("/api/users").status_code == 403
+        assert not c.get("/api/state").json()["me"]["owner"]   # the page shows the friends list only to the owner
+    owner = TestClient(server.app)
+    owner.cookies.set(accounts.COOKIE, accounts.new_session(store.OWNER))
+    assert {u["name"] for u in owner.get("/api/users").json()["users"]} >= {"Ming"}

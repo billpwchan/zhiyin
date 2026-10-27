@@ -7,7 +7,7 @@
 
 <p align="center">
   A private radio built from the songs you liked on YouTube Music.<br>
-  Every morning it brings a few stations of songs you haven't heard, and says why it picked each one.
+  Every week it brings a few stations of songs you haven't heard, and says why it picked each one.
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@ go out, so when it isn't sure, a station simply gets fewer songs (its best three
 
 ## What you get
 
-### A morning edition
+### A weekly edition
 
 About eight stations, one per kind of music you actually play, up to eight songs each, with
 one line on why each song is there. Full songs play through YouTube's own player, fading out into the next, with synced lyrics
@@ -113,7 +113,7 @@ uv run zhiyin setup    # read your likes, find your stations, pick the first edi
 uv run zhiyin serve    # open http://localhost:8817
 ```
 
-`uv run zhiyin service install` keeps it running from login and builds a new edition every morning at 05:00.
+`uv run zhiyin service install` keeps it running from login and builds a new edition every week, at 05:00.
 
 To run it on a server for yourself and a few friends, each signing in with their own Google account, see
 [running it on a server](docs/self-hosting.md). Every account is separate, with its own likes, stations and history.

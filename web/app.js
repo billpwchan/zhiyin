@@ -1310,7 +1310,7 @@ function welcomeHTML() {
   if (!me.google.configured) return `<div class="empty"><h2>${me.name ? t('你好，{name}', { name: esc(me.name) }) : t('你好')}</h2><p>${t('{owner}还在设置连接 YouTube Music 的那一步。好了之后，回到这个页面就能开始。', { owner: esc(owner) })}</p></div>`;
   return `<div class="welcome">
     <h1>${me.name ? t('你好，{name}', { name: esc(me.name) }) : t('你好')}</h1>
-    <p class="lede">${t('知音从你在 YouTube Music 点过的喜欢出发，每天挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')}</p>
+    <p class="lede">${t('知音从你在 YouTube Music 点过的喜欢出发，每周挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')}</p>
     <a class="btn" href="/auth/google/start">${t('连接 YouTube Music')}</a>
     <dl class="scope">
       <dt>${t('会读取')}</dt><dd>${t('你点过喜欢的歌和视频，只用来给你算推荐')}</dd>
@@ -1480,8 +1480,15 @@ let shownLink = null;
 const CLAUDE_SRC = {
   worker: (c) => t('用你的 Claude 订阅，在你的 Mac 上跑。') + (c.online ? '' : t('Mac 现在不在线：新一期会等它醒来再做，点歌也要等它在线。')),
   subscription: () => t('用你的 Claude 订阅，在服务器上跑。'),
-  key: () => t('用服务器上的 Claude API key，按用量计费。'),
+  key: () => t('用你的 Claude API key，按用量计费。'),
 };
+// what their own Claude use came to (llm.used): they pay for it
+function usedLine(u) {
+  if (!u) return '';
+  const n = (x) => new Intl.NumberFormat(LANG, { notation: 'compact', maximumFractionDigits: 1 }).format(x);
+  return ' ' + t('今天 {calls} 次调用，读 {in}、写 {out} token，${usd}；近 7 天 ${week}。', {
+    calls: u.today.calls, in: n(u.today.in), out: n(u.today.out), usd: u.today.usd.toFixed(2), week: u.week.usd.toFixed(2) });
+}
 
 function accountHTML() {
   const me = S.me;
@@ -1502,7 +1509,7 @@ function accountHTML() {
   }
   if (me.mine && me.claude) {
     const c = me.claude;
-    rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) : t('还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。')}</small></span><span>${c.source === 'worker' ? (c.online ? t('在线') : t('离线')) : ''}</span></li>`);
+    rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) + usedLine(c.used) : t('还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。')}</small></span><span>${c.source === 'worker' ? (c.online ? t('在线') : t('离线')) : ''}</span></li>`);
   }
   if (me.auth) {
     if (g.email) rows.push(`<li><span>${t('这个账号的登录书签')}<small>${t('在别的浏览器里想一键进来，就把这个链接存成书签（那里要登着 {email}）。', { email: esc(g.email) })}</small>${linkHTML(`${location.origin}/auth/google/start?mode=login&as=${encodeURIComponent(g.email)}`)}</span><span></span></li>`);
@@ -2194,7 +2201,7 @@ function makerHTML() {
     <div class="mk-f"><div class="mk-row"><input id="mkLink" name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false"
       placeholder="${t('粘贴网易云的歌单或主页链接')}" aria-label="${t('网易云的歌单或主页链接')}" value="${esc(MK.link)}"><button class="btn" type="submit"${MK.busy ? ' disabled' : ''}>${esc(MK.busy || t('锐评一下'))}</button></div>
       <p class="mk-err" id="mkErr" role="alert">${esc(MK.err)}</p>
-      <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="join">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每天还有几首新歌。')}</p></div>
+      <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="join">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每周还有几组新歌。')}</p></div>
   </form>`;
 }
 
@@ -2202,7 +2209,7 @@ function guestNextHTML() {
   return `<section class="sec g-next"><h2>${t('发给朋友，看谁更大众')}<small>${t('朋友点开你的卡，就能锐评他自己的。')}</small></h2>
     <div class="g-acts"><button class="btn" data-k="share">${I.share}<span>${t('分享这张卡')}</span></button>
       <button class="tb" data-k="gnew">${I.swap}<span>${t('换一份歌单')}</span></button>
-      <button class="tb" data-k="join">${I.go}<span>${t('用 YouTube Music 每天听新歌')}</span></button></div></section>`;
+      <button class="tb" data-k="join">${I.go}<span>${t('用 YouTube Music 每周听新歌')}</span></button></div></section>`;
 }
 
 function paintMaker() {
@@ -3339,7 +3346,7 @@ async function finished(done) {
     }
     if (k === 'refresh' && !j.error && S.edition?.id !== prevEd) {
       if (!Q) { const d = defaultStation(); if (d) { Q = queueOf(d); renderListen(); loadTrack(false); } }
-      toast(t('今天的电台换了新的一批，点电台就能听到'));
+      toast(t('这周的电台换了新的一批，点电台就能听到'));
     }
   }
 }
