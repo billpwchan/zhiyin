@@ -117,7 +117,7 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 | `ZHIYIN_SEATS` | how many people may join with Google without an invite (default 0: invites only) |
 | `ZHIYIN_GOOGLE_VERIFIED` | `1` once Google has verified the app; drops the "unverified app" note from the join sheet |
 | `ZHIYIN_HEAVY`, `ZHIYIN_GATHER` | how many first setups, and how many candidate gatherings, run at once (default 2 each) |
-| `ZHIYIN_OWNER_DAILY_USD` | a ceiling on your own calls per day, priced as on an API key (default 30); a full edition, with Claude reading every station's whole pool three times, measured $8.50 for eight stations |
+| `ZHIYIN_OWNER_DAILY_USD` | a ceiling on your own calls per day, priced as on an API key (default 30); a full edition measured $8.50 for eight stations when Claude read every station's whole pool three times; it now reads it once, about $2.80 less |
 | `ZHIYIN_WORKER_TOKEN` | shared with the worker; `deploy/worker-setup.sh` creates both ends |
 | `ZHIYIN_LLM_CONCURRENCY` | parallel `claude -p` calls (the image sets 2) |
 | `TZ` | the time zone the morning edition (05:00) follows, e.g. `Asia/Taipei`; the image defaults to UTC |

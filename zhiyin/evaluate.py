@@ -283,7 +283,8 @@ def screen_collect(log=print) -> bool:
 
 def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
     """Per arm: of the songs they went on to like that were in a pool, how many it kept, with a paired bootstrap
-    interval against the others; and what a read and an edition cost."""
+    interval against the others; and what a read and an edition cost. "+ graph" is what the edition does
+    (rank.screen): rank.SCREEN_PASSES reads taken in turn with the graph's order."""
     from . import rank
     res = _results()
 
@@ -293,11 +294,12 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
     units = []   # one per song of a window's own that sat in its pools: which arms kept it
     cost = {a: [] for a in arms}
     for w in _windows():
-        kept = {"graph": set()} | {f"{a} x1": set() for a in arms} | {f"{a} x{passes}": set() for a in arms}
+        kept = {"graph": set()} | {f"{a} {x}": set() for a in arms for x in ("x1", f"x{passes}", "+ graph")}
         found, complete = set(), True
         for l in w["lanes"]:
             found |= set(l["hits"].values())
-            kept["graph"] |= liked(l, [c["vid"] for c in l["pool"]])
+            graph = [c["vid"] for c in l["pool"]]
+            kept["graph"] |= liked(l, graph)
             for a in arms:
                 reads = [res.get(_request_id(w, l["key"], a, s)) for s in range(passes)]
                 if not all(reads):
@@ -306,6 +308,8 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
                 cost[a] += [r["usd"] for r in reads]
                 kept[f"{a} x1"] |= liked(l, reads[0]["vids"])
                 kept[f"{a} x{passes}"] |= liked(l, rank.merge_reads([r["vids"] for r in reads]))
+                one = rank.merge_reads([r["vids"] for r in reads[:rank.SCREEN_PASSES]])
+                kept[f"{a} + graph"] |= liked(l, rank.with_graph(graph, one))
         if not complete:
             log(f"{w['uid'][:6]} w{w['window']}: some reads have no answer yet")
         own = set(w["own"]) if "own" in w else found
@@ -315,7 +319,7 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
     if not units:
         log("no song they went on to like sat in a pool: build the windows first")
         return {"units": 0}
-    names = ["graph"] + [f"{a} x{n}" for a in arms for n in (1, passes)]
+    names = ["graph"] + [f"{a} {x}" for a in arms for x in ("x1", f"x{passes}", "+ graph")]
     rng = random.Random(7)
     boot = [[rng.randrange(len(units)) for _ in units] for _ in range(2000)]
 
@@ -330,10 +334,13 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
         f"with any later like, {len(later)}")
     for n in names:
         log(f"  {n:16s} kept {out['kept'][n]:3d} of {len(units)}   (any later like: {out['kept_later'][n]} of {len(later)})")
-    for a, b in [(f"{x} x{passes}", "graph") for x in arms] + [(f"{arms[0]} x{passes}", f"{x} x{passes}") for x in arms[1:]]:
+    pairs = [(f"{x} {y}", "graph") for x in arms for y in (f"x{passes}", "+ graph")] \
+        + [(f"{x} + graph", f"{x} x{passes}") for x in arms] + [(f"{arms[0]} + graph", f"{x} + graph") for x in arms[1:]]
+    for a, b in pairs:
         lo, hi = interval(a, b)
         log(f"  {a} minus {b}: {out['kept'][a] - out['kept'][b]:+d} (95% {lo:+d} to {hi:+d})")
     for a, c in out["per_read_usd"].items():
         if c:
-            log(f"  {a}: ${c:.3f} a read at batch prices, ${c * passes * 8:.2f} for an 8-station edition's screen")
+            log(f"  {a}: ${c:.3f} a read at batch prices; an 8-station edition's screen ${c * rank.SCREEN_PASSES * 8:.2f}"
+                f" (x{passes}: ${c * passes * 8:.2f})")
     return out

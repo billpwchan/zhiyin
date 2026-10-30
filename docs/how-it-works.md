@@ -91,12 +91,13 @@ and if it is a recent release. A huge hit by an artist you already follow scores
 it.
 
 On the owner's own accounts (and on a server you run for yourself), Claude then reads the whole pool, up to 700
-songs, against every song of yours in the station and how its earlier picks went, and keeps the 64 you're most
-likely to add on the first listen. It reads the list three times in different orders and the reads are merged, since
-one read of a long list leans on where songs sit in it. On held-out likes this kept 10 of the 19 that were in the
-pool, where the graph score's top 64 kept 6. Listeners on the shared key get the graph score's top 64: Sonnet reading
-the pool did no better than the graph (8 against 7 in the top 100), and Opus three times over costs too much to give
-everyone.
+songs, against every song of yours in the station and how its earlier picks went, and picks the 64 you're most
+likely to add on the first listen. Its picks and the graph score's order are then taken in turn until there are 64,
+because the two keep different songs. Measured on 124 held-out likes (`zhiyin eval-screen`: six rolling windows over
+two accounts, each window's pools rebuilt from the likes older than it), the graph's top 64 kept 45 and Opus's read
+alone 46, while the two taken in turn kept 56 to 59 over three separate reads. Reading the list three times and
+merging the reads kept no more than one read, so Claude reads it once. Listeners on the shared key get the graph
+score's top 64: Sonnet's read alone did no better than the graph (41 against 45).
 
 ## 5. Sound vetoes, it doesn't choose
 

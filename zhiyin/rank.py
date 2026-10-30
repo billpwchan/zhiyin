@@ -190,7 +190,7 @@ A well-known song is fine if it fits and they don't have it; obscurity is not a 
 sped-up, remixes and filler. Return exactly @K@ ids from the list, best first."""
 IDS_SCHEMA = {"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "integer"}}}, "required": ["ids"]}
 SCREEN_K = 64      # what the screen keeps for listening and the shortlist
-SCREEN_PASSES = 3  # shuffled reads merged: one read of a long list leans on where songs sit in it
+SCREEN_PASSES = 1  # three shuffled reads merged kept no more held-out likes than one (evaluate.screen_report)
 SCREEN_CAP = 700   # the most of a lane's pool one read takes, best by the graph score
 
 
@@ -241,10 +241,22 @@ def merge_reads(reads: list[list[str]]) -> list[str]:
     return sorted(votes, key=lambda v: -votes[v])[:SCREEN_K]
 
 
+def with_graph(graph: list[str], read: list[str]) -> list[str]:
+    """The graph's order and the read's, taken in turn. Each keeps songs the other misses: alone they kept 45 and 46 of
+    124 held-out likes, in turn 57."""
+    out = {}
+    for i in range(max(len(graph), len(read))):
+        for v in (graph[i] if i < len(graph) else None, read[i] if i < len(read) else None):
+            if v:
+                out.setdefault(v)
+        if len(out) >= SCREEN_K:
+            break
+    return list(out)[:SCREEN_K]
+
+
 def screen(lane: dict, cands: dict, story: list[str], went: list[str], model: str = "opus") -> list[str] | None:
-    """The whole pool read the way the editor reads a shortlist, keeping the SCREEN_K most likely to land, best first.
-    On held-out likes this kept about half again as many as the graph score's top 64 did (10 against 6 of 19 in the
-    pool, three reads merged). None when the pool is small or every read failed: the graph order stands."""
+    """The whole pool read the way the editor reads a shortlist, taken in turn with the graph score's order, SCREEN_K
+    in all. None when the pool is small or every read failed: the graph order stands."""
     pool = screen_pool(lane, cands)
     if len(pool) <= SCREEN_K:
         return None
@@ -260,7 +272,7 @@ def screen(lane: dict, cands: dict, story: list[str], went: list[str], model: st
 
     with store.Pool(SCREEN_PASSES) as ex:
         reads = [r for r in ex.map(read, range(SCREEN_PASSES)) if r]
-    return merge_reads(reads) if reads else None
+    return with_graph([c["vid"] for c in pool], merge_reads(reads)) if reads else None
 
 
 _QUOTED = re.compile(r"[《〈“\"]([^》〉”\"]{1,80})[》〉”\"]")

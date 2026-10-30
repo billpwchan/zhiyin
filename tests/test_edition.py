@@ -64,10 +64,10 @@ def test_the_shortlist_follows_the_screen_but_keeps_the_new_artist_share_and_two
     assert [c["vid"] for c in candidates.shortlist(LANE, cands, k=4, order=["e"])] == ["e"]   # only what the screen kept
 
 
-def test_the_screen_merges_its_reads_and_falls_back_when_they_all_fail(monkeypatch):
+def test_the_screen_takes_turns_with_the_graph_and_falls_back_when_its_reads_fail(monkeypatch):
     from zhiyin import llm, rank
-    pool = {f"v{i}": _cand(f"v{i}", f"A{i}", support=1 + i / 100) for i in range(80)}
-    reads = iter([{"ids": [0, 1, 2]}, {"ids": [2, 1, 0]}, {"ids": [2, 5]}])
+    pool = {f"v{i}": _cand(f"v{i}", f"A{i}", support=1 + i / 100) for i in range(80)}   # the graph puts v79 first
+    reads = iter([{"ids": [0, 1, 2]}, {"ids": [2, 1, 0]}, {"ids": [2, 75]}])
     seen = []
 
     def call(prompt, system, schema, **k):
@@ -77,12 +77,13 @@ def test_the_screen_merges_its_reads_and_falls_back_when_they_all_fail(monkeypat
     monkeypatch.setattr(rank, "SCREEN_PASSES", 3)
     order = rank.screen(LANE, pool, ["- Blue in Green — Bill Evans (liked 2026-09)"], ["- X — Y: heard it through"])
     assert len(seen) == 3 and "Blue in Green" in seen[0] and "heard it through" in seen[0] and "[79]" in seen[0]
-    # the song every read put near the top wins
+    # the graph's best, then the song every read put near the top; one far down the graph's order still gets in
     by_line = {}
     for line in seen[0].split("\n"):
         if line.startswith("["):
             by_line[int(line[1:line.index("]")])] = line.split("] ")[1].split(" — ")[0]
-    assert len(order) == 4 and order[0] == by_line[2].replace("Song ", "")
+    assert order[:2] == ["v79", by_line[2].replace("Song ", "")] and by_line[75] == "Song v4" and "v4" in order
+    assert len(order) == len(set(order)) == rank.SCREEN_K
 
     def fail(*a, **k):
         raise llm.LLMError("down")

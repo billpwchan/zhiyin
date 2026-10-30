@@ -28,7 +28,8 @@ def test_each_arm_is_scored_on_the_same_songs_they_went_on_to_like():
         answer(w, "sonnet", s, vids[20:84] if s else vids[:64])   # two reads of three don't keep the one at 10
     r = evaluate.screen_report(("opus", "sonnet"), 3, log=lambda *_: None)
     assert r["units"] == 2
-    assert r["kept"] == {"graph": 1, "opus x1": 2, "opus x3": 2, "sonnet x1": 1, "sonnet x3": 1}
+    assert r["kept"] == {"graph": 1, "opus x1": 2, "opus x3": 2, "opus + graph": 2, "sonnet x1": 1, "sonnet x3": 1,
+                         "sonnet + graph": 1}
     assert abs(r["per_read_usd"]["opus"] - 0.1) < 1e-9
 
 
