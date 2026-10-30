@@ -1015,6 +1015,7 @@ a.m-acct:hover { background: var(--hover); }
 @media (max-width: 899px) {
   .imm .view { height: 100dvh; min-height: 0; overflow: hidden; }
   .imm .listen { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; }
+  .imm .s-bar { display: none; }   /* the sample's join prompt waits outside immersive, as it does on a wide screen */
   .imm .room { container-type: size; min-height: 0; padding: 0 20px calc(16px + env(safe-area-inset-bottom)); }
   .imm .room-in, .imm .room.no-lyr .room-in { display: flex; flex-direction: column; gap: 0; height: 100%; }
   .imm .now, .imm .meta, .imm .side { display: contents; }
