@@ -117,7 +117,8 @@ def audio_check(holdout: int = 80):
 
 # ---------- v2: which of the songs they went on to like does each way of narrowing a lane's pool keep? ----------
 # Rolling windows of likes, newest first: each window's pools are rebuilt from the likes older than it, the way the
-# owner's edition builds them, and every like made in or after the window is a song they "went on to like". Each arm
+# owner's edition builds them. The window's own likes are what it is scored on (no song counts in two windows, so the
+# intervals hold); any later like a pool holds is reported beside them. Each arm
 # narrows the same pools to rank.SCREEN_K; all model calls go out as one Message Batch (half price) and are kept by
 # request, so a second run only pays for what is new. Everything stays under data/eval/screen on this machine.
 ARMS = {"opus": ("opus", "high"), "sonnet": ("sonnet", "high"), "opus-medium": ("opus", "medium"),
@@ -177,10 +178,12 @@ def screen_build(windows: int = 4, size: int = 60, min_train: int = 200, log=pri
                                    for c in pool],
                           "hits": {c["vid"]: h["vid"] for c in pool for h in later if _hit(c, h)}})
             log(f"w{k} {lane['key']}: pool {len(pool)}, went on to like {len(lanes[-1]['hits'])}")
+        own = [t["vid"] for t in later if t["rank"] >= cut - size]
         store.write_json(out / f"w{k}.json", {"uid": store.uid(), "window": k, "size": size, "train": len(train),
-                                               "later": len(later), "lanes": lanes})
+                                               "later": len(later), "own": own, "lanes": lanes})
         found = {h for l in lanes for h in l["hits"].values()}
-        log(f"w{k}: {len(train)} older likes, {len(later)} later; {len(found)} of them in a pool")
+        log(f"w{k}: {len(train)} older likes, {len(later)} later; {len(found)} of them in a pool, "
+            f"{len(found & set(own))} of the window's own {len(own)}")
 
 
 def _windows() -> list[dict]:
@@ -287,7 +290,7 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
     def liked(l, vids):
         return {l["hits"][v] for v in vids[:rank.SCREEN_K] if v in l["hits"]}
 
-    units = []   # one per song they went on to like that sat in a window's pools: which arms kept it
+    units = []   # one per song of a window's own that sat in its pools: which arms kept it
     cost = {a: [] for a in arms}
     for w in _windows():
         kept = {"graph": set()} | {f"{a} x1": set() for a in arms} | {f"{a} x{passes}": set() for a in arms}
@@ -305,7 +308,10 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
                 kept[f"{a} x{passes}"] |= liked(l, rank.merge_reads([r["vids"] for r in reads]))
         if not complete:
             log(f"{w['uid'][:6]} w{w['window']}: some reads have no answer yet")
-        units += [{"w": f"{w['uid'][:6]}.{w['window']}", **{name: v in s for name, s in kept.items()}} for v in found]
+        own = set(w["own"]) if "own" in w else found
+        units += [{"w": f"{w['uid'][:6]}.{w['window']}", "own": v in own, **{name: v in s for name, s in kept.items()}}
+                  for v in found]
+    later, units = units, [u for u in units if u["own"]]
     if not units:
         log("no song they went on to like sat in a pool: build the windows first")
         return {"units": 0}
@@ -318,10 +324,12 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
         return d[50], d[1949]
 
     out = {"units": len(units), "kept": {n: sum(u[n] for u in units) for n in names},
+           "later": len(later), "kept_later": {n: sum(u[n] for u in later) for n in names},
            "per_read_usd": {a: (sum(c) / len(c) if c else None) for a, c in cost.items()}}
-    log(f"songs they went on to like that sat in a pool: {len(units)} (over {len({u['w'] for u in units})} windows)")
+    log(f"each window's own likes that sat in its pools: {len(units)} (over {len({u['w'] for u in units})} windows); "
+        f"with any later like, {len(later)}")
     for n in names:
-        log(f"  {n:16s} kept {out['kept'][n]:3d}")
+        log(f"  {n:16s} kept {out['kept'][n]:3d} of {len(units)}   (any later like: {out['kept_later'][n]} of {len(later)})")
     for a, b in [(f"{x} x{passes}", "graph") for x in arms] + [(f"{arms[0]} x{passes}", f"{x} x{passes}") for x in arms[1:]]:
         lo, hi = interval(a, b)
         log(f"  {a} minus {b}: {out['kept'][a] - out['kept'][b]:+d} (95% {lo:+d} to {hi:+d})")

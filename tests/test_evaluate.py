@@ -9,7 +9,7 @@ def window(uid, k, hits):
     lane = {"key": "jazz", "head": "LANE: jazz", "pool": pool, "hits": {pool[i]["vid"]: f"like{k}{i}" for i in hits}}
     d = evaluate._dir() / uid
     d.mkdir(parents=True, exist_ok=True)
-    w = {"uid": uid, "window": k, "size": 60, "train": 300, "later": 60, "lanes": [lane]}
+    w = {"uid": uid, "window": k, "size": 60, "train": 300, "later": 60, "own": [f"like{k}{i}" for i in hits], "lanes": [lane]}
     store.write_json(d / f"w{k}.json", w)
     return w, pool
 
@@ -39,3 +39,12 @@ def test_only_the_owners_own_accounts_are_read():
     con.execute("update users set status='ready'")
     con.commit()
     assert set(evaluate.owner_accounts()) <= {store.OWNER, mine} and mine in evaluate.owner_accounts()
+
+
+def test_a_like_from_after_the_window_is_reported_beside_it_not_scored():
+    w, pool = window("evalB", 1, [10, 80])
+    w["own"] = ["like110"]   # the like at 80 came after this window
+    store.write_json(evaluate._dir() / "evalB" / "w1.json", w)
+    r = evaluate.screen_report(("opus",), 1, log=lambda *_: None)
+    assert r["later"] - r["units"] >= 1
+    assert r["kept_later"]["graph"] - r["kept"]["graph"] == 0   # the graph's top 64 never held the one at 80
