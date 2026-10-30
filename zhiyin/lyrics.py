@@ -344,11 +344,37 @@ def cached(vid: str) -> bool:
     return path.exists() and _fresh(json.loads(path.read_text()))
 
 
+RECHECK_BEFORE = 1793348400   # 2026-10-30 08:20 UTC: until then NetEase was searched where it mostly misses (eaf358f)
+_rechecking: set[str] = set()
+
+
+def _recheck_later(vid: str, title: str, artists: list[str], album: str, dur: float) -> None:
+    """Lyrics found back when NetEase was searched badly usually lack its word timing. Asked for again, they are
+    shown as they are and looked up once more behind the scenes; a word-timed find replaces them for next time."""
+    if vid in _rechecking:
+        return
+    _rechecking.add(vid)
+
+    def run():
+        try:
+            new = resolve(vid, title, artists, album, dur)
+            cur = json.loads(_path(vid).read_text())
+            out = new if new.get("found") and new.get("words") else {**cur, "rechecked": time.time()}
+            _path(vid).write_text(json.dumps(out, ensure_ascii=False))
+        except Exception:
+            pass
+        finally:
+            _rechecking.discard(vid)
+    threading.Thread(target=run, daemon=True).start()
+
+
 def get(vid: str, title: str, artists: list[str], album: str = "", dur: float = 0) -> dict:
     path = _path(vid)
     if path.exists():
         d = json.loads(path.read_text())
         if _fresh(d):
+            if d.get("found") and not d.get("words") and not d.get("rechecked") and d.get("ts", 0) < RECHECK_BEFORE:
+                _recheck_later(vid, title, artists, album, dur)
             return d
     with _lock:
         ev = _inflight.get(vid)

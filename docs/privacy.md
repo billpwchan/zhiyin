@@ -77,7 +77,7 @@ On the machine running Zhiyin:
 Someone listening to the sample without signing in leaves no record of themselves: their plays are not recorded.
 The first page they open sets a cookie, `zy_r`, holding the link that brought them (`?ref=`, `utm_source`, or the
 referring site's host name) for 30 days. The server keeps one table of counts per day and per link: visits, sample
-plays, joins and how they ended, first records, names, finished first runs and shares (`zhiyin stats`). A new account
+plays, joins and how they ended, sign-ins sent from an app's own browser to a real one, first records, names, finished first runs and shares (`zhiyin stats`). A new account
 carries its link in its settings for at most 30 days, so the steps of its first run can be counted. No row names a
 person.
 

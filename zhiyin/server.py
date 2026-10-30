@@ -12,7 +12,7 @@ import traceback
 from contextlib import asynccontextmanager
 from typing import Annotated, Literal
 from html import escape
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -340,6 +340,13 @@ def _reread_likes(log):
     return r
 
 
+def _look_again(log):
+    """A library too small for stations, read again while its listener is around: once it holds enough likes, the
+    first run goes on by itself instead of waiting for them to come back and ask."""
+    r = _reread_likes(log)
+    return _setup(log) if r["songs"] >= MIN_LIKES else r
+
+
 REREAD_DAYS = 25
 KEEP_DAYS = 30
 FORGET_DAYS = 28    # unread this long and it goes; a hold below adds at most HOLD_DAYS, so nothing outlives KEEP_DAYS
@@ -446,6 +453,10 @@ def _scheduler():
                                or llm.first_run_left(u["id"], (u["prefs"].get("last_sync") or {}).get("songs", 0)) > 0)
                           and not (j and (j["running"] or time.time() - j.get("ended", 0) < 1800))):
                         _start("setup", _setup)   # a first run that failed, e.g. while Claude was out
+                    elif (u["status"] == "thin" and time.time() - (u["last_seen"] or 0) < ACTIVE_DAYS * 86400
+                          and time.time() - _last_read(u) > LIKE_SYNC_H * 3600 and _can_read(u)
+                          and u["prefs"].get("google_error") != "revoked" and not (j and j["running"])):
+                        _start("setup", _look_again)
                     if u["status"] == "ready" and time.time() - (u["last_seen"] or 0) < ACTIVE_DAYS * 86400:
                         with llm.background():
                             _auto_refresh(store.read_json(store.EDITION))
@@ -640,7 +651,8 @@ def _me() -> dict:
     return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "mine": store.is_owners(u["id"]), "status": u["status"], "auth": AUTH,
             "lang": i18n.of(u["id"]),
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
-                       "error": u["prefs"].get("google_error")}, "setup_issue": u["prefs"].get("setup_issue"),
+                       "error": u["prefs"].get("google_error"), "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1"},
+            "setup_issue": u["prefs"].get("setup_issue"),
             "sync_likes": u["prefs"].get("sync_likes", True) and (not ok or google.writes_back(u["id"])),
             "writes_back": ok and google.writes_back(u["id"]), "sync": _sync_view(u["id"]),
             "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"), "read": _read_view() if ok else None,
@@ -703,6 +715,21 @@ def _ref_from(request: Request) -> str:
 
 def _ref_cookie(request: Request) -> str:
     return re.sub(r"[^a-z0-9._-]", "", request.cookies.get("zy_r", ""))[:40]
+
+
+# Google refuses to sign anyone in inside an app's own browser (403 disallowed_useragent), which is where links from
+# WeChat, Zhihu, LINE or Instagram open. Android marks every such web view with "wv"; iOS ones are known by name only,
+# since a home-screen web app has no "Safari" in its user agent either and Google lets that one sign in.
+_INAPP = (("wechat", r"MicroMessenger|WeChat"), ("wecom", r"wxwork"), ("zhihu", r"ZhihuHybrid|osee2unifiedRelease"),
+          ("weibo", r"Weibo"), ("qq", r"\bQQ/"), ("xhs", r"XiaoHongShu|xhsdiscover"), ("douyin", r"aweme|BytedanceWebview"),
+          ("bili", r"BiliApp"), ("dingtalk", r"DingTalk"), ("lark", r"\bLark/|Feishu"), ("line", r"\bLine/"),
+          ("instagram", r"Instagram"), ("facebook", r"FBAN|FBAV|FB_IAB"), ("threads", r"Barcelona"),
+          ("tiktok", r"musical_ly|TikTok"), ("kakao", r"KAKAOTALK"), ("app", r"; wv\)"))
+
+
+def _inapp(request: Request) -> str | None:
+    ua = request.headers.get("user-agent", "")
+    return next((k for k, pat in _INAPP if re.search(pat, ua)), None)
 
 
 def _ref_of_user() -> str:
@@ -961,6 +988,14 @@ def google_start(request: Request, mode: str = "connect", write: int = 0, yt: in
         ne = (cards.unsign(request.cookies.get("zy_n") or "") or {}).get("link")
         if not ne:
             return RedirectResponse("/card", 303)   # the cookie ran out: paste the link again
+    in_app = _inapp(request)
+    if in_app:
+        # on to a real browser, which has no NetEase cookie: the link travels in the address instead
+        go = f"/card?ne={quote(ne, safe='')}" if ne else request.url.path + (f"?{request.url.query}" if request.url.query else "")
+        if in_app == "line":   # LINE opens a link in the phone's own browser when asked to
+            return RedirectResponse(go + ("&" if "?" in go else "?") + "openExternalBrowser=1", 303)
+        store.count("inapp", _ref_cookie(request) or _ref_from(request))
+        return _gate("outside", request, app=in_app, url=google.public_url().rstrip("/") + go)
     join = mode == "join" and AUTH and not uid and _join_state() != "invite"
     if join and not yt:
         store.count("join_start", _ref_cookie(request))
@@ -1211,6 +1246,21 @@ def mine():
     return rotation.view()
 
 
+@app.get("/api/find")
+def find(q: Annotated[str, Query(max_length=80)] = ""):
+    """Their own likes matching what they typed in the ask box, to play one now."""
+    assign = (store.read_json(store.PROFILE) or {}).get("assign", {})
+    out = []
+    for t in library.find(q, 12):
+        if (ytm.cached("song", t["vid"]) or {}).get("embed") is False:
+            continue   # YouTube won't play it in the page
+        out.append({"vid": t["vid"], "title": t["title"], "artists": t["artists"][:3], "album": t.get("album"), "dur": t.get("dur"),
+                    "type": t.get("type"), "thumb": (ytm.cached("track", t["vid"]) or {}).get("thumb"),
+                    "at": (t.get("liked_est") or "")[:7] or None, "real": t.get("source") in ("google", "163"),
+                    "lanes": assign.get(t["vid"], []), "long": t.get("long", False)})
+    return {"songs": out[:8]}
+
+
 class Hush(BaseModel):
     vid: Vid
     days: float = Field(rotation.HUSH_D, ge=0, le=365)
@@ -1337,7 +1387,7 @@ class Play(BaseModel):
     pos: float = Field(0, ge=0, le=86400)
     dur: float | None = Field(None, ge=0, le=86400)
     # who chose the song: auto (the one before ended), next, prev, pick (from the list), station, ask, ear, compare
-    src: Literal["auto", "next", "prev", "pick", "station", "ask", "ear", "compare", "resume"] | None = None
+    src: Literal["auto", "next", "prev", "pick", "station", "ask", "ear", "compare", "resume", "find"] | None = None
     idle: float | None = Field(None, ge=0)   # seconds since anyone touched the page
     vis: Literal["visible", "hidden"] | None = None
     test: bool = False   # a check run by the operator, kept out of every count

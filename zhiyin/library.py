@@ -290,6 +290,27 @@ def load() -> list[dict]:
     return (store.read_json(store.LIBRARY) or {}).get("tracks", [])
 
 
+def find(q: str, n: int = 8) -> list[dict]:
+    """Their own likes matching what they typed, word by word, in title, artist or album and in either Chinese
+    script. Songs come before fancams and AI covers; then a title that starts with it, a singer who is it, a title
+    that holds it; then the newest likes."""
+    words = [w for w in (fold(i18n.convert(x, "zh-Hant", "zh-Hans")) for x in (q or "").split()) if w]
+    if not words:
+        return []
+    zh = lambda s: fold(i18n.convert(s, "zh-Hant", "zh-Hans"))   # noqa: E731
+    kinds = {v: x.get("kind") for v, x in (store.read_json(store.TAGS) or {}).items()}
+    hits = []
+    for t in load():
+        title, artists = zh(t["title"]), [zh(a["name"]) for a in t["artists"]]
+        rest = "".join(artists) + zh((t.get("album") or {}).get("name") or "")
+        if all(w in title or w in rest for w in words):
+            w = words[0]
+            tier = 0 if title.startswith(w) else 1 if any(a.startswith(w) for a in artists) else 2 if w in title else 3
+            hits.append((kinds.get(t["vid"]) in ("novelty", "clip"), tier, t["rank"], t))
+    hits.sort(key=lambda h: h[:3])
+    return [h[3] for h in hits[:n]]
+
+
 def estimate_like_dates(records: list[dict]) -> None:
     """YouTube Music hides when a song was liked. A like can't precede the upload it points at, so the running
     2nd-newest upload date among older likes is a lower bound. Album-track (ATV) uploads are skipped because

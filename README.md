@@ -46,7 +46,8 @@ that can show a translation and romanization.
 ### Ask in your own words
 
 "A rainy Sunday afternoon", "Japanese city pop to cook to". About a minute later there is
-a station for it.
+a station for it. Type a title or a singer instead and the songs you have liked that match come up as you
+type; pick one and it plays now.
 
 ### It listens back
 

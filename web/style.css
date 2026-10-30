@@ -594,7 +594,6 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 .g-follow .g-acts .btn { height: 44px; border-radius: 12px; }
 .g-follow h2 small, .g-follow .fine, .g-follow .mk-alt { max-width: 620px; }
 .g-follow .fine { margin-top: 16px; }
-.g-warn { margin: 0 0 14px; font-size: 13px; line-height: 1.6; color: var(--fg-2); }
 .g-acts .tb { height: 36px; padding: 0 12px 0 10px; color: var(--fg); background: rgba(255, 255, 255, .08); }
 .g-acts .tb:hover { background: rgba(255, 255, 255, .13); }
 
@@ -705,6 +704,8 @@ html:has(dialog[open]) { overflow: hidden; }   /* the page holds still under a d
 .c-row:hover { background: var(--hover); }
 .c-row b { display: block; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .c-row span { display: block; font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-row:focus-visible { outline: none; background: var(--hover); }
+.c-hint { margin: 0; padding: 8px 10px 4px; font-size: 12px; color: var(--fg-3); }
 .fly { position: fixed; z-index: 100; margin: 0; font-size: 18px; line-height: 1.2; white-space: nowrap; pointer-events: none; transform-origin: 0 0; color: var(--fg); }
 
 /* ---------- account menu ---------- */
@@ -1116,6 +1117,8 @@ body.pip {
 .gate p { margin: 12px 0 0; font-size: 15px; line-height: 1.65; color: var(--fg-2); }
 .gate .gate-err { color: var(--fg); }
 .gate-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 28px; }
+.gate .gate-link { margin-top: 24px; }
+.gate .gate-link input { height: 40px; }
 .gate .gate-note { font-size: 13px; color: var(--fg-3); }
 .gate a:not(.btn):not(.tb):not(.mark) { color: inherit; text-decoration: underline; text-decoration-color: var(--fg-3); text-underline-offset: 3px; }
 .gate-body:has(.doc) { place-items: start center; padding: 72px 16px 96px; }

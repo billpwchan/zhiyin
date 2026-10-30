@@ -34,6 +34,20 @@ if (G.mode === 'switch') {
     <h1>${t('这个链接是给{name}的', { name: esc(G.name) })}</h1>
     <p>${t('这个浏览器现在登录的是{me}。换成{name}之后，这里会显示{name}的电台。', { me: esc(G.me || t('另一位听众')), name: esc(G.name) })}</p>
     <div class="gate-acts"><a class="btn" href="/i/${encodeURIComponent(G.token)}?go=1">${t('以{name}的身份进入', { name: esc(G.name) })}</a><a class="tb" href="/">${t('保持现在的账号')}</a></div>${langs}`;
+} else if (G.mode === 'outside') {
+  // Google won't sign anyone in inside WeChat, Zhihu, Instagram…: the same step, in the phone's own browser
+  const APPS = { wechat: t('微信'), wecom: t('企业微信'), zhihu: t('知乎'), weibo: t('微博'), qq: 'QQ', xhs: t('小红书'), douyin: t('抖音'),
+    bili: t('哔哩哔哩'), dingtalk: t('钉钉'), lark: t('飞书'), line: 'LINE', instagram: 'Instagram', facebook: 'Facebook', threads: 'Threads',
+    tiktok: 'TikTok', kakao: 'KakaoTalk' };
+  el.innerHTML = `${MARK}
+    <h1>${t('在浏览器里打开')}</h1>
+    <p>${t('Google 不让在{app}里登录。点右上角的「···」，选「在浏览器中打开」，再点一次「用 Google 继续」。', { app: APPS[G.app] || t('这个应用') })}</p>
+    <div class="link gate-link"><input readonly value="${esc(G.url)}" aria-label="${t('链接')}"><button class="tb" id="copyOut">${t('复制链接')}</button></div>
+    <p class="gate-note">${t('也可以复制链接，粘贴到 Safari 或 Chrome 里打开。')}</p>${langs}`;
+  document.getElementById('copyOut').onclick = async (e) => {
+    const input = el.querySelector('.gate-link input');
+    try { await navigator.clipboard.writeText(G.url); e.target.textContent = t('已复制'); } catch { input.focus(); input.select(); }
+  };
 } else {
   // open: anyone may join with Google; a Google account that isn't in yet gets the join button in place of sign-in
   const open = G.join === 'open';
@@ -52,6 +66,7 @@ if (G.mode === 'switch') {
     <p>${pitch}</p>
     ${G.google && open ? `<p class="gate-note">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')}</p>` : ''}
     ${G.error ? `<p class="gate-err">${esc(errors[G.error] || G.error)}</p>` : ''}
+    ${open && retry && !G.verified ? `<p class="gate-note">${t('Google 会先提示「尚未验证此应用」，因为知音还在 Google 的审核中：点「高级」，再点「转至…（不安全）」；下一页记得勾上 YouTube。')}</p>` : ''}
     ${G.google ? `<div class="gate-acts">${main}${sample}</div>${note ? `<p class="gate-note">${note}</p>` : ''}`
       : sample ? `<div class="gate-acts">${sample}</div>` : ''}
     <p class="gate-note"><a href="/privacy">${t('知音怎么用你的数据')}</a></p>${langs}`;

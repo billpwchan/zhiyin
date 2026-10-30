@@ -729,3 +729,88 @@ def test_an_account_without_likes_yet_can_start_from_netease_but_not_change_sour
     monkeypatch.setattr(google, "disconnect", lambda u: None)
     server._forget_youtube(uid)                            # unreadable for 30 days: the link goes with the likes
     assert "netease" not in accounts.prefs(uid)
+
+
+WECHAT_IOS = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 "
+              "MicroMessenger/8.0.54(0x18003637) NetType/WIFI Language/zh_CN")
+LINE_ANDROID = ("Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP2A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 "
+                "Chrome/130.0.6723.58 Mobile Safari/537.36 Line/14.19.1")
+SAFARI = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 "
+          "Mobile/15E148 Safari/604.1")
+HOME_SCREEN = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+
+def test_inside_wechat_or_line_signing_in_moves_to_the_phones_browser_and_keeps_the_netease_link(monkeypatch):
+    import json
+    import re
+    from urllib.parse import parse_qs, unquote, urlparse
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, google, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "HOSTED", True)
+    monkeypatch.setattr(llm, "API_KEY", True)
+    monkeypatch.setattr(google, "client", lambda: {"id": "x", "secret": "y"})
+    monkeypatch.setattr(server, "SEATS", accounts.joined() + 5)
+    c = TestClient(server.app)
+
+    def start(ua, path="/auth/google/start?mode=join"):
+        return c.get(path, headers={"user-agent": ua}, follow_redirects=False)
+
+    r = start(WECHAT_IOS)                                  # Google would answer 403 disallowed_useragent
+    assert r.status_code == 200
+    gate = json.loads(re.search(r"const G = (\{.*?\});", r.text).group(1))
+    assert gate["mode"] == "outside" and gate["app"] == "wechat" and gate["url"].endswith("/auth/google/start?mode=join")
+    for ua in (SAFARI, HOME_SCREEN):                       # a real browser, and a home-screen web app, go straight on
+        assert "accounts.google.com" in start(ua).headers["location"]
+
+    link = "https://music.163.com/playlist?id=24381616"
+    assert c.post("/api/card/follow", json={"link": link}).status_code == 200
+    gate = json.loads(re.search(r"const G = (\{.*?\});", start(WECHAT_IOS, "/auth/google/start?mode=join&src=163").text).group(1))
+    assert unquote(parse_qs(urlparse(gate["url"]).query)["ne"][0]) == link   # the browser has no cookie: the link travels
+    r = start(LINE_ANDROID, "/auth/google/start?mode=join&src=163")
+    assert r.status_code == 303 and r.headers["location"].startswith("/card?ne=") and r.headers["location"].endswith("&openExternalBrowser=1")
+
+
+def test_their_own_likes_are_found_in_either_script_by_title_singer_or_both():
+    from zhiyin import library
+    uid = "finder01"
+    with store.as_user(uid):
+        library.save([
+            {"rank": 0, "vid": "aaaaaaaaaa1", "title": "愛情轉移", "artists": [{"name": "陳奕迅"}], "album": {"name": "認了吧"}, "dur": 260, "long": False},
+            {"rank": 1, "vid": "aaaaaaaaaa2", "title": "富士山下", "artists": [{"name": "陳奕迅"}], "album": None, "dur": 259, "long": False},
+            {"rank": 2, "vid": "aaaaaaaaaa3", "title": "Love Story", "artists": [{"name": "Taylor Swift"}], "album": None, "dur": 235, "long": False},
+            {"rank": 3, "vid": "aaaaaaaaaa4", "title": "她說", "artists": [{"name": "林俊傑"}], "album": None, "dur": 320, "long": False},
+        ])
+        assert [t["vid"] for t in library.find("爱情")] == ["aaaaaaaaaa1"]                 # simplified finds traditional
+        assert [t["vid"] for t in library.find("陈奕迅")] == ["aaaaaaaaaa1", "aaaaaaaaaa2"]   # a singer: newest first
+        assert [t["vid"] for t in library.find("富士 陈奕迅")] == ["aaaaaaaaaa2"]            # every word must be there
+        assert [t["vid"] for t in library.find("love")][0] == "aaaaaaaaaa3"                 # a title beats an album or a singer
+        assert library.find("   ") == [] and library.find("周杰伦") == []
+
+
+def test_a_library_too_small_for_stations_is_read_again_and_goes_on_by_itself(monkeypatch):
+    calls = []
+    monkeypatch.setattr(server, "_reread_likes", lambda log: calls.append("read") or {"songs": n})
+    monkeypatch.setattr(server, "_setup", lambda log: calls.append("setup") or "built")
+    n = server.MIN_LIKES - 1
+    assert server._look_again(print) == {"songs": n} and calls == ["read"]
+    n = server.MIN_LIKES
+    assert server._look_again(print) == "built" and calls == ["read", "read", "setup"]
+
+
+def test_old_lyrics_without_word_timing_are_looked_up_once_more_behind_the_scenes(monkeypatch):
+    import json
+    import threading
+    from zhiyin import lyrics
+    monkeypatch.setattr(threading, "Thread", lambda target, daemon: type("T", (), {"start": lambda s: target()})())
+    old = {"vid": "oldlyric001", "found": True, "source": "LRCLIB", "words": False, "lines": [{"t": 1, "x": "a"}], "ts": lyrics.RECHECK_BEFORE - 60}
+    for vid, words in (("oldlyric001", True), ("oldlyric002", False)):
+        lyrics._path(vid).write_text(json.dumps({**old, "vid": vid}))
+        found = {"vid": vid, "found": True, "source": "NetEase", "words": words, "lines": [{"t": 1, "x": "a", "w": [[1, 0.5, "a"]]}], "ts": 2e9}
+        monkeypatch.setattr(lyrics, "resolve", lambda *a, f=found: f)
+        assert lyrics.get(vid, "t", ["a"])["source"] == "LRCLIB"          # shown as it was, this once
+    assert json.loads(lyrics._path("oldlyric001").read_text())["source"] == "NetEase"
+    kept = json.loads(lyrics._path("oldlyric002").read_text())
+    assert kept["source"] == "LRCLIB" and kept["rechecked"]
+    monkeypatch.setattr(lyrics, "resolve", lambda *a: pytest.fail("looked up again"))
+    lyrics.get("oldlyric002", "t", ["a"])                                  # once is enough

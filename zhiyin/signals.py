@@ -19,7 +19,7 @@ READ_EVERY_H = 24
 KEEP_DAYS = 28
 # Spotify (Mehrotra et al., CIKM 2021) weighs a stream by whether the listener chose the track; a song that merely
 # played on is the weakest evidence there is. These are the sources of a start where the listener picked the song.
-CHOSEN = {"pick", "prev", "ear"}
+CHOSEN = {"pick", "prev", "ear", "find"}
 FULL, EARLY = 0.8, 10           # a listen that got 80% through is a full one; one left within 10 s an early skip
 W_CHOSEN, W_PLAYED, W_IDLE, W_REPLAY = 0.3, 0.1, 0.05, 0.3
 IDLE_S = 1800                   # nobody touched the page this long: the song may have played to an empty room
