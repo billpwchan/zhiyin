@@ -19,6 +19,7 @@ let LANG = detectLang();
 const STRINGS = {
   en: {
     "连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。": "When you connect, Zhiyin sends song titles, artists, like dates and other music preferences read from Google to Anthropic (Claude) to generate your stations and taste portrait. Your Google email and access credentials are not sent. Continuing to connect consents to this processing; see the privacy policy for details.",
+    "读到 {l} 首喜欢、{d} 首不喜欢、{f} 个订阅的音乐频道、{s} 首自建歌单里的歌：不推荐你踩过或已经存着的歌，也认得出你订阅的歌手。": "Read {l} liked songs, {d} thumbs-down, {f} music channels you subscribe to and {s} songs from your own playlists: songs you turned down or already keep are never recommended, and artists you follow are recognised.",
     "你喜欢和不喜欢的音乐、订阅的音乐频道、自建歌单，用来做推荐": "Your liked and disliked music, subscribed music channels and own playlists, to build recommendations",
     "同步你在这里点的喜欢，或保存电台为私人歌单。要你在设置里打开，Google 会再问一次": "Sync your likes here, or save a station as a private playlist. Enable it in Settings; Google will ask again",
     "授权后也能把电台存成私人 YouTube 歌单；开启同步会同步之前点过的喜欢。": " You can also save stations as private YouTube playlists after granting access. Enabling sync also syncs earlier Zhiyin likes.",
@@ -518,6 +519,7 @@ const STRINGS = {
     "用网易云歌单画一张唱片": "Draw a record from a NetEase playlist",
   },
   'zh-Hant': {
+    "读到 {l} 首喜欢、{d} 首不喜欢、{f} 个订阅的音乐频道、{s} 首自建歌单里的歌：不推荐你踩过或已经存着的歌，也认得出你订阅的歌手。": "讀到 {l} 首喜歡、{d} 首不喜歡、{f} 個訂閱的音樂頻道、{s} 首自建歌單裡的歌：不推薦你踩過或已經存著的歌，也認得出你訂閱的歌手。",
     "连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。": "連接後，知音會把從 Google 讀取的歌名、歌手、喜歡時間及其他音樂偏好傳給 Anthropic（Claude），用於產生你的電台和口味畫像；不傳送 Google 電子郵件或存取憑證。繼續連接即同意這些處理，詳情見隱私政策。",
     "你喜欢和不喜欢的音乐、订阅的音乐频道、自建歌单，用来做推荐": "你喜歡和不喜歡的音樂、訂閱的音樂頻道、自建歌單，用來做推薦",
     "同步你在这里点的喜欢，或保存电台为私人歌单。要你在设置里打开，Google 会再问一次": "同步你在這裡按的喜歡，或儲存電台為私人歌單。要你在設定裡開啟，Google 會再問一次",

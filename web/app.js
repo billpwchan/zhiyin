@@ -1504,7 +1504,8 @@ function accountHTML() {
     rows.push(`<li><span>YouTube Music<small>${t('还没连接。连接之后，知音读你在 YouTube Music 点过的喜欢，之后新点的也会自动进来。')}</small></span><a class="tb" href="/auth/google/start">${t('连接')}</a></li>`);
   } else {
     const busy = S.jobs?.sync?.running;
-    rows.push(`<li><span>YouTube Music<small>${esc(g.email || t('已连接'))}${me.synced ? ` · ${ls?.added ? t('{when} 读过一次，新增 {n} 首', { when: ago(me.synced), n: ls.added }) : t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
+    const rd = me.read;
+    rows.push(`<li><span>YouTube Music<small>${esc(g.email || t('已连接'))}${me.synced ? ` · ${ls?.added ? t('{when} 读过一次，新增 {n} 首', { when: ago(me.synced), n: ls.added }) : t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small>${rd && ls?.songs ? `<small>${t('读到 {l} 首喜欢、{d} 首不喜欢、{f} 个订阅的音乐频道、{s} 首自建歌单里的歌：不推荐你踩过或已经存着的歌，也认得出你订阅的歌手。', { l: ls.songs, d: rd.disliked, f: rd.follows, s: rd.saved })}</small>` : ''}</span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
     const state = !me.writes_back ? t('现在只读不写。打开时 Google 会再问一次，允许知音把这里的 ♥ 写回 YouTube Music') : sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
     rows.push(`<li><span>${t('把这里的喜欢同步到 YouTube Music')}<small>${esc(state)}${t('。「不要」只记在知音，不会变成 YouTube 上的踩。')}${t('授权后也能把电台存成私人 YouTube 歌单；开启同步会同步之前点过的喜欢。')}</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="${t('同步喜欢')}"></button></li>`);
   }

@@ -596,6 +596,14 @@ def _join_state() -> str:
     return "open" if _seats_left() else "full"
 
 
+def _read_view() -> dict | None:
+    """What the last reads took from YouTube besides the likes, so the listener can see what the permission is used for."""
+    sig = signals.youtube()
+    if not sig.get("read"):
+        return None
+    return {"disliked": len(sig.get("disliked", [])), "follows": len(sig.get("follows", [])), "saved": len(sig.get("saved", []))}
+
+
 def _me() -> dict:
     if store.is_sample():
         return {"uid": store.uid(), "sample": True, "name": "", "owner": False, "mine": False, "status": "ready",
@@ -610,7 +618,7 @@ def _me() -> dict:
                        "error": u["prefs"].get("google_error")}, "setup_issue": u["prefs"].get("setup_issue"),
             "sync_likes": u["prefs"].get("sync_likes", True) and (not ok or google.writes_back(u["id"])),
             "writes_back": ok and google.writes_back(u["id"]), "sync": _sync_view(u["id"]),
-            "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"),
+            "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"), "read": _read_view() if ok else None,
             "worker": audio.worker_online() if audio.REMOTE else None,
             "claude": llm.view(u["id"]) if AUTH else None}
 
