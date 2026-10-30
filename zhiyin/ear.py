@@ -184,16 +184,24 @@ def build() -> dict:
             "center": center(mine, tags), "label": label(), "built": time.time()}
 
 
-def from_tracks(tracks: list[dict], lang: str) -> dict:
-    """The record of likes kept somewhere else (netease.likes), drawn as a new listener's is before their stations
-    exist: ring by year, angle by the time of year of the like."""
+def from_tracks(tracks: list[dict], lang: str, released: bool = False) -> dict:
+    """The record of likes kept somewhere else (library.app_likes), drawn as a new listener's is before their stations
+    exist: ring by year, angle by the time of year of the like. `released`: QQ Music shows nobody when a song was
+    liked, and a playlist's order says nothing of it either, so each song sits where it came out (undated ones are
+    left off)."""
+    out = sorted((t for t in tracks if t.get("released")), key=lambda t: t["released"], reverse=True) if released else []
+    released = bool(out)
+    if released:
+        tracks = [{**t, "rank": i, "liked_est": t["released"]} for i, t in enumerate(out)]
     ts = dict(zip((t["rank"] for t in tracks), _times(tracks)))
     songs = []
     _calendar(tracks, ts, (set(), set()), songs)
     tags = {t["vid"]: {"year": t["year"]} for t in tracks if t.get("year")}
+    real = any(t.get("source") == "163" for t in tracks)
     return {"songs": songs, "sectors": [], "span": [round(min(ts.values()), 3), round(max(ts.values()), 3)], "eras": [],
-            "facts": facts(tracks, ts, {t["vid"]: "none" for t in tracks}, {}, tags, True, lang),
-            "real_dates": True, "stage": "library", "center": center(tracks, tags), "label": None, "built": time.time()}
+            "facts": facts(tracks, ts, {t["vid"]: "none" for t in tracks}, {}, tags, real, lang, released=released),
+            "real_dates": real, "dates": "released" if released else "liked", "stage": "library",
+            "center": center(tracks, tags), "label": None, "built": time.time()}
 
 
 def center(tracks, tags) -> int | None:
@@ -202,15 +210,18 @@ def center(tracks, tags) -> int | None:
     return years[(len(years) - 1) // 2] if len(years) >= 30 else None
 
 
-def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans", names=True) -> list[dict]:
+def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans", names=True, released=False) -> list[dict]:
     """`names` False: the artists are still YouTube channel names (a label's channel would pass for the artist), so
-    nothing is said about who."""
+    nothing is said about who. `released`: the songs sit where they came out, so nothing is said about when liked."""
     def tr(text, **kw):
         return i18n.tr(text, lang, **kw)
     out = []
     first = min(tracks, key=lambda t: (ts[t["rank"]], -t["rank"]))
     who = first["artists"][0]["name"] if first["artists"] else ""
-    text = tr("最早的一首是《{title}》，{who}。", title=first["title"], who=who) if names and who else tr("最早的一首是《{title}》。", title=first["title"])
+    if released:
+        text = tr("最老的一首是《{title}》，{who}。", title=first["title"], who=who) if names and who else tr("最老的一首是《{title}》。", title=first["title"])
+    else:
+        text = tr("最早的一首是《{title}》，{who}。", title=first["title"], who=who) if names and who else tr("最早的一首是《{title}》。", title=first["title"])
     out.append({"key": "first", "lead": f"{int(ts[first['rank']])}", "text": text, "vids": [first["vid"]]})
 
     span = defaultdict(list)
@@ -218,7 +229,7 @@ def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans", names=True) ->
         if t["artists"] and names:
             span[t["artists"][0]["name"]].append(t)
     long_ = [(max(ts[t["rank"]] for t in v) - min(ts[t["rank"]] for t in v), len(v), k, v) for k, v in span.items() if len(v) >= 3]
-    if long_:
+    if long_ and not released:
         yrs, n, name, songs = max(long_)
         a, b = int(min(ts[t["rank"]] for t in songs)), int(max(ts[t["rank"]] for t in songs))
         if yrs >= 2:   # a year together says little about who stayed

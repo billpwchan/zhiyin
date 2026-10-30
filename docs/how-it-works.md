@@ -22,13 +22,17 @@ song with its language, energy and the moments it suits. Then it groups the libr
 the kinds of music you actually listen to. For one listener that might be Cantonese R&B, Japanese city-pop groove,
 vocal jazz and K-pop girl groups.
 
-Your likes can also come from NetEase Cloud Music: the public "My Liked Music" behind a link you paste. Each one is
-found on YouTube Music by artist, title and length (`library.match_netease`). YouTube Music often spells a Chinese or
-Japanese artist in Latin letters, so a name in the other script is checked against the other names NetEase knows
-them by (陈奕迅 is also Eason Chan), while a different name in the same script is taken for someone's cover and
-refused. What is found becomes your library with the date you really liked it; what isn't stays out of the stations
-but is still yours (section 3). NetEase's 听歌排行 marks your favourites, which then come round more often between the
-new songs.
+Your likes can also come from NetEase Cloud Music or QQ Music: the public "My Liked Music" behind a link you paste,
+or the 我喜欢 on a QQ Music profile. Each one is found on YouTube Music by artist, title and length
+(`library.match_app`). YouTube Music often spells a Chinese or Japanese artist in Latin letters, so a name in the
+other script is checked against its pinyin and the other names the app knows them by (陈奕迅 is also Eason Chan;
+华莎 (화사) is also 화사), while a different name in the same script is taken for someone's cover and refused. What is
+found becomes your library; what isn't stays out of the stations but is still yours (section 3). NetEase gives the
+date you really liked each song, and its 听歌排行 marks your favourites, which then come round more often between the
+new songs. QQ Music shows nobody when a song was liked, so for the stations a like's date is estimated: no earlier
+than the songs at and below it in the list came out, and within the list's own start and last change. A record made
+from a QQ Music link places each song where it came out instead, and says so; its name and roast are written from
+those years, never from a guessed like date.
 
 Likes you mark as not your taste (a song a child asked for, a phase, a joke) stay liked but are left out of all
 of this: they don't seed stations, define them, or speak for you in the portrait. You can leave out a whole artist

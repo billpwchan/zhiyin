@@ -231,8 +231,17 @@ def cached(kind: str, key: str) -> dict | None:
         return None
 
 
-COVER_HOSTS = ("i.ytimg.com", "lh3.googleusercontent.com", "yt3.googleusercontent.com", "yt3.ggpht.com")
+COVER_HOSTS = ("i.ytimg.com", "lh3.googleusercontent.com", "yt3.googleusercontent.com", "yt3.ggpht.com", "y.gtimg.cn")
+# Covers on a card made without an account: QQ Music's CDN won't let the page read their pixels, so they pass through
+# here, and aren't kept, so the server holds no trace of whose likes they came from.
+PASS_HOSTS = ("y.gtimg.cn",)
+_PASS = re.compile(r"https://y\.gtimg\.cn/music/photo_new/T002R\d{2,4}x\d{2,4}M000[0-9A-Za-z]{6,24}\.jpg")
 COVER_MAX = 2 << 20
+
+
+def passed(u: str) -> bool:
+    """A QQ Music album cover, exactly as the page asks for one: nothing else is fetched on its behalf."""
+    return bool(_PASS.fullmatch(u or ""))
 
 
 def cover_url(t: dict, size: int = 120) -> str:
@@ -251,21 +260,39 @@ def cover_cached(u: str) -> bool:
     return _cover_path(u).exists()
 
 
+def _fetch_cover(u: str, follow: bool = True) -> bytes:
+    data = b""
+    with httpx.stream("GET", u, timeout=15, follow_redirects=follow) as r:
+        r.raise_for_status()
+        if r.status_code != 200:
+            raise ValueError("status")
+        for chunk in r.iter_bytes():
+            data += chunk
+            if len(data) > COVER_MAX:
+                raise ValueError("size")
+    return data
+
+
+def cover_bytes(u: str) -> bytes:
+    from urllib.parse import urlparse
+    host = urlparse(u).hostname
+    if host not in COVER_HOSTS:
+        raise ValueError("host")
+    if host in PASS_HOSTS:
+        if not passed(u):
+            raise ValueError("path")
+        return _fetch_cover(u, follow=False)
+    return cover_file(u).read_bytes()
+
+
 def cover_file(u: str):
     from urllib.parse import urlparse
-    if urlparse(u).hostname not in COVER_HOSTS:
+    if urlparse(u).hostname not in COVER_HOSTS or urlparse(u).hostname in PASS_HOSTS:
         raise ValueError("host")
     f = _cover_path(u)
     f.parent.mkdir(parents=True, exist_ok=True)
     if not f.exists():
-        data = b""
-        with httpx.stream("GET", u, timeout=15, follow_redirects=True) as r:
-            r.raise_for_status()
-            for chunk in r.iter_bytes():
-                data += chunk
-                if len(data) > COVER_MAX:
-                    raise ValueError("size")
-        f.write_bytes(data)
+        f.write_bytes(_fetch_cover(u))
     return f
 
 

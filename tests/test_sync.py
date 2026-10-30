@@ -628,14 +628,14 @@ def test_a_netease_like_is_found_on_youtube_music_by_title_length_and_artist_in_
         "宋冬野 安和桥": [_hit("songdongy2", "安和桥", "Sun Yanzi")],
     }
     monkeypatch.setattr(ytm, "search", lambda q, kind="songs", limit=10: hits.get(q, []))
-    assert library.match_netease(_ne(1, "爱情转移", "陈奕迅"))["vid"] == "easonchan1" and asked == [10]
-    assert library.match_netease(_ne(2, "曾经的你", "许巍")) is None
-    assert library.match_netease(_ne(3, "LA Girls", "Charlie Puth")) is None
-    assert library.match_netease(_ne(4, "拥抱", "五月天"))["vid"] == "mayday0001"
-    assert library.match_netease(_ne(5, "斑马，斑马", "宋冬野"))["vid"] == "songdongye"
-    assert library.match_netease(_ne(6, "默", "那英"))["vid"] == "nayingmo01"
-    assert library.match_netease(_ne(7, "Sofía", "Álvaro Soler"))["vid"] == "alvarosofi"
-    assert library.match_netease(_ne(8, "安和桥", "宋冬野")) is None   # another singer's pinyin
+    assert library.match_app(_ne(1, "爱情转移", "陈奕迅"))["vid"] == "easonchan1" and asked == [10]
+    assert library.match_app(_ne(2, "曾经的你", "许巍")) is None
+    assert library.match_app(_ne(3, "LA Girls", "Charlie Puth")) is None
+    assert library.match_app(_ne(4, "拥抱", "五月天"))["vid"] == "mayday0001"
+    assert library.match_app(_ne(5, "斑马，斑马", "宋冬野"))["vid"] == "songdongye"
+    assert library.match_app(_ne(6, "默", "那英"))["vid"] == "nayingmo01"
+    assert library.match_app(_ne(7, "Sofía", "Álvaro Soler"))["vid"] == "alvarosofi"
+    assert library.match_app(_ne(8, "安和桥", "宋冬野")) is None   # another singer's pinyin
 
 
 def test_netease_likes_become_the_library_and_an_unliked_song_leaves(monkeypatch):
@@ -643,7 +643,7 @@ def test_netease_likes_become_the_library_and_an_unliked_song_leaves(monkeypatch
     uid = accounts.redeem(accounts.invite("Lin"))
     likes = [_ne(1, "爱情转移", "陈奕迅"), _ne(2, "孤岛", "思敏哥哥"), _ne(3, "拥抱", "五月天")]
     found = {1: _hit("easonchan1", "愛情轉移", "Eason Chan"), 3: _hit("mayday0001", "擁抱", "五月天")}
-    monkeypatch.setattr(library, "match_netease", lambda t: found.get(t["ne"]))
+    monkeypatch.setattr(library, "match_app", lambda t: found.get(t["ne"]))
     monkeypatch.setattr(netease, "aliases", lambda aid: [])
     monkeypatch.setattr(netease, "ranking", lambda owner: {3: 100} if owner == 77 else {})
 
@@ -651,7 +651,7 @@ def test_netease_likes_become_the_library_and_an_unliked_song_leaves(monkeypatch
         return {"key": "163:5", "owner": 77, "tracks": list(likes), "total": len(likes)}
     seen = []
     with store.as_user(uid):
-        r = library.sync_from_netease("x", log=lambda *a, **k: None, glimpsed=lambda: seen.append(store.read_json(store.GLIMPSE)), got=got())
+        r = library.sync_from_app("x", log=lambda *a, **k: None, glimpsed=lambda: seen.append(store.read_json(store.GLIMPSE)), got=got())
         assert r["first"] and r["songs"] == 2 and r["unmatched"] == 1 and len(seen[0]["songs"]) == 3
         lib = library.load()
         assert [(t["vid"], t["rank"], t["ne_score"]) for t in lib] == [("easonchan1", 0, None), ("mayday0001", 1, 100)]
@@ -663,9 +663,42 @@ def test_netease_likes_become_the_library_and_an_unliked_song_leaves(monkeypatch
 
         likes[:] = [_ne(4, "红玫瑰", "陈奕迅"), likes[0], likes[1]]   # one new like; 拥抱 unliked on NetEase
         found[4] = _hit("easonchan2", "紅玫瑰", "Eason Chan")
-        r = library.sync_from_netease("x", log=lambda *a, **k: None, got=got())
+        r = library.sync_from_app("x", log=lambda *a, **k: None, got=got())
         assert (r["added"], r["removed"], r["first"]) == (1, 1, False)
         assert [(t["vid"], t["rank"]) for t in library.load()] == [("easonchan2", -1), ("easonchan1", 0)]
+
+
+
+def test_qq_music_likes_are_matched_with_qq_names_and_kept_without_a_ranking(monkeypatch):
+    from zhiyin import accounts, library, netease, qqmusic, ytm
+    uid = accounts.redeem(accounts.invite("Qi"))
+    asked = []
+    monkeypatch.setattr(qqmusic, "aliases", lambda mid: asked.append(mid) or (["Eason Chan"] if mid == "S1" else []))
+    monkeypatch.setattr(netease, "aliases", lambda aid: pytest.fail("a QQ Music singer looked up on NetEase"))
+    monkeypatch.setattr(netease, "ranking", lambda owner: pytest.fail("QQ Music has no ranking to read"))
+    hits = {"陈奕迅 富士山下": [_hit("easonfuji1", "富士山下", "Eason Chan")],
+            "华莎 (화사) Maria": [_hit("hwasamaria", "Maria", "화사")],
+            "G.E.M.邓紫棋 光年之外": [_hit("gemlight01", "光年之外", "G.E.M.")]}
+    monkeypatch.setattr(ytm, "search", lambda q, kind="songs", limit=10: hits.get(q, []))
+
+    def qq(i, title, singer, mid):
+        return {**_ne(i, title, singer, ar=[mid]), "vid": f"q{i}", "source": "qq", "pop": None, "released": "2009-04-14"}
+    likes = [qq(1, "富士山下", "陈奕迅", "S1"), qq(2, "Maria", "华莎 (화사)", "S2"), qq(3, "光年之外", "G.E.M.邓紫棋", "S3"),
+             qq(4, "某首独占", "某人", "S4")]
+    assert library.match_app(likes[0])["vid"] == "easonfuji1" and asked == ["S1"]   # the name QQ Music gives him in English
+    assert library.match_app(likes[1])["vid"] == "hwasamaria"                         # the name inside her QQ Music name
+    with store.as_user(uid):
+        r = library.sync_from_app("x", log=lambda *a, **k: None, got={"key": "qq:u:oK**", "owner": None, "tracks": likes, "total": 4})
+        lib = library.load()
+        assert r["unmatched"] == 1 and {t["source"] for t in lib} == {"qq"} and lib[0]["ne_score"] is None
+        assert (store.read_json(store.LIBRARY) or {})["source"] == "qq"
+        # the taste's name is asked from the year each song came out, not from like dates QQ Music never showed
+        from zhiyin import llm, profile
+        seen = {}
+        monkeypatch.setattr(llm, "call", lambda prompt, system, schema, **k: seen.update(prompt=prompt, system=system) or {"label": "港乐"})
+        accounts.set_prefs(uid, netease={"link": "https://y.qq.com/n/ryqq/playlist/7256912512"})
+        assert profile.label() == "港乐"
+        assert seen["prompt"].startswith("2009 | ") and "QQ Music doesn't show when a song was liked" in seen["system"]
 
 
 def test_a_netease_card_becomes_an_account_with_google_saying_only_who_they_are(monkeypatch):
@@ -699,7 +732,7 @@ def test_a_netease_card_becomes_an_account_with_google_saying_only_who_they_are(
     assert accounts.prefs(uid)["netease"] == {"link": link} and started == [(uid, "setup")]
     assert accounts.get(uid)["email"] == "mei@example.com" and not google.connected(uid)
     with store.as_user(uid):
-        assert server._netease() == link and server._can_read(accounts.get(uid))
+        assert server._app_likes() == link and server._can_read(accounts.get(uid))
 
     r = come("kai")                                        # no seat left: waits, and the link waits too
     assert r.headers["location"] == "/login?e=full" and accounts.by_google("kai") is None
@@ -712,6 +745,35 @@ def test_a_netease_card_becomes_an_account_with_google_saying_only_who_they_are(
     assert r.headers["location"] == "/" and accounts.prefs(uid)["netease"] == {"link": link} and started[-1] == (uid, "setup")
 
 
+def test_a_qq_music_card_follows_the_same_way_and_the_account_knows_its_app(monkeypatch):
+    from urllib.parse import parse_qs, urlparse
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, google, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "HOSTED", True)
+    monkeypatch.setattr(llm, "API_KEY", True)
+    monkeypatch.setattr(google, "client", lambda: {"id": "x", "secret": "y"})
+    monkeypatch.setattr(server, "_start", lambda kind, fn: None)
+    monkeypatch.setattr(server, "SEATS", accounts.joined() + 1)
+    link = "https://i.y.qq.com/n2/m/share/profile_v2/index.html?encrypt_uin=oKcPoKoP7i4soz**"
+    c = TestClient(server.app)
+    r = c.post("/api/card/follow", json={"link": "https://y.qq.com/n/ryqq/songDetail/002q83Sd2G7Y7D"}, headers={"accept-language": "zh-CN"})
+    assert r.status_code == 422 and "一首歌" in r.json()["detail"] and "QQ 音乐" in r.json()["detail"]
+    r = c.post("/api/card/follow", json={"link": link})
+    assert r.json()["go"] == "/auth/google/start?mode=join&src=163"
+    day = store.db().execute("select sum(n) from events where name='join_qq'").fetchone()[0]
+    assert day == 1
+    monkeypatch.setattr(google, "exchange", lambda code, v: {"id_token": "qiao", "scope": "openid email"})
+    monkeypatch.setattr(google, "claims", lambda tok: {"sub": tok, "email": f"{tok}@example.com", "name": tok.title()})
+    r = c.get(r.json()["go"], follow_redirects=False)
+    state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
+    c.get(f"/auth/google/callback?state={state}&code=x", follow_redirects=False)
+    uid = accounts.by_google("qiao")
+    assert accounts.prefs(uid)["netease"] == {"link": link}
+    c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+    assert c.get("/api/state").json()["me"]["netease"]["app"] == "qq"
+
+
 def test_an_account_without_likes_yet_can_start_from_netease_but_not_change_source(monkeypatch):
     from fastapi import HTTPException
     from zhiyin import accounts, google, netease
@@ -720,11 +782,11 @@ def test_an_account_without_likes_yet_can_start_from_netease_but_not_change_sour
     monkeypatch.setattr(server, "_start", lambda kind, fn: started.append(kind))
     monkeypatch.setattr(netease, "likes", lambda link: {"key": "163:9", "owner": 1, "tracks": [], "total": 30})
     with store.as_user(uid):
-        server.netease_use(server.NeteaseReq(link="https://music.163.com/#/user/home?id=1"))
+        server.app_use(server.LinkReq(link="https://music.163.com/#/user/home?id=1"))
         assert accounts.prefs(uid)["netease"] == {"link": "https://music.163.com/playlist?id=9"} and started == ["setup"]
         monkeypatch.setattr(google, "connected", lambda u=None: True)
         with pytest.raises(HTTPException) as e:
-            server.netease_use(server.NeteaseReq(link="https://music.163.com/playlist?id=9"))
+            server.app_use(server.LinkReq(link="https://music.163.com/playlist?id=9"))
         assert e.value.status_code == 409
     monkeypatch.setattr(google, "disconnect", lambda u: None)
     server._forget_youtube(uid)                            # unreadable for 30 days: the link goes with the likes

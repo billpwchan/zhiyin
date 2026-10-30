@@ -55,8 +55,6 @@ const STRINGS = {
     "Claude 锐评": "Claude says",
     "歌单大众度，热歌榜是 100%": "mainstream score, where the hot chart is 100%",
     "下面是一位示例听众的唱片": "Below is a sample listener's record",
-    "让 Claude 锐评你的网易云歌单": "Let Claude roast your NetEase likes",
-    "在网易云打开「我喜欢的音乐」，点分享，复制链接贴进来。十秒出一张唱片：名字、锐评、你有多大众。": "In NetEase Cloud Music, open “My Liked Music”, tap Share, copy the link and paste it here. Ten seconds later: a record, a name, a roast, and how mainstream you are.",
     "锐评一下": "Roast me",
     "Claude 正在听…": "Claude is listening…",
     "发给朋友，看谁更大众": "Send it on and see who is more mainstream",
@@ -340,7 +338,6 @@ const STRINGS = {
     "在另一台设备上登录": "Sign in on another device",
     "生成一个 14 天内有效的登录链接，发给自己。": "Make a sign-in link that works for 14 days and send it to yourself.",
     "生成链接": "Make a link",
-    "这里连不上 YouTube。贴一个网易云歌单，也能画一张你的唱片": "YouTube won't load here. Paste a NetEase playlist and get your record anyway",
     "去画一张": "Draw mine",
     "看我的唱片": "See my record",
     "退出登录": "Sign out",
@@ -496,8 +493,6 @@ const STRINGS = {
     "这是一位示例听众的唱片": "This is a sample listener's record",
     "画一张你自己的": "Draw your own",
     "在网易云音乐打开「我喜欢的音乐」，点分享，复制链接贴在这里。不用登录，也不保存你的歌单。": "In NetEase Cloud Music, open “My Liked Music”, tap Share, copy the link and paste it here. No sign-in, and your playlist isn't kept.",
-    "粘贴网易云的歌单或主页链接": "Paste a NetEase link here",
-    "网易云的歌单或主页链接": "NetEase playlist or profile link",
     "画出来": "Draw it",
     "用 YouTube Music 的话，": "On YouTube Music? ",
     "：唱片会按你的口味分区，每周还有几组新歌。": " to get your record split by taste, and new songs every week.",
@@ -517,7 +512,6 @@ const STRINGS = {
     "链接已复制": "Link copied",
     "链接收回了，打开它只会看到「这张卡已经收回」": "Link taken down. Anyone who opens it now sees that the card was taken down",
     "不用 YouTube Music？": "Not on YouTube Music? ",
-    "用网易云歌单画一张唱片": "Draw a record from a NetEase playlist",
 
     // your own likes between the new songs
     "每 4 首你的收藏放 1 首新歌": "One new song after every 4 of your own",
@@ -544,12 +538,9 @@ const STRINGS = {
     "已经不是我的口味": "Not my taste any more",
     "这阵子先不听": "Not for a while",
     "这阵子先不听（X）": "Not for a while (X)",
-    "用网易云的「我喜欢的音乐」也行：在网易云打开它，点分享，复制链接贴进来。电台照样在 YouTube 上播放。": "Your NetEase “My Liked Music” works too: open it in NetEase, tap Share, copy the link and paste it here. The stations still play on YouTube.",
     "从这份歌单开始": "Start from this playlist",
     "知音会读这份歌单和公开的听歌排行，之后每 6 小时重读一次；歌名、歌手、喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。": "Zhiyin reads this playlist and your public listening ranking, then again every 6 hours. Titles, artists and when you liked them go to Anthropic (Claude) to pick songs. You can delete all of it in Settings at any time.",
-    "网易云音乐「我喜欢」": "NetEase Cloud Music likes",
     "其中 {n} 首在 YouTube Music 上没找到：不在电台里放，也不会再推荐给你": ["1 of them isn't on YouTube Music: it won't play in your stations, and it won't be recommended back to you", "{n} of them aren't on YouTube Music: they won't play in your stations, and they won't be recommended back to you"],
-    "每 6 小时重读一次，在网易云新点的喜欢会自动进来。": "Read again every 6 hours, so new likes on NetEase come in by themselves.",
     "没点喜欢、却一直在听的歌，会列在这里，也算进你的口味。在知音里听得越多越准。": "Songs you keep playing without a like show up here and count toward your taste. The more you listen in Zhiyin, the better it gets.",
     "按这些歌，每周给你挑新歌": "New songs every week, picked from these",
     "名额暂时满了。先用 Google 登记，空出位置之后再来，就从这份歌单直接开始。": "All the places are taken for now. Sign up with Google, and when one opens up you'll start straight from this playlist.",
@@ -564,7 +555,6 @@ const STRINGS = {
     "打开后，这里点的 ♥（包括之前点过的）会写进 YouTube Music，电台也能存成私人歌单；Google 会再问你一次": "Turn this on and the ♥s you give here, earlier ones included, go into YouTube Music, and stations can be saved as private playlists. Google asks you once more",
     "。「不要」只记在知音。": ". “Not for me” stays in Zhiyin.",
     "你在 YouTube 点过 {n} 首歌的喜欢，要 20 首才分得出你的口味。先听「先听着」；在 YouTube Music 多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。": ["You've liked {n} song on YouTube, and it takes 20 to tell your kinds of music apart. Start with “For now” and like a few more in YouTube Music: Zhiyin looks again every 6 hours and starts by itself once there are enough.", "You've liked {n} songs on YouTube, and it takes 20 to tell your kinds of music apart. Start with “For now” and like a few more in YouTube Music: Zhiyin looks again every 6 hours and starts by itself once there are enough."],
-    "你的网易云喜欢里，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先听「先听着」；在网易云多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。": ["{n} of your NetEase likes is on YouTube Music, and it takes 20 to tell your kinds of music apart. Start with “For now” and like a few more on NetEase: Zhiyin looks again every 6 hours and starts by itself once there are enough.", "{n} of your NetEase likes are on YouTube Music, and it takes 20 to tell your kinds of music apart. Start with “For now” and like a few more on NetEase: Zhiyin looks again every 6 hours and starts by itself once there are enough."],
     "现在就看一次": "Look now",
     "电台在 YouTube 上播放，可你这里现在打不开 YouTube。换到能打开它的网络，再回到这一页就能开始，这份歌单会一直留着。": "The stations play on YouTube, which doesn't open from here right now. Come back to this page on a network where it does and start then; this playlist stays here.",
     "微信": "WeChat",
@@ -580,6 +570,28 @@ const STRINGS = {
     "在浏览器里打开": "Open it in your browser",
     "Google 不让在{app}里登录。点右上角的「···」，选「在浏览器中打开」，再点一次「用 Google 继续」。": "Google doesn't allow signing in inside {app}. Tap “···” at the top right, choose “Open in browser”, then tap “Continue with Google” again.",
     "也可以复制链接，粘贴到 Safari 或 Chrome 里打开。": "Or copy the link and open it in Safari or Chrome.",
+    "QQ 音乐": "QQ Music",
+    "网易云": "NetEase",
+    "{app}「我喜欢」": "{app} “Liked”",
+    "你的{app}喜欢里，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先听「先听着」；在{app}多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。": ["{n} of your {app} likes is on YouTube Music, and it takes 20 to tell your kinds of music apart. Start with “For now” and like a few more on {app}: Zhiyin looks again every 6 hours and starts by itself once there are enough.", "{n} of your {app} likes are on YouTube Music, and it takes 20 to tell your kinds of music apart. Start with “For now” and like a few more on {app}: Zhiyin looks again every 6 hours and starts by itself once there are enough."],
+    "发给朋友，比比谁的歌更老": "Send it to friends: whose songs are older?",
+    "打开「我喜欢的音乐」→ 分享 → 复制链接": "Open “My Liked Music” → Share → Copy link",
+    "每 6 小时重读一次，在{app}新点的喜欢会自动进来。": "Read again every 6 hours: what you like on {app} comes in by itself.",
+    "点头像进主页 → 右上角「···」→ 分享 → 复制链接": "Tap your picture for your profile → “···” at the top right → Share → Copy link",
+    "用网易云或 QQ 音乐歌单画一张唱片": "Draw a record from NetEase or QQ Music",
+    "用网易云或 QQ 音乐里的喜欢也行，复制链接贴进来。电台照样在 YouTube 上播放。": "Your likes on NetEase or QQ Music work too: copy the link and paste it here. The stations still play on YouTube.",
+    "知音会读这份歌单（网易云的还有公开的听歌排行），之后每 6 小时重读一次；歌名、歌手和喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。": "Zhiyin reads this list (and, on NetEase, your public listening ranking), then again every 6 hours; titles, artists and when you liked them go to Anthropic (Claude) to pick songs. You can delete it all in Settings at any time.",
+    "知音会读这份歌单，之后每 6 小时重读一次；歌名、歌手和估出来的喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。": "Zhiyin reads this list, then again every 6 hours; titles, artists and roughly when you liked them go to Anthropic (Claude) to pick songs. You can delete it all in Settings at any time.",
+    "粘贴网易云或 QQ 音乐的链接": "Paste a NetEase or QQ Music link",
+    "网易云或 QQ 音乐的链接": "NetEase or QQ Music link",
+    "让 Claude 锐评你的歌单": "Let Claude roast your likes",
+    "贴上你在网易云或 QQ 音乐的喜欢，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句。": "Paste your likes from NetEase or QQ Music and get a record in ten seconds: Claude names your taste, then roasts it.",
+    "这里连不上 YouTube。贴一个网易云或 QQ 音乐歌单，也能画一张你的唱片": "YouTube doesn't load here. Paste a NetEase or QQ Music list and you still get a record of your own",
+    "每一圈是一年，越往外越近；点喜欢的时间是估的，只看得出大概哪一年。": "Each ring is a year, the newest outside. When you liked each song is estimated, so read it by the year.",
+    "{when}发行": "released {when}",
+    "{a}–{b} 年的歌": "released {a}–{b}",
+    "从最老的一首开始，重放一遍": "Replay from the oldest song",
+    "每一圈是一年，越往外越新；位置是每首歌的发行时间：{app}不显示你哪天点的喜欢。": "Each ring is a year, the newest outside. Songs sit where they came out: {app} doesn't show when you liked them.",
   },
   'zh-Hant': {
     "读到 {l}、{d}、{f}、{s}：不推荐你踩过或已经存着的歌，也认得出你订阅的歌手。": "讀到 {l}、{d}、{f}、{s}：不推薦你踩過或已經存著的歌，也認得出你訂閱的歌手。",
@@ -618,8 +630,6 @@ const STRINGS = {
     "Claude 锐评": "Claude 銳評",
     "歌单大众度，热歌榜是 100%": "歌單大眾度，熱歌榜是 100%",
     "下面是一位示例听众的唱片": "下面是一位示例聽眾的唱片",
-    "让 Claude 锐评你的网易云歌单": "讓 Claude 銳評你的網易雲歌單",
-    "在网易云打开「我喜欢的音乐」，点分享，复制链接贴进来。十秒出一张唱片：名字、锐评、你有多大众。": "在網易雲開啟「我喜歡的音樂」，點分享，複製連結貼進來。十秒出一張唱片：名字、銳評、你有多大眾。",
     "锐评一下": "銳評一下",
     "Claude 正在听…": "Claude 正在聽…",
     "发给朋友，看谁更大众": "發給朋友，看誰更大眾",
@@ -883,7 +893,6 @@ const STRINGS = {
     "在另一台设备上登录": "在另一台裝置上登入",
     "生成一个 14 天内有效的登录链接，发给自己。": "產生一個 14 天內有效的登入連結，傳給自己。",
     "生成链接": "產生連結",
-    "这里连不上 YouTube。贴一个网易云歌单，也能画一张你的唱片": "這裡連不上 YouTube。貼一個網易雲歌單，也能畫一張你的唱片",
     "去画一张": "去畫一張",
     "看我的唱片": "看我的唱片",
     "退出登录": "登出",
@@ -1060,8 +1069,6 @@ const STRINGS = {
     "这是一位示例听众的唱片": "這是一位範例聽眾的唱片",
     "画一张你自己的": "畫一張你自己的",
     "在网易云音乐打开「我喜欢的音乐」，点分享，复制链接贴在这里。不用登录，也不保存你的歌单。": "在網易雲音樂打開「我喜歡的音樂」，點分享，複製連結貼在這裡。不用登入，也不會保存你的歌單。",
-    "粘贴网易云的歌单或主页链接": "貼上網易雲的歌單或主頁連結",
-    "网易云的歌单或主页链接": "網易雲的歌單或主頁連結",
     "画出来": "畫出來",
     "用 YouTube Music 的话，": "用 YouTube Music 的話，",
     "：唱片会按你的口味分区，每周还有几组新歌。": "：唱片會按你的口味分區，每週還有幾組新歌。",
@@ -1081,7 +1088,6 @@ const STRINGS = {
     "链接已复制": "連結已複製",
     "链接收回了，打开它只会看到「这张卡已经收回」": "連結收回了，打開它只會看到「這張卡已經收回」",
     "不用 YouTube Music？": "不用 YouTube Music？",
-    "用网易云歌单画一张唱片": "用網易雲歌單畫一張唱片",
 
     // your own likes between the new songs
     "每 4 首你的收藏放 1 首新歌": "每 4 首你的收藏放 1 首新歌",
@@ -1108,12 +1114,9 @@ const STRINGS = {
     "已经不是我的口味": "已經不是我的口味",
     "这阵子先不听": "這陣子先不聽",
     "这阵子先不听（X）": "這陣子先不聽（X）",
-    "用网易云的「我喜欢的音乐」也行：在网易云打开它，点分享，复制链接贴进来。电台照样在 YouTube 上播放。": "用網易雲的「我喜歡的音樂」也行：在網易雲打開它，點分享，複製連結貼進來。電台照樣在 YouTube 上播放。",
     "从这份歌单开始": "從這份歌單開始",
     "知音会读这份歌单和公开的听歌排行，之后每 6 小时重读一次；歌名、歌手、喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。": "知音會讀這份歌單和公開的聽歌排行，之後每 6 小時重讀一次；歌名、歌手、喜歡時間會傳給 Anthropic（Claude）來挑歌。隨時可以在設定裡全部刪除。",
-    "网易云音乐「我喜欢」": "網易雲音樂「我喜歡」",
     "其中 {n} 首在 YouTube Music 上没找到：不在电台里放，也不会再推荐给你": "其中 {n} 首在 YouTube Music 上沒找到：不在電台裡放，也不會再推薦給你",
-    "每 6 小时重读一次，在网易云新点的喜欢会自动进来。": "每 6 小時重讀一次，在網易雲新按的喜歡會自動進來。",
     "没点喜欢、却一直在听的歌，会列在这里，也算进你的口味。在知音里听得越多越准。": "沒按喜歡、卻一直在聽的歌，會列在這裡，也算進你的口味。在知音裡聽得越多越準。",
     "按这些歌，每周给你挑新歌": "按這些歌，每週幫你挑新歌",
     "名额暂时满了。先用 Google 登记，空出位置之后再来，就从这份歌单直接开始。": "名額暫時滿了。先用 Google 登記，空出位置之後再來，就從這份歌單直接開始。",
@@ -1128,7 +1131,6 @@ const STRINGS = {
     "打开后，这里点的 ♥（包括之前点过的）会写进 YouTube Music，电台也能存成私人歌单；Google 会再问你一次": "打開後，這裡點的 ♥（包括之前點過的）會寫進 YouTube Music，電台也能存成私人播放清單；Google 會再問你一次",
     "。「不要」只记在知音。": "。「不要」只記在知音。",
     "你在 YouTube 点过 {n} 首歌的喜欢，要 20 首才分得出你的口味。先听「先听着」；在 YouTube Music 多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。": "你在 YouTube 點過 {n} 首歌的喜歡，要 20 首才分得出你的口味。先聽「先聽著」；在 YouTube Music 多點幾首喜歡，知音每 6 小時會再看一次，夠了就自己開始。",
-    "你的网易云喜欢里，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先听「先听着」；在网易云多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。": "你的網易雲喜歡裡，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先聽「先聽著」；在網易雲多點幾首喜歡，知音每 6 小時會再看一次，夠了就自己開始。",
     "现在就看一次": "現在就看一次",
     "电台在 YouTube 上播放，可你这里现在打不开 YouTube。换到能打开它的网络，再回到这一页就能开始，这份歌单会一直留着。": "電台在 YouTube 上播放，可你這裡現在打不開 YouTube。換到能打開它的網路，再回到這一頁就能開始，這份歌單會一直留著。",
     "微信": "微信",
@@ -1144,13 +1146,43 @@ const STRINGS = {
     "在浏览器里打开": "在瀏覽器裡開啟",
     "Google 不让在{app}里登录。点右上角的「···」，选「在浏览器中打开」，再点一次「用 Google 继续」。": "Google 不讓在{app}裡登入。點右上角的「···」，選「在瀏覽器中開啟」，再點一次「用 Google 繼續」。",
     "也可以复制链接，粘贴到 Safari 或 Chrome 里打开。": "也可以複製連結，貼到 Safari 或 Chrome 裡開啟。",
+    "QQ 音乐": "QQ 音樂",
+    "网易云": "網易雲",
+    "{app}「我喜欢」": "{app}「我喜歡」",
+    "你的{app}喜欢里，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先听「先听着」；在{app}多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。": "你的{app}喜歡裡，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先聽「先聽著」；在{app}多點幾首喜歡，知音每 6 小時會再看一次，夠了就自己開始。",
+    "发给朋友，比比谁的歌更老": "發給朋友，比比誰的歌更老",
+    "打开「我喜欢的音乐」→ 分享 → 复制链接": "打開「我喜歡的音樂」→ 分享 → 複製連結",
+    "每 6 小时重读一次，在{app}新点的喜欢会自动进来。": "每 6 小時重讀一次，在{app}新點的喜歡會自動進來。",
+    "点头像进主页 → 右上角「···」→ 分享 → 复制链接": "點頭像進主頁 → 右上角「···」→ 分享 → 複製連結",
+    "用网易云或 QQ 音乐歌单画一张唱片": "用網易雲或 QQ 音樂歌單畫一張唱片",
+    "用网易云或 QQ 音乐里的喜欢也行，复制链接贴进来。电台照样在 YouTube 上播放。": "用網易雲或 QQ 音樂裡的喜歡也行，複製連結貼進來。電台照樣在 YouTube 上播放。",
+    "知音会读这份歌单（网易云的还有公开的听歌排行），之后每 6 小时重读一次；歌名、歌手和喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。": "知音會讀這份歌單（網易雲的還有公開的聽歌排行），之後每 6 小時重讀一次；歌名、歌手和喜歡時間會發給 Anthropic（Claude）來挑歌。隨時可以在設定裡全部刪除。",
+    "知音会读这份歌单，之后每 6 小时重读一次；歌名、歌手和估出来的喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。": "知音會讀這份歌單，之後每 6 小時重讀一次；歌名、歌手和估出來的喜歡時間會發給 Anthropic（Claude）來挑歌。隨時可以在設定裡全部刪除。",
+    "粘贴网易云或 QQ 音乐的链接": "貼上網易雲或 QQ 音樂的連結",
+    "网易云或 QQ 音乐的链接": "網易雲或 QQ 音樂的連結",
+    "让 Claude 锐评你的歌单": "讓 Claude 銳評你的歌單",
+    "贴上你在网易云或 QQ 音乐的喜欢，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句。": "貼上你在網易雲或 QQ 音樂的喜歡，十秒出一張唱片：Claude 給你的口味起個名字，再銳評一句。",
+    "这里连不上 YouTube。贴一个网易云或 QQ 音乐歌单，也能画一张你的唱片": "這裡連不上 YouTube。貼一個網易雲或 QQ 音樂歌單，也能畫一張你的唱片",
+    "每一圈是一年，越往外越近；点喜欢的时间是估的，只看得出大概哪一年。": "每一圈是一年，越往外越近；點喜歡的時間是估的，只看得出大概哪一年。",
+    "{when}发行": "{when}發行",
+    "{a}–{b} 年的歌": "{a}–{b} 年的歌",
+    "从最老的一首开始，重放一遍": "從最老的一首開始，重放一遍",
+    "每一圈是一年，越往外越新；位置是每首歌的发行时间：{app}不显示你哪天点的喜欢。": "每一圈是一年，越往外越新；位置是每首歌的發行時間：{app}不顯示你哪天點的喜歡。",
   },
 };
+
+const HAN = /[㐀-鿿]/;
 
 function t(s, v) {
   let x = LANG === 'zh-Hans' ? s : STRINGS[LANG]?.[s] ?? s;
   if (Array.isArray(x)) x = v && +v.n === 1 ? x[0] : x[1];
-  return v ? x.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m)) : x;
+  // a word in Latin letters set into Chinese gets the spaces Chinese puts around one: 在 QQ 音乐, 在 LINE 里
+  return v ? x.replace(/\{(\w+)\}/g, (m, k, at) => {
+    if (!(k in v)) return m;
+    const w = String(v[k]);
+    return (HAN.test(x[at - 1] || '') && /^[A-Za-z]/.test(w) ? ' ' : '') + w
+      + (HAN.test(x[at + m.length] || '') && /[A-Za-z]$/.test(w) ? ' ' : '');
+  }) : x;
 }
 
 // Static markup carries its source text in data-i18n (text), data-i18n-label (aria-label), data-i18n-ph

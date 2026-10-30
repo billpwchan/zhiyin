@@ -1,4 +1,5 @@
-"""Cards made without an account (from someone's public NetEase likes), and every card anyone chooses to share by link.
+"""Cards made without an account (from someone's public NetEase or QQ Music likes), and every card anyone chooses to
+share by link.
 
 A shared card is only the picture plus the few words its page shows (the name, the roast, how many likes, since when,
 how mainstream). The likes it
@@ -12,7 +13,7 @@ import struct
 import time
 from collections import Counter
 
-from . import ear, i18n, llm, netease, profile, store
+from . import ear, i18n, library, llm, profile, store
 
 DIR = store.DATA / "cards"
 DIR.mkdir(parents=True, exist_ok=True)
@@ -92,9 +93,9 @@ def popularity(tracks: list[dict]) -> int | None:
     return round(sum(pops) / len(pops)) if len(pops) >= MIN_POP else None
 
 
-def _about(tracks: list[dict], total: int) -> str:
+def _about(tracks: list[dict], total: int, dated: bool = True) -> str:
     """The numbers the roast may lean on, in the prompt's own words."""
-    first = min((t["liked_est"] for t in tracks if t["liked_est"]), default="")[:4]
+    first = min((t["liked_est"] for t in tracks if t["liked_est"]), default="")[:4] if dated else ""
     top = Counter(t["artists"][0]["name"] for t in tracks if t["artists"]).most_common(3)
     years = sorted(t["year"] for t in tracks if t["year"] > 1950)
     out = [f"{total} liked songs" + (f", the first liked in {first}" if first else "") + "."]
@@ -126,14 +127,18 @@ def _clip(roast: str, lang: str) -> str:
     return head[:cut + 1] if cut > 0 else roast
 
 
-def verdict(tracks: list[dict], total: int, lang: str, model: str = "haiku") -> tuple[str, str]:
+SERVICE = {"163": "NetEase Cloud Music", "qq": "QQ Music"}
+
+
+def verdict(tracks: list[dict], total: int, lang: str, model: str = "haiku", app: str = "163") -> tuple[str, str]:
     """(label, roast) for a card: the taste's name, and one line teasing it."""
-    rows = profile.sample([((t["liked_est"] or "")[:7], t["title"], ", ".join(a["name"] for a in t["artists"][:2]))
-                           for t in tracks], NAME_LINES)
+    dated = app != "qq"   # QQ Music's like dates are only estimates: the roast must not count on them
+    rows = profile.sample([((t["liked_est"] or "")[:7] if dated else (t.get("released") or "")[:4], t["title"],
+                            ", ".join(a["name"] for a in t["artists"][:2])) for t in tracks], NAME_LINES)
     w = i18n.WRITE[lang]
-    system = (profile.LABEL_SYSTEM + ROAST).replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"]) \
-        .replace("@SERVICE@", "NetEase Cloud Music").replace("@ROAST@", ROAST_LEN[lang])
-    prompt = "About them: " + _about(tracks, total) + "\n\nTheir likes:\n" + "\n".join(" | ".join(r) for r in rows)
+    system = (profile.LABEL_SYSTEM + ROAST).replace("@ROWS@", profile.ROWS[dated]).replace("@LABEL@", w["label"]) \
+        .replace("@LANG@", w["lang"]).replace("@SERVICE@", SERVICE[app]).replace("@ROAST@", ROAST_LEN[lang])
+    prompt = "About them: " + _about(tracks, total, dated) + "\n\nTheir likes:\n" + "\n".join(" | ".join(r) for r in rows)
     label = roast = ""
     for _ in range(3):
         out = llm.call(prompt, system, VERDICT_SCHEMA, model=model, timeout=180, retries=1)
@@ -151,7 +156,7 @@ def verdict(tracks: list[dict], total: int, lang: str, model: str = "haiku") -> 
     return label, roast
 
 
-def _verdict(tracks: list[dict], total: int, key: str, lang: str, again: bool) -> tuple[str | None, str | None, str | None]:
+def _verdict(tracks: list[dict], total: int, key: str, lang: str, again: bool, app: str) -> tuple[str | None, str | None, str | None]:
     """(label, roast, why there are none). A playlist read today keeps its verdict unless they ask for another."""
     k = hashlib.sha256(f"{key}|{lang}".encode()).hexdigest()[:24]
     today = time.strftime("%Y-%m-%d")
@@ -166,7 +171,7 @@ def _verdict(tracks: list[dict], total: int, key: str, lang: str, again: bool) -
             cap = llm.spent(store.CARDS, days=1) >= llm.CARD_DAILY_USD
             return *kept, i18n.tr("今天起名字的额度用完了，明天再来起名" if cap else "现在起不了名字，唱片先画好了", lang)
         try:
-            label, roast = verdict(tracks, total, lang)
+            label, roast = verdict(tracks, total, lang, app=app)
         except llm.LLMError:
             return *kept, i18n.tr("起名字的时候出了点问题，再试一次", lang)
     con.execute("insert or replace into card_names(k, label, day, rolls, roast) values (?, ?, ?, ?, ?)",
@@ -177,17 +182,18 @@ def _verdict(tracks: list[dict], total: int, key: str, lang: str, again: bool) -
 
 
 def make(link: str, lang: str, again: bool = False) -> dict:
-    got = netease.likes(link)
+    got = library.app_likes(link)
     tracks = got["tracks"]
-    label, roast, why = _verdict(tracks, got["total"], got["key"], lang, again)
-    rec = ear.from_tracks(tracks, lang)
+    app = got["key"].split(":", 1)[0]
+    label, roast, why = _verdict(tracks, got["total"], got["key"], lang, again, app)
+    rec = ear.from_tracks(tracks, lang, released=app == "qq")
     pop = popularity(tracks)
     if pop is not None:
         rec["facts"].insert(0, {"key": "pop", "lead": f"{pop}%",
                                 "text": i18n.tr("大众度：你喜欢的歌在网易云的平均热度是 {p}，热歌榜是 100。", lang, p=pop), "vids": []})
-    rec.update(label=label, roast=roast, pop=pop, n=got["total"], source="163", why=why,
+    rec.update(label=label, roast=roast, pop=pop, n=got["total"], source=app, why=why,
                pics={t["vid"]: t["pic"] for t in tracks if t["pic"]})
-    since = int(rec["span"][0])
+    since = 0 if rec["dates"] == "released" else int(rec["span"][0])   # 0: no year their likes start from
     rec["token"] = sign({"label": label or "", "roast": roast or "", "pop": pop, "n": got["total"], "since": since,
                          "lang": lang, "exp": time.time() + TOKEN_S, "nonce": secrets.token_hex(8)})
     return rec

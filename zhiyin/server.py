@@ -41,9 +41,12 @@ SAMPLE_GETS = ("/api/state", "/api/mine", "/api/ear", "/api/jobs", "/api/img", "
 # so what they make it fetch is capped per ten minutes, all of them together. Anything already cached is free.
 SAMPLE_FETCHES = {"img": 400, "lyrics": 60, "more": 30}
 _sample_fetched: dict[str, list[float]] = {k: [] for k in SAMPLE_FETCHES}
+# A QQ Music card's covers pass through uncached, one per album: each visitor's record gets its own allowance
+PASS_PER_IP = 3000
+_passed: dict[str, list[float]] = {}
 
 
-def _sample_may_fetch(path: str, q) -> bool:
+def _sample_may_fetch(path: str, q, ip: str = "") -> bool:
     kind = path.rsplit("/", 1)[1]
     if kind not in SAMPLE_FETCHES:
         return True
@@ -52,6 +55,15 @@ def _sample_may_fetch(path: str, q) -> bool:
     if kind == "lyrics" and q.get("t") and re.fullmatch(VID, q.get("vid", "")) and lyrics.cached(q["vid"]):
         return True
     now = time.time()
+    if kind == "img" and ytm.passed(q.get("u", "")):
+        if len(_passed) > 2000:
+            for k in [k for k, v in _passed.items() if not v or now - v[-1] > 600]:
+                del _passed[k]
+        seen = _passed[ip] = [t for t in _passed.get(ip, []) if now - t < 600]
+        if len(seen) >= PASS_PER_IP:
+            return False
+        seen.append(now)
+        return True
     seen = _sample_fetched[kind] = [t for t in _sample_fetched[kind] if now - t < 600]
     if len(seen) >= SAMPLE_FETCHES[kind]:
         return False
@@ -110,7 +122,7 @@ async def _who(request: Request, call_next):
         path = request.url.path
         if SAMPLE_ON[0] and request.method == "GET" and (path in ("/", "/card") or path in SAMPLE_GETS):
             # Someone not signed in tries the app as the sample listener, read-only, in their browser's language.
-            if not _sample_may_fetch(path, request.query_params):
+            if not _sample_may_fetch(path, request.query_params, request.client.host if request.client else ""):
                 return JSONResponse({"detail": "busy"}, 429)
             lang = i18n.from_request(request)
             tu = store._uid.set(store.SAMPLE if lang == "en" else store.SAMPLE_ZH)
@@ -276,8 +288,9 @@ def _read_signals(log) -> None:
         traceback.print_exc()
 
 
-def _netease(uid: str | None = None) -> str | None:
-    """The NetEase likes this listener's stations come from instead of YouTube's (a link `netease.likes` reads)."""
+def _app_likes(uid: str | None = None) -> str | None:
+    """The NetEase or QQ Music likes this listener's stations come from instead of YouTube's (a link
+    `library.app_likes` reads; the prefs key is NetEase's because it came first)."""
     return (accounts.prefs(uid).get("netease") or {}).get("link")
 
 
@@ -286,11 +299,11 @@ def _can_read(u: dict) -> bool:
 
 
 def _read_likes(log, glimpsed=None, got: dict | None = None) -> dict:
-    ne = _netease()
+    ne = _app_likes()
     if ne:
-        r = library.sync_from_netease(ne, log=log, glimpsed=glimpsed, got=got)
-        # the playlist itself from now on, not the share text or short link it was found through
-        accounts.set_prefs(store.uid(), netease={"link": netease.link_of(r["key"]), "n": r["videos"], "unmatched": r["unmatched"]})
+        r = library.sync_from_app(ne, log=log, glimpsed=glimpsed, got=got)
+        # the list itself from now on, not the share text or short link it was found through
+        accounts.set_prefs(store.uid(), netease={"link": library.app_link(r["key"]), "n": r["videos"], "unmatched": r["unmatched"]})
         return r
     return library.sync_from_google(log=log, glimpsed=glimpsed) if glimpsed else library.sync_from_google(log=log)
 
@@ -298,7 +311,7 @@ def _read_likes(log, glimpsed=None, got: dict | None = None) -> dict:
 def _sync_likes(log):
     r = _read_likes(log)
     accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)   # the read worked, whatever follows
-    if not _netease():
+    if not _app_likes():
         _read_signals(log)
     if profile.absorb_new(log=log) and audio.REMOTE:   # also likes a re-read took in while the listener was away
         audio.ensure([t for t in library.load() if not t["long"]], log=log)
@@ -335,7 +348,7 @@ def _reread_likes(log):
     likes are re-read on the same clock."""
     r = _read_likes(log)
     accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)
-    if not _netease():
+    if not _app_likes():
         _read_signals(log)
     return r
 
@@ -371,7 +384,7 @@ def _unread_too_long(u: dict) -> bool:
 def _forget_youtube(uid: str) -> None:
     """What YouTube returned for this listener couldn't be read again within 30 days (access taken away, the
     connection dropped, or every read failing): it is deleted. The account stays, and connecting again starts over.
-    A library from NetEase likes that stopped being readable (made private, deleted) goes the same way."""
+    A library from NetEase or QQ Music likes that stopped being readable (made private, deleted) goes the same way."""
     print(f"zhiyin: likes of {uid} not re-read in {KEEP_DAYS} days, deleting what was read from YouTube", flush=True)
     google.disconnect(uid)
     for k in FROM_YOUTUBE:
@@ -497,7 +510,7 @@ def _want_label():
 
 
 def _setup(log, got: dict | None = None):
-    """First run for a listener who just connected Google (or gave their NetEase likes; `got` is that list if it
+    """First run for a listener who just connected Google (or gave their NetEase or QQ Music likes; `got` is that list if it
     was just read): read likes, learn the lanes, pick the first stations. Their record is drawn from the likes as
     soon as those are read, and named a few seconds later."""
     with llm.first_run():
@@ -508,7 +521,9 @@ def _first_setup(log, got: dict | None = None):
     uid = store.uid()
     accounts.set_status(uid, "importing")
     try:
-        log(i18n.tr("读取你在网易云喜欢的歌") if _netease() else i18n.tr("读取你在 YouTube 点过的喜欢"), step=1)
+        ne = _app_likes()
+        log(i18n.tr("读取你在 QQ 音乐喜欢的歌" if ne and library.app_of(ne) == "qq" else "读取你在网易云喜欢的歌") if ne
+            else i18n.tr("读取你在 YouTube 点过的喜欢"), step=1)
 
         def glimpsed():
             _milestone("first_disc")
@@ -520,7 +535,7 @@ def _first_setup(log, got: dict | None = None):
             accounts.set_status(uid, "thin")
             _milestone("thin")
             return r
-        if not _netease():
+        if not _app_likes():
             _read_signals(log)
         if audio.REMOTE:
             audio.ensure([t for t in library.load() if not t["long"]], log=log)
@@ -648,6 +663,7 @@ def _me() -> dict:
                 "join": _join_state(), "sync": {}, "claude": None}
     u = accounts.get() or {"id": store.uid(), "name": "", "status": "ready", "prefs": {}, "email": None}
     ok = google.configured() and google.connected(u["id"])
+    ne = u["prefs"].get("netease")
     return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "mine": store.is_owners(u["id"]), "status": u["status"], "auth": AUTH,
             "lang": i18n.of(u["id"]),
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
@@ -656,7 +672,7 @@ def _me() -> dict:
             "sync_likes": u["prefs"].get("sync_likes", True) and (not ok or google.writes_back(u["id"])),
             "writes_back": ok and google.writes_back(u["id"]), "sync": _sync_view(u["id"]),
             "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"), "read": _read_view() if ok else None,
-            "netease": u["prefs"].get("netease"),
+            "netease": ne and {**ne, "app": library.app_of(ne["link"])},
             "worker": audio.worker_online() if audio.REMOTE else None,
             "claude": llm.view(u["id"]) if AUTH else None}
 
@@ -665,8 +681,8 @@ def _me() -> dict:
 # What a link to the site shows when it is pasted into a chat or a post
 OG_TITLE = "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片"
 OG_TEXT = "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每周几组你没听过的歌，每首都写着为什么挑它。"
-CARD_TITLE = "让 Claude 锐评你的网易云歌单"
-CARD_TEXT = "贴一个歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句，顺便算出你有多大众。"
+CARD_TITLE = "让 Claude 锐评你的网易云、QQ 音乐歌单"
+CARD_TEXT = "贴一个网易云或 QQ 音乐的歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句。"
 
 
 def _og(lang: str, card: bool = False) -> str:
@@ -756,15 +772,25 @@ def event(b: Event, request: Request):
     return {"ok": True}
 
 
-# ---------- cards: a record from someone's public NetEase likes, and any card shared by link ----------
+# ---------- cards: a record from someone's public NetEase or QQ Music likes, and any card shared by link ----------
 CARD_WHY = {
-    "link": "这不像网易云音乐的主页或歌单链接。在网易云里打开「我喜欢的音乐」，点分享，复制链接贴过来",
-    "private": "这份「我喜欢的音乐」只有本人看得到。在网易云的隐私设置里改成所有人可见，或者贴一份公开歌单的链接",
+    "link": "这不像网易云或 QQ 音乐的主页、歌单链接。在 App 里点分享，选「复制链接」再贴过来",
+    ("song", "163"): "这是一首歌的链接。要的是整份喜欢：在网易云打开「我喜欢的音乐」，点分享，复制链接贴过来",
+    ("song", "qq"): "这是一首歌的链接。要的是整份喜欢：在 QQ 音乐点头像进主页，右上角「···」点分享，复制链接贴过来",
+    ("private", "163"): "这份「我喜欢的音乐」只有本人看得到。在网易云的隐私设置里改成所有人可见，或者贴一份公开歌单的链接",
+    ("private", "qq"): "你的「喜欢」只有自己看得到。在 QQ 音乐点头像进主页，右上角「···」→「访问设置」，打开「喜欢」再贴一次；或者贴一份公开歌单的链接",
     "few": "这份歌单只有 {n} 首，至少要 20 首才画得出来",
-    "upstream": "网易云那边没有回应，过一会儿再试",
+    ("upstream", "163"): "网易云那边没有回应，过一会儿再试",
+    ("upstream", "qq"): "QQ 音乐那边没有回应，过一会儿再试",
 }
+
+
 CARD_ID = r"^[A-Za-z0-9]{6,12}$"
 _anon_shares: dict[str, list[float]] = {}
+
+
+def _why(e: netease.Unreadable, lang: str) -> str:
+    return i18n.tr(CARD_WHY.get((e.why, e.app)) or CARD_WHY[e.why], lang, n=e.n)
 
 
 class CardReq(BaseModel):
@@ -784,7 +810,7 @@ def card_make(b: CardReq, request: Request):
         rec = cards.make(b.link, lang, b.again)
     except netease.Unreadable as e:
         store.count(f"card_{e.why}", ref)
-        raise HTTPException(422, i18n.tr(CARD_WHY[e.why], lang, n=e.n)) from None
+        raise HTTPException(422, _why(e, lang)) from None
     finally:
         i18n.reader.reset(tl)
     store.count("card_made", ref)
@@ -865,8 +891,9 @@ def card_page(cid: str, request: Request):
     if c:
         cl = c["lang"] or lang
         title = c["label"] or i18n.tr("我的知音唱片", cl)
-        text = (f'{i18n.tr("「{r}」", cl, r=c["roast"])}{i18n.tr("让 Claude 也锐评一下你的网易云歌单。", cl)}' if c.get("roast")
-                else i18n.tr("{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。", cl, n=c["n"], y=c["since"]))
+        text = (f'{i18n.tr("「{r}」", cl, r=c["roast"])}{i18n.tr("让 Claude 也锐评一下你的歌单。", cl)}' if c.get("roast")
+                else i18n.tr("{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。", cl, n=c["n"], y=c["since"]) if c["since"]
+                else i18n.tr("{n} 首喜欢，每一圈是一年。做一张你自己的。", cl, n=c["n"]))
         og = (f'<meta name="description" content="{escape(text)}">\n<meta property="og:type" content="website">\n'
               f'<meta property="og:site_name" content="{escape(i18n.tr("知音", cl))}">\n'
               f'<meta property="og:title" content="{escape(title)}">\n<meta property="og:description" content="{escape(text)}">\n'
@@ -979,7 +1006,7 @@ def google_start(request: Request, mode: str = "connect", write: int = 0, yt: in
                  as_: Annotated[str, Query(alias="as", max_length=254)] = ""):
     """mode=login&as=<email> is a bookmark that goes straight back into that listener's account. mode=join is
     signing up with Google in one step (no invite), asking only to read YouTube; write=1 adds writing likes back.
-    mode=join&src=163 comes from a NetEase card (/api/card/follow): Google is asked only who they are."""
+    mode=join&src=163 comes from a NetEase or QQ Music card (/api/card/follow): Google is asked only who they are."""
     if not google.configured():
         raise HTTPException(503, i18n.tr("Google 登录还没配置", i18n.from_request(request)))
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
@@ -1040,13 +1067,13 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     tok = google.exchange(code, st["v"])
     c = google.claims(tok["id_token"])
     if st.get("ne"):
-        return _join_netease(request, c, st["ne"], st.get("lang"))
+        return _join_app(request, c, st["ne"], st.get("lang"))
     if st.get("join"):
         st["uid"] = accounts.by_google(c["sub"])
         if not st["uid"]:
             w = con.execute("select admitted, src from waitlist where sub=?", (c["sub"],)).fetchone()
             if w and w["admitted"] and w["src"]:   # let in, and they had come from a NetEase card
-                return _join_netease(request, c, w["src"], st.get("lang"))
+                return _join_app(request, c, w["src"], st.get("lang"))
             if not _seats_left() and not (w and w["admitted"]):
                 con.execute("insert or ignore into waitlist(sub, email, name, ts, lang) values (?, ?, ?, ?, ?)",
                             (c["sub"], c.get("email", ""), c.get("name", ""), time.time(), st.get("lang")))
@@ -1069,7 +1096,7 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
             w = con.execute("select admitted, src from waitlist where sub=?", (c["sub"],)).fetchone()
             if w and w["admitted"] and _join_state() != "invite":
                 if w["src"]:   # came from a NetEase card: their likes come from there
-                    return _join_netease(request, c, w["src"], st.get("lang"))
+                    return _join_app(request, c, w["src"], st.get("lang"))
                 return RedirectResponse("/auth/google/start?mode=join&yt=1", 303)   # let in from the waitlist: joins now
             return RedirectResponse("/login?e=unknown", 303)
         return _signed_in(RedirectResponse("/", 303), uid, request)
@@ -1102,8 +1129,8 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     return _signed_in(r, uid, request) if st.get("join") else r
 
 
-def _join_netease(request: Request, c: dict, link: str, lang: str | None) -> Response:
-    """Someone from a NetEase card, back from Google with who they are. A seat makes them an account whose stations
+def _join_app(request: Request, c: dict, link: str, lang: str | None) -> Response:
+    """Someone from a NetEase or QQ Music card, back from Google with who they are. A seat makes them an account whose stations
     come from that link; with none left they wait, and the link waits with them."""
     con = store.db()
     ref = _ref_cookie(request)
@@ -1127,7 +1154,7 @@ def _join_netease(request: Request, c: dict, link: str, lang: str | None) -> Res
         con.commit()
     u = accounts.get(uid)
     if u["status"] in ("new", "thin", "error") and not google.connected(uid):
-        _use_netease(uid, link)
+        _use_app(uid, link)
     r = _signed_in(RedirectResponse("/", 303), uid, request)
     r.delete_cookie("zy_n")
     return r
@@ -1529,11 +1556,11 @@ def warmup():
     nm = settings.not_me()
     tracks = [t for t in library.load() if not t["long"] and t["type"] in ("ATV", "OMV") and not settings.is_not_me(t, nm)][:3]
     mine = set()
-    if not tracks and _netease():
+    if not tracks and _app_likes():
         # still matching: the newest few likes, found on YouTube Music the same way (the import reuses the lookups)
         for x in (store.read_json(store.GLIMPSE) or {}).get("songs", [])[:8]:
-            h = library.match_netease({"title": x["title"], "artists": [{"name": x["artist"]}], "dur": x["dur"],
-                                       "ne_ar": x.get("ne_ar", [])})
+            h = library.match_app({"title": x["title"], "artists": [{"name": x["artist"]}], "dur": x["dur"],
+                                   "ne_ar": x.get("ne_ar", []), "source": x.get("source")})
             if h and h["type"] in ("ATV", "OMV"):
                 tracks.append(h)
                 if len(tracks) == 3:
@@ -1634,19 +1661,19 @@ def account_delete(request: Request):
     return r
 
 
-class NeteaseReq(BaseModel):
+class LinkReq(BaseModel):
     link: Annotated[str, Field(max_length=2000)]
 
 
-def _read_netease(link: str, lang: str) -> dict:
+def _read_app(link: str, lang: str) -> dict:
     try:
-        return netease.likes(link)
+        return library.app_likes(link)
     except netease.Unreadable as e:
-        raise HTTPException(422, i18n.tr(CARD_WHY[e.why], lang, n=e.n)) from None
+        raise HTTPException(422, _why(e, lang)) from None
 
 
-def _use_netease(uid: str, link: str, got: dict | None = None) -> None:
-    """This listener's stations come from their NetEase likes from now on; the first run starts."""
+def _use_app(uid: str, link: str, got: dict | None = None) -> None:
+    """This listener's stations come from their NetEase or QQ Music likes from now on; the first run starts."""
     if (accounts.prefs(uid).get("netease") or {}).get("link") != link:   # another source: start over, never mix two
         for k in FROM_YOUTUBE:
             f = store.USERS / uid / store._PER_USER[k]
@@ -1663,33 +1690,34 @@ def _use_netease(uid: str, link: str, got: dict | None = None) -> None:
 
 
 @app.post("/api/netease")
-def netease_use(b: NeteaseReq):
-    """Stations from the listener's NetEase likes instead of YouTube's, for an account that has none yet."""
+def app_use(b: LinkReq):
+    """Stations from the listener's NetEase or QQ Music likes instead of YouTube's, for an account that has none yet."""
     u = accounts.get()
     if store.is_sample() or not u:
         raise HTTPException(403)
     if google.connected(u["id"]) or u["status"] not in ("new", "thin", "error"):
         raise HTTPException(409, i18n.tr("这个账号已经在用别的喜欢了"))
-    got = _read_netease(b.link, i18n.of())
-    _use_netease(u["id"], netease.link_of(got["key"]), got)
+    got = _read_app(b.link, i18n.of())
+    _use_app(u["id"], library.app_link(got["key"]), got)
     return {"me": _me(), "jobs": jobs()}
 
 
 @app.post("/api/card/follow")
-def card_follow(b: NeteaseReq, request: Request):
-    """From a NetEase card to weekly stations: the link waits in a signed cookie while Google says who they are
-    (only that: nothing is read from YouTube)."""
+def card_follow(b: LinkReq, request: Request):
+    """From a NetEase or QQ Music card to weekly stations: the link waits in a signed cookie while Google says who
+    they are (only that: nothing is read from YouTube)."""
     lang = i18n.from_request(request)
+    app_ = library.app_of(b.link)
     try:
-        netease.parse(b.link)
+        library.APPS[app_].parse(b.link)
     except netease.Unreadable as e:
-        raise HTTPException(422, i18n.tr(CARD_WHY[e.why], lang, n=e.n)) from None
+        raise HTTPException(422, _why(e, lang)) from None
     if AUTH and accounts.session_uid(request.cookies.get(accounts.COOKIE)):
-        netease_use(b)
+        app_use(b)
         return {"go": "/"}
     if _join_state() == "invite":
         raise HTTPException(403, i18n.tr("现在只能通过朋友的邀请加入", lang))
-    store.count("join_163", _ref_cookie(request))
+    store.count(f"join_{app_}", _ref_cookie(request))
     r = JSONResponse({"go": "/auth/google/start?mode=join&src=163"})
     r.set_cookie("zy_n", cards.sign({"link": b.link, "exp": time.time() + 900}), max_age=900, httponly=True,
                  samesite="lax", secure=google.public_url().startswith("https"))
@@ -1821,14 +1849,13 @@ def img(u: str):
     """Same-origin copy of a cover so the page can read its pixels for the ambient colour."""
     import httpx
     try:
-        f = ytm.cover_file(u)
+        data = ytm.cover_bytes(u)
     except ValueError:
         raise HTTPException(400, "host")
     except httpx.HTTPStatusError as e:
         raise HTTPException(404 if e.response.status_code == 404 else 502, "img")
     except httpx.HTTPError:
         raise HTTPException(502, "img")
-    data = f.read_bytes()
     kind = "image/webp" if data[8:12] == b"WEBP" else "image/png" if data[:4] == b"\x89PNG" else "image/jpeg"
     return Response(data, media_type=kind, headers={"Cache-Control": "max-age=2592000, immutable"})
 

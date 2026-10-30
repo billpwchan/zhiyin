@@ -92,6 +92,15 @@ function cover(p, size) {
 const lb = (u) => (letterboxed(u) ? 'lb' : '');
 // Covers go through the local cache: same origin (so the ambient colour can read pixels) and no hotlink limits.
 const px = (u) => `/api/img?u=${encodeURIComponent(u)}`;
+// A record from likes kept in an app: whose, and its covers at about `size` px. NetEase scales a cover by a parameter;
+// QQ Music by the file name, and only through this server, since its CDN won't let the page read the pixels.
+const appName = (a) => (a === 'qq' ? t('QQ 音乐') : t('网易云音乐'));
+const appShort = (a) => (a === 'qq' ? t('QQ 音乐') : t('网易云'));
+function appPic(u, size) {
+  if (!/\.gtimg\.cn\//.test(u)) return `${u}?param=${size}y${size}`;
+  const s = size > 150 ? 300 : 90;
+  return px(u.replace(/T002R\d+x\d+M000/, `T002R${s}x${s}M000`));
+}
 function imgTag(p, size) {
   const u = cover(p, size);
   return `<img loading="lazy" src="${px(u)}" class="${lb(u)}" alt="">`;
@@ -113,7 +122,7 @@ function when(ts) {
 function reasonOf(p) {
   if (p.kind) return mineLine(p);
   if (p.mine) return t('这首是你喜欢过的');
-  if (Q?.key === 'ear' && p.t) return t('你在 {when}点了喜欢', { when: whenLiked(p.t) });
+  if (Q?.key === 'ear' && p.t) return EAR?.dates === 'released' ? whenPlaced(p.t) : t('你在 {when}点了喜欢', { when: whenLiked(p.t) });
   if (p.reason) return p.reason;
   return p.near ? t('听感接近你收藏的〈{s}〉', { s: p.near }) : '';
 }
@@ -422,7 +431,7 @@ function prepHTML() {
     const j = S.jobs?.setup, step = Math.max(1, j?.step || (me.status === 'building' ? 2 : 1));
     return `<div class="prep"><b>${t('正在准备你的电台 · {n}/3', { n: step })}</b><p>${esc(STEPS()[step - 1])}${t('。')}${step === 1 ? t('要几分钟，可以先听着，好了会告诉你。') : t('大约一刻钟，可以先听着，好了会告诉你。')}</p></div>`;
   }
-  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${me.netease ? t('你的网易云喜欢里，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先听「先听着」；在网易云多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。', { n: me.last_sync?.songs ?? 0 }) : t('你在 YouTube 点过 {n} 首歌的喜欢，要 20 首才分得出你的口味。先听「先听着」；在 YouTube Music 多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('现在就看一次')}</button></div>`;
+  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${me.netease ? t('你的{app}喜欢里，YouTube Music 上找得到 {n} 首，要 20 首才分得出你的口味。先听「先听着」；在{app}多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。', { n: me.last_sync?.songs ?? 0, app: appShort(me.netease.app) }) : t('你在 YouTube 点过 {n} 首歌的喜欢，要 20 首才分得出你的口味。先听「先听着」；在 YouTube Music 多点几首喜欢，知音每 6 小时会再看一次，够了就自己开始。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('现在就看一次')}</button></div>`;
   if (me.status === 'error' && me.setup_issue === 'nochannel') return `<div class="prep"><b>${t('这个 Google 账号还没有 YouTube 频道')}</b><p>${t('没有频道，YouTube 不让别的应用读你点过的喜欢。建一个频道只要一分钟，不用发视频；建好回来点「再试一次」。')}</p><div class="prep-acts"><a class="tb" href="https://www.youtube.com/create_channel" target="_blank" rel="noopener">${t('去建频道')}</a><button class="tb" data-k="setup">${t('再试一次')}</button></div></div>`;
   if (me.status === 'error') return `<div class="prep"><b>${t('准备电台时出了问题')}</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">${t('再试一次')}</button></div>`;
   return '';
@@ -1756,10 +1765,11 @@ function welcomeHTML() {
     <p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p>
     <p class="fine">${t('你的喜欢和反馈存在{owner}的服务器上，随时可以在设置里断开并全部删除。', { owner: esc(owner) })}</p>
     <form class="w-163" id="neForm" autocomplete="off"><h2>${t('不用 YouTube Music？')}</h2>
-      <p>${t('用网易云的「我喜欢的音乐」也行：在网易云打开它，点分享，复制链接贴进来。电台照样在 YouTube 上播放。')}</p>
-      <div class="mk-row"><input name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false" placeholder="${t('粘贴网易云的歌单或主页链接')}" aria-label="${t('网易云的歌单或主页链接')}"><button class="btn" type="submit">${t('从这份歌单开始')}</button></div>
+      <p>${t('用网易云或 QQ 音乐里的喜欢也行，复制链接贴进来。电台照样在 YouTube 上播放。')}</p>
+      ${howHTML()}
+      <div class="mk-row"><input name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false" placeholder="${t('粘贴网易云或 QQ 音乐的链接')}" aria-label="${t('网易云或 QQ 音乐的链接')}"><button class="btn" type="submit">${t('从这份歌单开始')}</button></div>
       <p class="mk-err" role="alert"></p>
-      <p class="fine">${t('知音会读这份歌单和公开的听歌排行，之后每 6 小时重读一次；歌名、歌手、喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。')}</p></form>
+      <p class="fine">${t('知音会读这份歌单（网易云的还有公开的听歌排行），之后每 6 小时重读一次；歌名、歌手和喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。')}</p></form>
   </div>`;
 }
 
@@ -1941,7 +1951,7 @@ function accountHTML() {
   const rows = [];
   if (me.netease) {
     const ne = me.netease, busy = S.jobs?.sync?.running;
-    rows.push(`<li><span>${t('网易云音乐「我喜欢」')}<small>${t('{n} 首喜欢', { n: ne.n ?? ls?.videos ?? 0 })}${ne.unmatched ? ` · ${t('其中 {n} 首在 YouTube Music 上没找到：不在电台里放，也不会再推荐给你', { n: ne.unmatched })}` : ''}${me.synced ? ` · ${t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small><small>${t('每 6 小时重读一次，在网易云新点的喜欢会自动进来。')}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
+    rows.push(`<li><span>${t('{app}「我喜欢」', { app: appName(ne.app) })}<small>${t('{n} 首喜欢', { n: ne.n ?? ls?.videos ?? 0 })}${ne.unmatched ? ` · ${t('其中 {n} 首在 YouTube Music 上没找到：不在电台里放，也不会再推荐给你', { n: ne.unmatched })}` : ''}${me.synced ? ` · ${t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small><small>${t('每 6 小时重读一次，在{app}新点的喜欢会自动进来。', { app: appShort(ne.app) })}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
   } else if (!g.configured) {
     rows.push(`<li><span>YouTube Music<small>${t('连接 YouTube Music 需要先在服务器上配置 Google 登录。')}</small></span><span></span></li>`);
   } else if (g.error === 'revoked') {
@@ -2051,7 +2061,7 @@ function openJoin(why) {
     ${!full && !invite ? `<p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')}</p>` : ''}
     ${invite ? `<a class="btn j-go" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`
       : `<a class="btn j-go" href="/auth/google/start?mode=join">${G_LOGO}${full ? t('用 Google 登记') : t('用 Google 继续')}</a>`}
-    ${SAMPLE() ? `<p class="j-163">${t('不用 YouTube Music？')}<button class="lnk" data-k="tomaker">${t('用网易云歌单画一张唱片')}</button></p>` : ''}
+    ${SAMPLE() ? `<p class="j-163">${t('不用 YouTube Music？')}<button class="lnk" data-k="tomaker">${t('用网易云或 QQ 音乐歌单画一张唱片')}</button></p>` : ''}
     <div class="j-alt">${invite ? '<span></span>' : `<a href="/auth/google/start?mode=login">${t('已经加入过？登录')}</a>`}<a href="/about">${t('知音是什么')}</a><a href="/privacy">${t('知音怎么用你的数据')}</a></div>
     <div class="j-lang">${Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" ${k === LANG ? 'aria-current="true"' : ''}>${v}</button>`).join('')}</div>
   </div>`;
@@ -2334,7 +2344,7 @@ async function cardCanvas() {
     font(400, 28);
     x.fillStyle = INK3;
     y += 50;
-    x.fillText([t('{n} 首喜欢', { n: liked }), t('{y} 年至今', { y: first }), kinds ? t('{n} 种口味', { n: kinds }) : ''].filter(Boolean).join('  ·  '), M, y);
+    x.fillText([t('{n} 首喜欢', { n: liked }), sinceText(first), kinds ? t('{n} 种口味', { n: kinds }) : ''].filter(Boolean).join('  ·  '), M, y);
   }
 
   // the number, at the foot: how mainstream a NetEase record is, else the year half the songs had come out by
@@ -2681,7 +2691,7 @@ function earOf(raw) {
   return d;
 }
 
-/* ---------- a record from someone's public NetEase likes, before (or instead of) an account ---------- */
+/* ---------- a record from someone's public NetEase or QQ Music likes, before (or instead of) an account ---------- */
 // It lives in this browser only: the server draws it, names it and forgets the songs (cards.py).
 let GUEST = store.get('guest');
 let MAKE = false;   // came in on /card: the box to paste a link into is what the page is for
@@ -2704,16 +2714,22 @@ function toMaker() {
 function noYouTube() {
   if (view === 'ear' && guest()) renderEar();   // the way on to weekly stations needs YouTube
   if (!SAMPLE() || (view === 'ear' && !guest())) return;
-  toast(t('这里连不上 YouTube。贴一个网易云歌单，也能画一张你的唱片'),
+  toast(t('这里连不上 YouTube。贴一个网易云或 QQ 音乐歌单，也能画一张你的唱片'),
     [[guest() ? t('看我的唱片') : t('去画一张'), toMaker]], 15000);
+}
+
+// Where each app keeps the link to the likes: one paste box takes either, so nobody has to say which app first
+function howHTML() {
+  return `<dl class="mk-how"><dt>${t('网易云')}</dt><dd>${t('打开「我喜欢的音乐」→ 分享 → 复制链接')}</dd>
+    <dt>${t('QQ 音乐')}</dt><dd>${t('点头像进主页 → 右上角「···」→ 分享 → 复制链接')}</dd></dl>`;
 }
 
 function makerHTML() {
   return `<form class="maker" id="maker" autocomplete="off">
-    <div class="mk-t"><p class="mk-k">${t('下面是一位示例听众的唱片')}</p><h2>${t('让 Claude 锐评你的网易云歌单')}</h2>
-      <p class="mk-sub">${t('在网易云打开「我喜欢的音乐」，点分享，复制链接贴进来。十秒出一张唱片：名字、锐评、你有多大众。')}</p></div>
+    <div class="mk-t"><p class="mk-k">${t('下面是一位示例听众的唱片')}</p><h2>${t('让 Claude 锐评你的歌单')}</h2>
+      <p class="mk-sub">${t('贴上你在网易云或 QQ 音乐的喜欢，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句。')}</p>${howHTML()}</div>
     <div class="mk-f"><div class="mk-row"><input id="mkLink" name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false"
-      placeholder="${t('粘贴网易云的歌单或主页链接')}" aria-label="${t('网易云的歌单或主页链接')}" value="${esc(MK.link)}"><button class="btn" type="submit"${MK.busy ? ' disabled' : ''}>${esc(MK.busy || t('锐评一下'))}</button></div>
+      placeholder="${t('粘贴网易云或 QQ 音乐的链接')}" aria-label="${t('网易云或 QQ 音乐的链接')}" value="${esc(MK.link)}"><button class="btn" type="submit"${MK.busy ? ' disabled' : ''}>${esc(MK.busy || t('锐评一下'))}</button></div>
       <p class="mk-err" id="mkErr" role="alert">${esc(MK.err)}</p>
       <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="join">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每周还有几组新歌。')}</p></div>
   </form>`;
@@ -2721,13 +2737,13 @@ function makerHTML() {
 
 function guestNextHTML() {
   const follow = followHTML();
-  return `<section class="sec g-next"><h2>${t('发给朋友，看谁更大众')}<small>${t('朋友点开你的卡，就能锐评他自己的。')}</small></h2>
+  return `<section class="sec g-next"><h2>${GUEST.pop != null ? t('发给朋友，看谁更大众') : t('发给朋友，比比谁的歌更老')}<small>${t('朋友点开你的卡，就能锐评他自己的。')}</small></h2>
     <div class="g-acts"><button class="btn" data-k="share">${I.share}<span>${t('分享这张卡')}</span></button>
       <button class="tb" data-k="gnew">${I.swap}<span>${t('换一份歌单')}</span></button>
       ${follow ? '' : `<button class="tb" data-k="join">${I.go}<span>${t('用 YouTube Music 每周听新歌')}</span></button>`}</div></section>${follow}`;
 }
 
-// The card's songs as the start of weekly stations: Google only says who they are, the likes stay NetEase's.
+// The card's songs as the start of weekly stations: Google only says who they are, the likes stay in the app.
 function followHTML() {
   const j = S.me?.join;
   if (!GUEST?.link || !j || j === 'invite' || !S.me.google?.configured) return '';
@@ -2737,7 +2753,7 @@ function followHTML() {
   return `<section class="sec g-next g-follow"><h2>${t('按这些歌，每周给你挑新歌')}<small>${full ? t('名额暂时满了。先用 Google 登记，空出位置之后再来，就从这份歌单直接开始。') : t('几分钟后出第一批电台：每首都是你没听过的，写着为什么挑它，在 YouTube 上播放。Google 只用来确认是你，不读你的 YouTube。')}</small></h2>
     <div class="g-acts"><button class="btn" data-k="follow">${G_LOGO}<span>${full ? t('用 Google 登记') : t('用 Google 继续')}</span></button></div>
     <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="join">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每周还有几组新歌。')}</p>
-    <p class="fine">${t('知音会读这份歌单和公开的听歌排行，之后每 6 小时重读一次；歌名、歌手、喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p></section>`;
+    <p class="fine">${GUEST.source === 'qq' ? t('知音会读这份歌单，之后每 6 小时重读一次；歌名、歌手和估出来的喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。') : t('知音会读这份歌单和公开的听歌排行，之后每 6 小时重读一次；歌名、歌手、喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p></section>`;
 }
 
 async function follow(btn) {
@@ -2795,7 +2811,11 @@ function leaveGuest() {
 }
 
 const yearOf = (t) => Math.floor(t);
-const whenLiked = (y) => (EAR?.real_dates ? new Date(yearOf(y), Math.min(11, Math.floor((y - yearOf(y)) * 12))).toLocaleDateString(LANG, { year: 'numeric', month: 'short' }) : t('{y} 年前后', { y: yearOf(y) }));
+const monthIn = (y) => new Date(yearOf(y), Math.min(11, Math.floor((y - yearOf(y)) * 12))).toLocaleDateString(LANG, { year: 'numeric', month: 'short' });
+const whenLiked = (y) => (EAR?.real_dates ? monthIn(y) : t('{y} 年前后', { y: yearOf(y) }));
+// a record placed by release date (QQ Music, which shows nobody when a song was liked) says when each came out instead
+const whenPlaced = (y) => (EAR?.dates === 'released' ? t('{when}发行', { when: monthIn(y) }) : whenLiked(y));
+const sinceText = (first) => (EAR?.dates === 'released' ? t('{a}–{b} 年的歌', { a: first, b: yearOf(EAR.span[1]) }) : t('{y} 年至今', { y: first }));
 const songByTitle = (t) => EAR?.list.findLast((s) => s.title === t) || EAR?.list.findLast((s) => s.title.startsWith(t));
 // 《title》 (“title” in English) in the portrait and the facts plays that like
 const playable = (text) => (EAR?.pics ? esc(text) : esc(text).replace(/《([^》]+)》|“([^”]+)”/g, (m, a, b) => {
@@ -3097,7 +3117,7 @@ function renderEar() {
   const naming = (!name && S.jobs?.label?.running) || !songs;
 
   const first = songs ? yearOf(EAR.span[0]) : (S.timeline.map((p) => p[1]).filter(Boolean).sort()[0] || '').slice(0, 4);
-  const meta = [g ? t('网易云音乐') : SAMPLE() ? t('示例听众') : '', n ? t('{n} 首喜欢', { n }) : '', first ? t('{y} 年至今', { y: first }) : '',
+  const meta = [g ? appName(EAR.source) : SAMPLE() ? t('示例听众') : '', n ? t('{n} 首喜欢', { n }) : '', first ? sinceText(first) : '',
     full ? t('{n} 种口味', { n: S.lanes.length }) : ''].filter(Boolean).map((x) => `<span class="nw">${esc(x)}</span>`).join(' · ');
   const canShare = songs && (name || g);
   const fbRows = S.feedback.filter((f) => f.action !== 'known').slice(0, 30);
@@ -3123,7 +3143,7 @@ function renderEar() {
           <canvas></canvas><svg class="disc-svg"></svg><div class="hub" id="hub"></div><div class="tip"></div>
         </div>
         ${EAR?.eras?.length ? `<div class="eras2"><button class="replay" data-k="replay" title="${t('从第一首喜欢开始，重放一遍')}">${I.play}<span>${t('回放')}</span></button><div class="eratrack" id="eraTrack"></div></div>
-        <p class="era-now" id="eraNow"></p>` : songs ? `<div class="eras2"><button class="replay" data-k="replay" title="${t('从第一首喜欢开始，重放一遍')}">${I.play}<span>${t('回放')}</span></button><p class="disc-key">${t('每一圈是一年，越往外越近；角度是你在一年里的哪个月点的喜欢。')}</p></div>` : ''}
+        <p class="era-now" id="eraNow"></p>` : songs ? `<div class="eras2"><button class="replay" data-k="replay" title="${EAR?.dates === 'released' ? t('从最老的一首开始，重放一遍') : t('从第一首喜欢开始，重放一遍')}">${I.play}<span>${t('回放')}</span></button><p class="disc-key">${EAR?.dates === 'released' ? t('每一圈是一年，越往外越新；位置是每首歌的发行时间：{app}不显示你哪天点的喜欢。', { app: appName(EAR.source) }) : EAR?.real_dates ? t('每一圈是一年，越往外越近；角度是你在一年里的哪个月点的喜欢。') : t('每一圈是一年，越往外越近；点喜欢的时间是估的，只看得出大概哪一年。')}</p></div>` : ''}
       </div>`}
     </header>
     ${g ? guestNextHTML() : ''}
@@ -3329,7 +3349,7 @@ function paintHub() {
   if (!hub || !EAR) return;
   if (E.T !== Infinity) { hub.dataset.u = ''; hub.className = 'hub'; hub.innerHTML = `<b class="num">${yearOf(Math.min(E.T, EAR.span[1]))}</b>`; return; }
   const p = E.hover?.s || (EAR.pics ? null : cur());
-  const u = p && (EAR.pics ? (EAR.pics[p.vid] ? `${EAR.pics[p.vid]}?param=300y300` : '') : px(cover(p, 300)));
+  const u = p && (EAR.pics ? (EAR.pics[p.vid] ? appPic(EAR.pics[p.vid], 300) : '') : px(cover(p, 300)));
   if (u) {
     if (hub.dataset.u !== u) { hub.dataset.u = u; hub.innerHTML = `<img src="${u}" alt="">`; }
     hub.className = `hub ${E.hover ? '' : 'spin'}`;
@@ -3376,7 +3396,7 @@ function hoverDot(p) {
   E.hover = p;
   const tip = $('#disc .tip');
   if (p) {
-    tip.innerHTML = `<b>${esc(p.s.title)}</b><span>${esc(names(p.s.artists))} · ${whenLiked(p.s.t)}</span>`;
+    tip.innerHTML = `<b>${esc(p.s.title)}</b><span>${esc(names(p.s.artists))} · ${whenPlaced(p.s.t)}</span>`;
     tip.style.left = `${p.x}px`;
     tip.style.top = `${p.y}px`;
     tip.style.opacity = 1;
@@ -3501,13 +3521,13 @@ async function colourDots() {
   if (!earCol.size && !pics) for (const [v, c] of Object.entries(store.get(acct('earCol')) || {})) earCol.set(v, c);
   const todo = [...new Set(EAR.list.map((s) => s.vid))].filter((v) => !earCol.has(v));
   if (!todo.length) return;
-  // NetEase songs share their album's cover (and its CDN allows reading the pixels): one look per cover
+  // a record from an app: songs share their album's cover, one look per cover
   const byPic = new Map();
   const colorOf = (v) => {
     if (!pics) return dotColor(px(`https://i.ytimg.com/vi/${v}/default.jpg`));
     const u = pics[v];
     if (!u) return Promise.reject();
-    if (!byPic.has(u)) byPic.set(u, dotColor(`${u}?param=40y40`, true));
+    if (!byPic.has(u)) byPic.set(u, dotColor(appPic(u, 40), true));
     return byPic.get(u);
   };
   let i = 0, dirty = false;

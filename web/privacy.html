@@ -44,6 +44,7 @@
     <li><b>YouTube</b>：读取你的喜欢、不喜欢、订阅和播放列表，你打开同步后写回你的喜欢，在你选择时创建私人歌单，以及网页里的播放器；</li>
     <li><b>Deezer、Apple iTunes</b>：歌名和歌手，用来找 30 秒试听；</li>
     <li><b>网易云音乐、LRCLIB、YouTube Music</b>：歌名、歌手和时长，用来找歌词；你不登录做唱片时，网易云音乐还会收到你贴的歌单或主页 id；</li>
+    <li><b>QQ 音乐</b>：你贴的主页加密 id 或歌单 id，用来读那份公开的「我喜欢」或歌单；其中歌手的 id，用来查歌手的其他名字（陈奕迅也叫 Eason Chan）；唱片上每个点的颜色取自专辑封面，这些封面经知音的服务器转给你的浏览器，不保存；</li>
     <!--cdn--><li><b>{cdn}</b>：网站经过它转发，它能看到你的 IP 地址和访问的网址，用来加速和挡住攻击。</li><!--/cdn-->
   </ul>
   <p>你的 Google 凭证只用于你自己的账号，除了 Google 不会发给任何地方。知音使用 YouTube API 服务，适用 <a href="https://www.youtube.com/t/terms">YouTube 服务条款</a>和 <a href="https://policies.google.com/privacy">Google 隐私权政策</a>。</p>
@@ -55,11 +56,12 @@
 
   <h2>不登录做唱片</h2>
   <p>你贴一个网易云音乐的歌单或主页链接，知音会读取那份公开歌单：歌名、歌手、专辑、封面、发行日期，以及每首歌是什么时候加进去的、在网易云的热度。唱片画好就交给你的浏览器，歌单本身不保存。最近的 600 首歌名和歌手，连同数量、年份和热度这几个数，会发给 Anthropic（Claude）起名字、写一句锐评；名字和锐评用歌单 id 的哈希值记 7 天，同一份歌单再来就不用重新写。为了防止滥用，服务器在内存里按 IP 地址数一下每十分钟做了几张，不写进磁盘。</p>
+  <p>贴 QQ 音乐的主页或歌单链接也一样，读的是那份公开的「我喜欢」或歌单：歌名、歌手、专辑、封面、时长和发行日期。QQ 音乐不公开每首歌是哪天喜欢的，也没有热度，所以唱片上的时间按发行日期估，没有大众度。</p>
   <p>只有你点「生成链接」，知音才保存这张卡的图片，以及卡上的名字、锐评、大众度、喜欢的数量和起始年份。拿到链接的任何人都能看到它；知音只记它被打开了几次，不记是谁。在做卡的浏览器里可以随时收回，图片和记录立刻删除；登录后分享的卡，删除账号时也一起删掉。</p>
 
 
-  <h2 id="netease">从网易云歌单开始电台</h2>
-  <p>在唱片下面点「按这些歌，每周给你挑新歌」时，Google 只用来确认是你（账号 id、邮箱和名字），不请求任何 YouTube 权限。知音保存这份网易云歌单的地址，之后每 6 小时读一次公开的「我喜欢的音乐」和听歌排行（只用排行里每首歌的分数，认出你最常听的歌）。每首歌按歌名、歌手和时长在 YouTube Music 上找同一首，所以 YouTube Music 会收到歌手和歌名；找到的存成你的喜欢（歌名、歌手、专辑、时长、喜欢的日期和网易云的歌曲 id），找不到的只存歌名、歌手和日期，用来不再推荐给你。之后和其他账号一样：歌名、歌手和喜欢的月份发给 Anthropic（Claude）来生成电台和推荐理由，歌在页面里的 YouTube 播放器播放。如果 30 天里一直读不到这份歌单（比如改成了仅自己可见），由它做出的音乐库、唱片和电台会删掉，账号保留。删除账号时立即全部删除。</p>
+  <h2 id="netease">从网易云或 QQ 音乐开始电台</h2>
+  <p>在唱片下面点「按这些歌，每周给你挑新歌」时，Google 只用来确认是你（账号 id、邮箱和名字），不请求任何 YouTube 权限。知音保存这份网易云歌单的地址，之后每 6 小时读一次公开的「我喜欢的音乐」和听歌排行（只用排行里每首歌的分数，认出你最常听的歌）。每首歌按歌名、歌手和时长在 YouTube Music 上找同一首，所以 YouTube Music 会收到歌手和歌名；找到的存成你的喜欢（歌名、歌手、专辑、时长、喜欢的日期和网易云的歌曲 id），找不到的只存歌名、歌手和日期，用来不再推荐给你。之后和其他账号一样：歌名、歌手和喜欢的月份发给 Anthropic（Claude）来生成电台和推荐理由，歌在页面里的 YouTube 播放器播放。如果 30 天里一直读不到这份歌单（比如改成了仅自己可见），由它做出的音乐库、唱片和电台会删掉，账号保留。删除账号时立即全部删除。从 QQ 音乐来的一样，只是没有听歌排行，存下的是 QQ 音乐的歌曲 id 和估出来的喜欢日期。</p>
 
   <h2>删除</h2>
   <p>在设置里点「断开并删除我的数据」，知音会撤销 Google 授权，删掉你的喜欢、电台、反馈、播放和导入的播放记录。你也可以随时在 <a href="https://myaccount.google.com/permissions">Google 账号的第三方访问</a>里撤销知音的权限；撤销后知音读不到新的喜欢，从上次读取算起 30 天内会删掉从 YouTube 读来的一切。</p>
@@ -102,6 +104,7 @@
     <li><b>YouTube</b>：讀取你的喜歡、不喜歡、訂閱和播放清單，你開啟同步後寫回你的喜歡，在你選擇時建立私人歌單，以及網頁裡的播放器；</li>
     <li><b>Deezer、Apple iTunes</b>：歌名和歌手，用來找 30 秒試聽；</li>
     <li><b>網易雲音樂、LRCLIB、YouTube Music</b>：歌名、歌手和長度，用來找歌詞；你不登入做唱片時，網易雲音樂還會收到你貼的歌單或主頁 id；</li>
+    <li><b>QQ 音樂</b>：你貼的主頁加密 id 或歌單 id，用來讀那份公開的「我喜歡」或歌單；其中歌手的 id，用來查歌手的其他名字（陳奕迅也叫 Eason Chan）；唱片上每個點的顏色取自專輯封面，這些封面經知音的伺服器轉給你的瀏覽器，不保存；</li>
     <!--cdn--><li><b>{cdn}</b>：網站經過它轉發，它能看到你的 IP 位址和造訪的網址，用來加速和擋住攻擊。</li><!--/cdn-->
   </ul>
   <p>你的 Google 憑證只用於你自己的帳戶，除了 Google 不會傳到任何地方。知音使用 YouTube API 服務，適用 <a href="https://www.youtube.com/t/terms">YouTube 服務條款</a>和 <a href="https://policies.google.com/privacy">Google 隱私權政策</a>。</p>
@@ -113,11 +116,12 @@
 
   <h2>不登入做唱片</h2>
   <p>你貼一個網易雲音樂的歌單或主頁連結，知音會讀取那份公開歌單：歌名、歌手、專輯、封面、發行日期，以及每首歌是什麼時候加進去的、在網易雲的熱度。唱片畫好就交給你的瀏覽器，歌單本身不保存。最近的 600 首歌名和歌手，連同數量、年份和熱度這幾個數，會傳給 Anthropic（Claude）取名字、寫一句銳評；名字和銳評用歌單 id 的雜湊值記 7 天，同一份歌單再來就不用重新寫。為了防止濫用，伺服器在記憶體裡按 IP 位址數一下每十分鐘做了幾張，不寫進磁碟。</p>
+  <p>貼 QQ 音樂的主頁或歌單連結也一樣，讀的是那份公開的「我喜歡」或歌單：歌名、歌手、專輯、封面、長度和發行日期。QQ 音樂不公開每首歌是哪天喜歡的，也沒有熱度，所以唱片上的時間按發行日期估，沒有大眾度。</p>
   <p>只有你點「產生連結」，知音才保存這張卡的圖片，以及卡上的名字、銳評、大眾度、喜歡的數量和起始年份。拿到連結的任何人都能看到它；知音只記它被打開了幾次，不記是誰。在做卡的瀏覽器裡可以隨時收回，圖片和記錄立刻刪除；登入後分享的卡，刪除帳號時也一起刪掉。</p>
 
 
-  <h2 id="netease">從網易雲歌單開始電台</h2>
-  <p>在唱片下面點「按這些歌，每週幫你挑新歌」時，Google 只用來確認是你（帳戶 ID、電子郵件和名字），不請求任何 YouTube 權限。知音保存這份網易雲歌單的地址，之後每 6 小時讀一次公開的「我喜歡的音樂」和聽歌排行（只用排行裡每首歌的分數，認出你最常聽的歌）。每首歌按歌名、歌手和時長在 YouTube Music 上找同一首，所以 YouTube Music 會收到歌手和歌名；找到的存成你的喜歡（歌名、歌手、專輯、時長、喜歡的日期和網易雲的歌曲 ID），找不到的只存歌名、歌手和日期，用來不再推薦給你。之後和其他帳戶一樣：歌名、歌手和喜歡的月份傳給 Anthropic（Claude）來產生電台和推薦理由，歌在頁面裡的 YouTube 播放器播放。如果 30 天裡一直讀不到這份歌單（例如改成僅自己可見），由它做出的音樂庫、唱片和電台會刪掉，帳戶保留。刪除帳戶時立即全部刪除。</p>
+  <h2 id="netease">從網易雲或 QQ 音樂開始電台</h2>
+  <p>在唱片下面點「按這些歌，每週幫你挑新歌」時，Google 只用來確認是你（帳戶 ID、電子郵件和名字），不請求任何 YouTube 權限。知音保存這份網易雲歌單的地址，之後每 6 小時讀一次公開的「我喜歡的音樂」和聽歌排行（只用排行裡每首歌的分數，認出你最常聽的歌）。每首歌按歌名、歌手和時長在 YouTube Music 上找同一首，所以 YouTube Music 會收到歌手和歌名；找到的存成你的喜歡（歌名、歌手、專輯、時長、喜歡的日期和網易雲的歌曲 ID），找不到的只存歌名、歌手和日期，用來不再推薦給你。之後和其他帳戶一樣：歌名、歌手和喜歡的月份傳給 Anthropic（Claude）來產生電台和推薦理由，歌在頁面裡的 YouTube 播放器播放。如果 30 天裡一直讀不到這份歌單（例如改成僅自己可見），由它做出的音樂庫、唱片和電台會刪掉，帳戶保留。刪除帳戶時立即全部刪除。從 QQ 音樂來的一樣，只是沒有聽歌排行，存下的是 QQ 音樂的歌曲 id 和估出來的喜歡日期。</p>
 
   <h2>刪除</h2>
   <p>在設定裡點「中斷連接並刪除我的資料」，知音會撤銷 Google 授權，刪掉你的喜歡、電台、回饋、播放和匯入的播放記錄。你也可以隨時在 <a href="https://myaccount.google.com/permissions">Google 帳戶的第三方存取權</a>裡撤銷知音的權限；撤銷後知音讀不到新的喜歡，從上次讀取算起 30 天內會刪除從 YouTube 讀來的一切。</p>
@@ -160,6 +164,7 @@
     <li><b>YouTube</b>: to read your likes, dislikes, subscriptions and playlists, to write likes back once you turn that on, to create private playlists when you choose, and for the player on the page;</li>
     <li><b>Deezer, Apple iTunes</b>: titles and artists, to find 30-second previews;</li>
     <li><b>NetEase Cloud Music, LRCLIB, YouTube Music</b>: titles, artists and lengths, to find lyrics; when you make a record without signing in, NetEase Cloud Music also gets the playlist or profile ID you pasted;</li>
+    <li><b>QQ Music</b>: the encrypted profile ID or playlist ID you pasted, to read that public 我喜欢 or playlist; the IDs of its singers, to find their other names (陈奕迅 is also Eason Chan); the dots on a record take their colour from album covers, which pass through Zhiyin's server to your browser and aren't kept;</li>
     <!--cdn--><li><b>{cdn}</b>: the site is served through it, so it sees your IP address and the pages you open, to speed the site up and block attacks.</li><!--/cdn-->
   </ul>
   <p>Your Google token is used only for your own account and is never sent anywhere but Google. Zhiyin uses YouTube API Services; the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a> and the <a href="https://policies.google.com/privacy">Google Privacy Policy</a> apply.</p>
@@ -171,11 +176,12 @@
 
   <h2>A record without signing in</h2>
   <p>When you paste a NetEase Cloud Music playlist or profile link, Zhiyin reads that public playlist: titles, artists, albums, covers, release dates, when each song was added, and how popular it is on NetEase. The record is handed to your browser once it's drawn; the playlist itself is not kept. The titles and artists of the newest 600 songs, with a few numbers (how many, which years, how popular), go to Anthropic (Claude) to name the taste and write a one-line roast; both are kept for 7 days under a hash of the playlist's ID, so the same playlist isn't written up again. To stop abuse, the server counts in memory how many records each IP address made in the last ten minutes; this is never written to disk.</p>
+  <p>A QQ Music profile or playlist link works the same way, reading that public 我喜欢 or playlist: titles, artists, albums, covers, lengths and release dates. QQ Music shows nobody when each song was liked, or how popular it is, so the record's dates are estimated from release dates and there is no mainstream score.</p>
   <p>Only when you choose "Make a link" does Zhiyin keep the card's picture, with the name, the roast, the mainstream score, the number of liked songs and the first year shown on it. Anyone with the link can see it; Zhiyin counts how often it's opened, never by whom. The browser that made it can take it down at any time, and the picture and its record are deleted at once; cards shared while signed in are also deleted with the account.</p>
 
 
-  <h2 id="netease">Stations from your NetEase likes</h2>
-  <p>When you choose "New songs every week, picked from these" under a record, Google is used only to confirm it's you (account ID, email address and name); no YouTube permission is asked for. Zhiyin keeps the address of that NetEase playlist and reads your public "My Liked Music" and listening ranking again every 6 hours (from the ranking it uses only each song's score, to tell which songs you play most). Each song is looked up on YouTube Music by title, artist and length, so YouTube Music gets the artist and title; the ones found are kept as your likes (title, artist, album, length, the date you liked it and its NetEase song ID), and the ones not found keep only title, artist and date, so they're never recommended back to you. From there it works like any other account: titles, artists and the month you liked them go to Anthropic (Claude) to make your stations and reasons, and songs play in the YouTube player on the page. If the playlist can't be read for 30 days (say you made it private), the library, record and stations made from it are deleted and the account stays. Deleting the account deletes everything at once.</p>
+  <h2 id="netease">Stations from your NetEase or QQ Music likes</h2>
+  <p>When you choose "New songs every week, picked from these" under a record, Google is used only to confirm it's you (account ID, email address and name); no YouTube permission is asked for. Zhiyin keeps the address of that NetEase playlist and reads your public "My Liked Music" and listening ranking again every 6 hours (from the ranking it uses only each song's score, to tell which songs you play most). Each song is looked up on YouTube Music by title, artist and length, so YouTube Music gets the artist and title; the ones found are kept as your likes (title, artist, album, length, the date you liked it and its NetEase song ID), and the ones not found keep only title, artist and date, so they're never recommended back to you. From there it works like any other account: titles, artists and the month you liked them go to Anthropic (Claude) to make your stations and reasons, and songs play in the YouTube player on the page. If the playlist can't be read for 30 days (say you made it private), the library, record and stations made from it are deleted and the account stays. Deleting the account deletes everything at once. Likes from QQ Music work the same way, without a listening ranking; what is kept is QQ Music's song ID and the estimated date.</p>
 
   <h2>Deleting</h2>
   <p>In Settings, choose "Disconnect and delete my data": Zhiyin revokes Google access and deletes your likes, stations, feedback, plays and any imported history. You can also remove Zhiyin's access at any time under <a href="https://myaccount.google.com/permissions">third-party access in your Google Account</a>; Zhiyin then can't read your likes any more, and deletes everything read from YouTube within 30 days of the last read.</p>

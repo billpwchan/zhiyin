@@ -81,8 +81,11 @@ plays, joins and how they ended, sign-ins sent from an app's own browser to a re
 carries its link in its settings for at most 30 days, so the steps of its first run can be counted. No row names a
 person.
 
-Someone who makes a record from a NetEase Cloud Music link without signing in (`netease.py`, `cards.py`) leaves
-little more. The public playlist is read, the record goes back to their browser, and the playlist is not kept. The
+Someone who makes a record from a NetEase Cloud Music or QQ Music link without signing in (`netease.py`,
+`qqmusic.py`, `cards.py`) leaves little more. The public playlist (on QQ Music, the 我喜欢 of the profile linked, or a
+public playlist) is read, the record goes back to their browser, and the playlist is not kept. QQ Music's album
+covers, which give a record's dots their colour, pass through `/api/img` because their CDN won't let the page read
+them, and aren't written to disk (`ytm.PASS_HOSTS`). The
 titles and artists of its newest 600 songs go to Anthropic for a name, billed to the server's API key under the
 `cards` account and capped at `ZHIYIN_CARD_DAILY_USD` a day (default $2); the name is kept for 7 days in
 `card_names`, keyed by a hash of the playlist id and language, so the same list is named once a day (three times if
@@ -91,10 +94,10 @@ they ask for another). How many records an address made in the last ten minutes 
 Someone who goes on from such a record to weekly stations ("New songs every week, picked from these",
 `/api/card/follow`) signs in with Google for who they are only (openid, email, profile; no YouTube scope). The link
 waits for that in a signed cookie, `zy_n`, for at most 15 minutes. Their account then keeps the playlist's address in
-its settings (`netease`), and reads the public likes and 听歌排行 on the same clock as YouTube likes: every 6 hours
-while they listen, at least every 25 days while they are away (`library.sync_from_netease`). Each like is looked up
-on YouTube Music by artist and title (`library.match_netease`); a match is kept as a library record with its NetEase
-song id and like date, and a like with no match keeps only its title, artists and date (`unmatched`), so it is never
+its settings (`netease`, for either app), and reads the public likes (and NetEase's 听歌排行) on the same clock as
+YouTube likes: every 6 hours while they listen, at least every 25 days while they are away (`library.sync_from_app`).
+Each like is looked up on YouTube Music by artist and title (`library.match_app`); a match is kept as a library
+record with the app's song id and like date (estimated from release dates for QQ Music, which shows nobody when), and a like with no match keeps only its title, artists and date (`unmatched`), so it is never
 recommended back. Of the ranking only each song's score is kept (`ne_score`), as a sign of a favourite. Everything
 downstream is the same as for a YouTube library, and the 30-day rule below applies to it too: a playlist that can't
 be read for 30 days (made private, deleted) takes the library made from it, and the link, with it. With every seat
@@ -144,7 +147,8 @@ says so.
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
 | NetEase Cloud Music | the playlist or profile id someone pasted to make a record without signing in, or to start stations from; the ids of the artists in it | read that public playlist and 听歌排行; other names of an artist (Eason Chan for 陈奕迅) to find its songs on YouTube Music |
-| YouTube Music (unauthenticated) | the artist and title of each NetEase like | find the same song to play |
+| QQ Music | the encrypted profile id or playlist id someone pasted, for the same; the ids of the singers in it; the album ids of its covers | read that public 我喜欢 or playlist; other names of a singer; the covers, passed through to the page for its colours |
+| YouTube Music (unauthenticated) | the artist and title of each NetEase or QQ Music like | find the same song to play |
 | The YouTube embedded player, in your browser | the video being played | playback, under YouTube's own terms |
 
 Your Google token is only used for your own account. It is never sent anywhere but Google.

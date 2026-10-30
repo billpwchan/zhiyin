@@ -256,8 +256,7 @@ def build(model: str = "opus", log=print) -> dict:
 
 
 LABEL_SCHEMA = {"type": "object", "properties": {"label": {"type": "string"}}, "required": ["label"]}
-LABEL_SYSTEM = """You name one person's taste in music, from the songs they liked on @SERVICE@ (newest first, with the
-month of each like).
+LABEL_SYSTEM = """You name one person's taste in music, from the songs they liked on @SERVICE@ (@ROWS@).
 Write one label of @LABEL@ in @LANG@: a name for their taste or for the kind of listener they are, the way a sharp
 friend would put it. It is the first line on their own page and on the card they may post, so they should read it
 and think "that's me", and their friends should want to argue with it.
@@ -271,20 +270,30 @@ and think "that's me", and their friends should want to argue with it.
 Shapes other listeners got (theirs, not yours; don't reuse the wording): "Mostly Fujii Kaze, and everyone near him",
 "A jazz piano person who won't admit it", "老派港乐，新派韩流", "粤语慢歌，偶尔被 K-R&B 拐走"."""
 LABEL_LINES = 600
+# what a row starts with: QQ Music shows nobody when a song was liked, so its rows give the year the song came out
+ROWS = {True: "newest first, with the month of each like",
+        False: "in the order @SERVICE@ lists them, likely newest first, with the year each song came out; @SERVICE@ "
+               "doesn't show when a song was liked"}
 
 
 def label() -> str:
     """A short name for the listener's taste, from the likes alone (the matched library, or the liked videos as
     YouTube lists them while that runs). Quick: it is the first thing a new listener reads."""
-    tracks = [t for t in library.load() if not t["long"]]
-    if tracks:
-        rows = [((t.get("liked_est") or "")[:7], t["title"], ", ".join(a["name"] for a in t["artists"][:2])) for t in tracks]
-    else:
-        rows = [(x["at"][:7], x["title"], x["artist"]) for x in (store.read_json(store.GLIMPSE) or {}).get("songs", [])]
     from . import accounts, settings
+    tracks = [t for t in library.load() if not t["long"]]
+    ne = (accounts.prefs().get("netease") or {}).get("link")
+    qq = bool(ne) and library.app_of(ne) == "qq"
+
+    def when(t: dict, liked: str | None) -> str:
+        return (t.get("released") or "")[:4] if qq else (liked or "")[:7]
+    if tracks:
+        rows = [(when(t, t.get("liked_est")), t["title"], ", ".join(a["name"] for a in t["artists"][:2])) for t in tracks]
+    else:
+        rows = [(when(x, x["at"]), x["title"], x["artist"]) for x in (store.read_json(store.GLIMPSE) or {}).get("songs", [])]
     nm = settings.not_me()
     rows = [r for r, t in zip(rows, tracks or [None] * len(rows)) if not (t and settings.is_not_me(t, nm))]
-    return name_taste(rows, i18n.of(), service="NetEase Cloud Music" if accounts.prefs().get("netease") else "YouTube")
+    service = ("QQ Music" if qq else "NetEase Cloud Music") if ne else "YouTube"
+    return name_taste(rows, i18n.of(), service=service, dated=not qq)
 
 
 def sample(rows: list, lines: int) -> list:
@@ -297,13 +306,14 @@ def sample(rows: list, lines: int) -> list:
 
 
 def name_taste(rows: list[tuple[str, str, str]], lang: str, lines: int = LABEL_LINES, model: str = "sonnet",
-               service: str = "YouTube") -> str:
-    """The label from (month liked, title, artists) rows, newest first."""
+               service: str = "YouTube", dated: bool = True) -> str:
+    """The label from (month liked, title, artists) rows, newest first (`dated` False: the year each came out)."""
     if not rows:
         return ""
     rows = sample(rows, lines)
     w = i18n.WRITE[lang]
-    system = LABEL_SYSTEM.replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"]).replace("@SERVICE@", service)
+    system = LABEL_SYSTEM.replace("@ROWS@", ROWS[dated]).replace("@LABEL@", w["label"]).replace("@LANG@", w["lang"]) \
+        .replace("@SERVICE@", service)
     prompt = "\n".join(" | ".join(r) for r in rows)
     for _ in range(2):
         out = llm.call(prompt, system, LABEL_SCHEMA, model=model, timeout=180, retries=1)["label"].strip().rstrip("。.!！")

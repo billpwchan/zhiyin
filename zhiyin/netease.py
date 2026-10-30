@@ -26,11 +26,12 @@ _gate = threading.BoundedSemaphore(3)
 
 
 class Unreadable(Exception):
-    """`why` is one of: link (not a NetEase profile or playlist), private, few, upstream."""
+    """`why` is one of: link (not a profile or playlist link), song (a link to one song), private, few, upstream.
+    `app` is whose link it was: "163", or "qq" from qqmusic."""
 
-    def __init__(self, why: str, n: int = 0):
+    def __init__(self, why: str, n: int = 0, app: str = "163"):
         super().__init__(why)
-        self.why, self.n = why, n
+        self.why, self.n, self.app = why, n, app
 
 
 def _client() -> httpx.Client:
@@ -76,6 +77,8 @@ def parse(text: str, c: httpx.Client | None = None) -> tuple[str, int]:
                 return "playlist", int(ids[0])
             if "user" in path:
                 return "user", int(ids[0])
+        if "song" in path and ids:
+            raise Unreadable("song")
     raise Unreadable("link")
 
 
