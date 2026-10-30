@@ -181,12 +181,14 @@ def _get(url, params, headers, tries=3):
 
 
 def netease(title, artists, album, dur):
-    r = _get("https://music.163.com/api/search/get", {"s": f"{artists[0] if artists else ''} {title}", "type": 1, "limit": 12}, NE)
+    # api/search/get answers a server outside China with unrelated songs (2026-10-30: 富士山下 found nothing);
+    # cloudsearch/pc returns the real catalogue
+    r = _get("https://music.163.com/api/cloudsearch/pc", {"s": f"{artists[0] if artists else ''} {title}", "type": 1, "limit": 12}, NE)
     if not r or r.status_code != 200:
         return None
     songs = (r.json().get("result") or {}).get("songs") or []
-    ranked = sorted(((_score(title, artists, dur, s.get("name"), "/".join(a.get("name", "") for a in s.get("artists", [])),
-                             (s.get("duration") or 0) / 1000), s) for s in songs), key=lambda x: -x[0])
+    ranked = sorted(((_score(title, artists, dur, s.get("name"), "/".join(a.get("name", "") for a in s.get("ar", [])),
+                             (s.get("dt") or 0) / 1000), s) for s in songs), key=lambda x: -x[0])
     for sc, s in ranked[:3]:
         if sc < MIN_SCORE:
             break
