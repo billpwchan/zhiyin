@@ -179,3 +179,21 @@ def test_a_first_setup_has_its_own_allowance_and_leaves_the_day_alone(hosted, mo
         llm.call("p", "s", {})
         llm.call("p", "s", {})
         assert llm.unavailable()   # an ordinary day still ends at DAILY_USD
+
+
+def test_a_listener_on_the_key_gets_the_screen_only_when_their_allowance_covers_it(hosted, monkeypatch):
+    from zhiyin import accounts, edition
+    hosted(key=True)
+    monkeypatch.setattr(llm, "DAILY_USD", 0.5)
+    uid = accounts.redeem(accounts.invite("Lan"))
+    with store.as_user(uid):
+        assert edition.screens(4, "opus") and not edition.screens(8, "opus")   # eight stations by hand cost more than a day
+        with llm.background():
+            assert edition.screens(8, "opus")                                 # the weekly edition goes at batch prices
+        llm._record(uid, "key", 0.3)
+        assert not edition.screens(4, "opus")
+        with llm.first_run():
+            assert edition.screens(8, "opus")                                 # a first setup has its own allowance
+    with store.as_user(store.OWNER):
+        llm._record(store.OWNER, "key:owner", 20)
+        assert edition.screens(8, "opus")

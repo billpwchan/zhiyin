@@ -156,6 +156,19 @@ def require(uid: str | None = None) -> None:
         raise NoClaude(why)
 
 
+def left(uid: str | None = None) -> float | None:
+    """What a listener's calls on the key may still spend now (their day, or their first setup's allowance), in list-price
+    dollars: a batch costs half, so it goes twice as far. None when nothing here caps them."""
+    uid = uid or store.uid()
+    if source(uid) != "key" or store.is_owners(uid):
+        return None
+    if (r := _first_run.get()) is not None:
+        room = first_run_left(uid, r["songs"])
+    else:
+        room = DAILY_USD - spent(uid, days=1, source="key")
+    return room * (2 if _background.get() else 1)
+
+
 def view(uid: str) -> dict:
     src = source(uid)
     out = {"source": src, "online": worker_online() if src == "worker" else src is not None, "others": API_KEY}
@@ -164,7 +177,8 @@ def view(uid: str) -> dict:
     return out
 
 
-def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout: int = 600, retries: int = 2) -> dict:
+def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout: int = 600, retries: int = 2,
+         effort: str | None = None) -> dict:
     uid = store.uid()
     require(uid)
     src = source(uid)
@@ -172,7 +186,7 @@ def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout:
     if src == "key" and not mine:
         model = KEY_MODEL[model]
     # the owner asked for the best picks whatever they cost (2026-10-27): more thinking on their own calls
-    effort = "high" if mine else "medium"
+    effort = effort or ("high" if mine else "medium")
     try:
         if src == "worker":
             req = {"prompt": prompt, "system": system, "schema": schema, "model": model, "timeout": timeout,

@@ -117,7 +117,7 @@ def pick(lane: dict, shortlist: list[dict], seeds: list[dict], negatives: list[s
 
 # --- What the screen and the editor are told about the listener, and the screen itself ---
 
-STORY_N = 150   # a lane's own songs given to the screen and the editor (the owner's accounts; others get fewer)
+STORY_N = 150   # a lane's own songs given to the screen and the editor (when the screen runs; otherwise fewer)
 
 
 def lane_story(lane: dict, tracks: list[dict], profile: dict, loves=(), n: int = STORY_N, here: bool = True) -> list[str]:
@@ -264,8 +264,9 @@ def screen(lane: dict, cands: dict, story: list[str], went: list[str], model: st
 
     def read(seed: int) -> list[str]:
         try:
+            # high effort for everyone: the effort the eval measured it at
             out = llm.call(screen_prompt(head, pool, lane["key"], seed), screen_system(), IDS_SCHEMA, model=model,
-                           timeout=900, retries=1)
+                           timeout=900, retries=1, effort="high")
         except llm.LLMError:
             return []
         return screen_ids(out, pool)

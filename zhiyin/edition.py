@@ -145,6 +145,18 @@ def negatives() -> list[str]:
 
 PRE_K = 64   # candidates per lane that get listened to before the final shortlist
 EDITOR_K = {False: 32, True: 40}   # songs the editor reads per lane: with the whole pool screened first, more of them are worth it
+# A station's screen read and the editor after it, at list price on the key: the read measured by the eval
+# (2026-10-30), the editor from editions (2026-10-25) with the longer story and shortlist a screened station gets.
+STATION_USD = {"opus": 0.24, "sonnet": 0.10, "haiku": 0.01}
+
+
+def screens(stations: int, model: str) -> bool:
+    """Whether Claude reads each station's whole pool this time (rank.screen): always on the owner's own accounts; for a
+    listener on the key when what is left of their allowance covers every read and the editor after it, so the screen
+    never leaves the editor short. Eight stations rebuilt by hand cost more than a listener's day; at batch prices the
+    weekly edition fits."""
+    room = llm.left()
+    return room is None or room >= stations * STATION_USD.get(llm.KEY_MODEL.get(model, model), STATION_USD["opus"])
 
 
 def build_lane(lane, tracks, prof, known, rng, n, log, loves=()):
@@ -267,13 +279,13 @@ def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
     finally:
         GATHER.release()
 
-    # What the screen and the editor read about each lane: all its songs, and how earlier picks for it went. The
-    # owner's own accounts get the whole pool read by Claude before listening (rank.screen); others the graph's top.
-    mine = store.is_owners(store.uid())
-    stories = {b[0]["key"]: rank.lane_story(b[0], tracks, prof, loves, rank.STORY_N if mine else 60) for b in built}
+    # What the screen and the editor read about each lane: all its songs, and how earlier picks for it went. Claude
+    # reads the whole pool before listening when `screens` says so (rank.screen); otherwise the graph's top goes on.
+    screened = bool(built) and screens(len(built), model)
+    stories = {b[0]["key"]: rank.lane_story(b[0], tracks, prof, loves, rank.STORY_N if screened else 60) for b in built}
     went = {b[0]["key"]: rank.outcomes(b[0]["key"]) for b in built}
     orders = {}
-    if mine and built:
+    if screened:
         log(i18n.tr("Claude 通读每条线的全部候选（{n} 条线）", n=len(built)))
         with store.Pool(4) as ex:
             for b, order in zip(built, ex.map(lambda b: rank.screen(b[0], b[2]["cands"], stories[b[0]["key"]],

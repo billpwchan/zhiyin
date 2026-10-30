@@ -39,7 +39,9 @@ while the Mac sleeps, the morning edition waits for it.
 
 Listeners on the API key get Sonnet where you get Opus. On the same shortlists Sonnet kept 75% of Opus's picks and
 wrote reasons as good, at a third of the price: an edition of eight stations cost $0.13 against $0.39 (Haiku, at
-$0.02, kept half and slipped into the wrong language). A new edition comes once a week, at 05:00 seven days after
+$0.02, kept half and slipped into the wrong language). Before the editor, Sonnet also reads each station's whole
+pool, about $0.075 a station, when what is left of the listener's day covers it (see how-it-works.md, section 4).
+A new edition comes once a week, at 05:00 seven days after
 the last one; only the stations a listener played from are rebuilt, and those builds go through the Batch API at half
 price. A listener who hasn't opened Zhiyin for two weeks gets no new edition until they come back. A first setup for a library of about 800 likes costs about $2.
 
