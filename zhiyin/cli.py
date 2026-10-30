@@ -47,6 +47,14 @@ def main():
     p = sub.add_parser("eval", help="offline check: hide your newest likes and see if the engine finds them")
     p.add_argument("--holdout", type=int, default=60)
     p.add_argument("--audio", action="store_true", help="check whether sound alone predicts new likes")
+    p = sub.add_parser("eval-screen", help="offline check of the screen on rolling held-out windows of your own accounts' "
+                                          "likes: build the pools, submit the reads as one batch, collect, report")
+    p.add_argument("step", choices=("build", "submit", "collect", "report"))
+    p.add_argument("--windows", type=int, default=4)
+    p.add_argument("--size", type=int, default=60, help="likes per window")
+    p.add_argument("--arms", default="opus,sonnet", help="comma-separated: opus, sonnet, opus-medium, sonnet-medium")
+    p.add_argument("--passes", type=int, default=3)
+    p.add_argument("--go", action="store_true", help="submit for real (without it: the estimate only)")
     a = ap.parse_args()
 
     if a.cmd in ("setup", "profile", "refresh", "ask"):
@@ -181,6 +189,19 @@ def main():
         from . import quality
         prof = store.read_json(store.PROFILE) or {}
         quality.print_report(quality.report(a.days), {l["key"]: l["name"] for l in prof.get("lanes", [])})
+    elif a.cmd == "eval-screen":
+        from . import evaluate
+        arms = tuple(a.arms.split(","))
+        if a.step == "build":
+            for uid in evaluate.owner_accounts():
+                with store.as_user(uid):
+                    evaluate.screen_build(a.windows, a.size)
+        elif a.step == "submit":
+            evaluate.screen_submit(arms, a.passes, a.go)
+        elif a.step == "collect":
+            evaluate.screen_collect()
+        else:
+            evaluate.screen_report(arms, a.passes)
     elif a.cmd == "eval":
         from . import evaluate
         evaluate.audio_check(a.holdout) if a.audio else evaluate.run(a.holdout)

@@ -120,15 +120,16 @@ def pick(lane: dict, shortlist: list[dict], seeds: list[dict], negatives: list[s
 STORY_N = 150   # a lane's own songs given to the screen and the editor (the owner's accounts; others get fewer)
 
 
-def lane_story(lane: dict, tracks: list[dict], profile: dict, loves=(), n: int = STORY_N) -> list[str]:
-    """Their songs in this lane, newest first: likes made here, then their library with the month each was liked,
-    then songs they play often without a like. Ten sampled seeds were all the editor used to see of a lane."""
+def lane_story(lane: dict, tracks: list[dict], profile: dict, loves=(), n: int = STORY_N, here: bool = True) -> list[str]:
+    """Their songs in this lane, newest first: likes made here (unless `here` is off, as for a look back from before
+    them), then their library with the month each was liked, then songs they play often without a like. Ten sampled
+    seeds were all the editor used to see of a lane."""
     assign = profile.get("assign", {})
     aside = {r for s in profile.get("set_aside", []) for r in s["ranks"]}
     nm = settings.not_me()
     out = [f"- {r['title']} — {r['artist']} (liked here, {time.strftime('%Y-%m', time.localtime(r['ts']))})" for r in store.db().execute(
         "select title, artist, ts from feedback where uid=? and action='like' and lane=? and title is not null order by ts desc",
-        (store.uid(), lane["key"]))]
+        (store.uid(), lane["key"])) if here]
     mine = sorted((t for t in tracks if not t["long"] and t["rank"] not in aside and not settings.is_not_me(t, nm)
                    and lane["key"] in assign.get(t["vid"], [])), key=lambda t: t["rank"])
     out += [f"- {t['title']} — {', '.join(a['name'] for a in t['artists'][:2])}"
@@ -203,41 +204,63 @@ def _screen_line(i: int, c: dict) -> str:
     return f"[{i}] {c['title']} — {', '.join(a['name'] for a in c['artists'])}{alb}{yr} | {fam}" + (f" | via {via}" if via else "")
 
 
-def screen(lane: dict, cands: dict, story: list[str], went: list[str], model: str = "opus") -> list[str] | None:
-    """The whole pool read the way the editor reads a shortlist, keeping the SCREEN_K most likely to land, best first.
-    On held-out likes this kept about half again as many as the graph score's top 64 did (10 against 6 of 19 in the
-    pool, three reads merged). None when the pool is small or every read failed: the graph order stands."""
-    pool = sorted((c for c in cands.values() if set(c["sources"]) - {"playlist"}),
+def screen_pool(lane: dict, cands: dict) -> list[dict]:
+    """What one read takes: the lane's pool best by the graph score, songs found only in playlists left out."""
+    return sorted((c for c in cands.values() if set(c["sources"]) - {"playlist"}),
                   key=lambda c: -candidates.score(c, lane))[:SCREEN_CAP]
-    if len(pool) <= SCREEN_K:
-        return None
-    head = (f"LANE: {lane['name']} ({lane['english']})\nSound: {lane['sound']}\nWhen: {lane['when']}\n"
+
+
+def screen_head(lane: dict, story: list[str], went: list[str]) -> str:
+    return (f"LANE: {lane['name']} ({lane['english']})\nSound: {lane['sound']}\nWhen: {lane['when']}\n"
             f"Languages: {', '.join(lane['langs'])} | energy {lane['energy']}\nAvoid: {'; '.join(lane['avoid'])}\n"
             + (f"THEIR OWN WORDS ABOUT THIS LANE (follow them): {lane['note']}\n" if lane.get("note") else "")
             + "\nTHEIR SONGS IN THIS LANE, newest first:\n" + "\n".join(story)
             + ("\n\nHOW OUR EARLIER PICKS FOR THIS LANE WENT, newest first:\n" + "\n".join(went) if went else ""))
-    system = SCREEN_SYSTEM.replace("@K@", str(SCREEN_K))
 
-    def read(seed: int) -> list[str]:
-        order = list(range(len(pool)))
-        random.Random(f"{lane['key']}|{seed}").shuffle(order)
-        prompt = head + f"\n\nCANDIDATES ({len(pool)}):\n" + "\n".join(_screen_line(i, pool[i]) for i in order)
-        try:
-            out = llm.call(prompt, system, IDS_SCHEMA, model=model, timeout=900, retries=1)
-        except llm.LLMError:
-            return []
-        ids = [i for i in out.get("ids", []) if isinstance(i, int) and 0 <= i < len(pool)]
-        return [pool[i]["vid"] for i in dict.fromkeys(ids)][:SCREEN_K]
 
-    with store.Pool(SCREEN_PASSES) as ex:
-        reads = [r for r in ex.map(read, range(SCREEN_PASSES)) if r]
-    if not reads:
-        return None
+def screen_system() -> str:
+    return SCREEN_SYSTEM.replace("@K@", str(SCREEN_K))
+
+
+def screen_prompt(head: str, pool: list[dict], key: str, seed: int) -> str:
+    order = list(range(len(pool)))
+    random.Random(f"{key}|{seed}").shuffle(order)
+    return head + f"\n\nCANDIDATES ({len(pool)}):\n" + "\n".join(_screen_line(i, pool[i]) for i in order)
+
+
+def screen_ids(out: dict, pool: list[dict]) -> list[str]:
+    ids = [i for i in out.get("ids", []) if isinstance(i, int) and 0 <= i < len(pool)]
+    return [pool[i]["vid"] for i in dict.fromkeys(ids)][:SCREEN_K]
+
+
+def merge_reads(reads: list[list[str]]) -> list[str]:
     votes = {}
     for r in reads:
         for i, v in enumerate(r):
             votes[v] = votes.get(v, 0) + 1 / (10 + i)
     return sorted(votes, key=lambda v: -votes[v])[:SCREEN_K]
+
+
+def screen(lane: dict, cands: dict, story: list[str], went: list[str], model: str = "opus") -> list[str] | None:
+    """The whole pool read the way the editor reads a shortlist, keeping the SCREEN_K most likely to land, best first.
+    On held-out likes this kept about half again as many as the graph score's top 64 did (10 against 6 of 19 in the
+    pool, three reads merged). None when the pool is small or every read failed: the graph order stands."""
+    pool = screen_pool(lane, cands)
+    if len(pool) <= SCREEN_K:
+        return None
+    head = screen_head(lane, story, went)
+
+    def read(seed: int) -> list[str]:
+        try:
+            out = llm.call(screen_prompt(head, pool, lane["key"], seed), screen_system(), IDS_SCHEMA, model=model,
+                           timeout=900, retries=1)
+        except llm.LLMError:
+            return []
+        return screen_ids(out, pool)
+
+    with store.Pool(SCREEN_PASSES) as ex:
+        reads = [r for r in ex.map(read, range(SCREEN_PASSES)) if r]
+    return merge_reads(reads) if reads else None
 
 
 _QUOTED = re.compile(r"[《〈“\"]([^》〉”\"]{1,80})[》〉”\"]")
