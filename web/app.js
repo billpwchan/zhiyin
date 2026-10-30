@@ -26,6 +26,7 @@ const I = {
   pip: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><rect x="12" y="11.5" width="6" height="4.5" rx="1" fill="currentColor" stroke="none"/></svg>',
   full: '<svg viewBox="0 0 24 24"><path d="M4.5 9V4.5H9M15 4.5h4.5V9M19.5 15v4.5H15M9 19.5H4.5V15"/></svg>',
   shrink: '<svg viewBox="0 0 24 24"><path d="M9 4.5V9H4.5M19.5 9H15V4.5M15 19.5V15h4.5M4.5 15H9v4.5"/></svg>',
+  stage: '<svg viewBox="0 0 24 24"><path d="M7.5 8h9M9 11.5h6"/><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><rect x="5.5" y="14" width="4" height="3.5" rx=".8" fill="currentColor" stroke="none"/></svg>',
   more: '<svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>',
   updown: '<svg viewBox="0 0 24 24"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="m5.5 12.5 4 4 9-9"/></svg>',
@@ -56,7 +57,8 @@ const SAMPLE = () => !!S?.me?.sample;
 const NEEDS_ACCOUNT = new Set(['like', 'nope', 'refresh', 'setup', 'resync', 'synclikes', 'device', 'mine', 'delete',
   'settings', 'save', 'stmenu', 'logout', 'relabel']);
 const fb = new Map();
-const prefs = { lyr: store.get('lyr') ?? true, lyrNarrow: true, imm: false };
+const prefs = { lyr: store.get('lyr') ?? true, lyrNarrow: true, imm: false, stage: store.get('stage') ?? false };
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)');
 
 async function api(path, body) {
   // Say which account this page shows, so a tab left open after switching accounts can't write into the other one.
@@ -117,20 +119,25 @@ function reasonOf(p) {
 }
 // What the page says about the listener next to a pick comes from their data, never from the editor's sentence:
 // the one like of theirs it is shown with (play it, then the pick, and judge), and whether they have the artist.
-function becauseHTML(p) {
-  if (!p || p.mine || Q?.key === 'ear') return '';
-  if (p.kind) return p.bridge ? `<span>${esc(p.bridge === 'near' ? t('下一首新歌听感像这首') : t('下一首新歌是从这首找到的'))}</span>` : '';
+// [text, can be played first] for each fact
+function becauseParts(p) {
+  if (!p || p.mine || Q?.key === 'ear') return [];
+  if (p.kind) return p.bridge ? [[p.bridge === 'near' ? t('下一首新歌听感像这首') : t('下一首新歌是从这首找到的')]] : [];
   const out = [], b = p.because, a = p.artists?.[0]?.name;
   // just heard as the song before: say so, nothing to play first
   const just = b && cur() === p && Q.tracks[Q.i - 1]?.vid === b.vid && Q.played.has(b.vid);
-  if (just) out.push(`<span>${esc(b.how === 'near' ? t('像刚才那首〈{s}〉', { s: b.title }) : t('从刚才那首〈{s}〉找到', { s: b.title }))}</span>`);
-  else if (b) out.push(`<button class="bc-song" data-k="hearmine" title="${t('先放你这首，再回到这首推荐')}">${I.play}<span>${esc(b.how === 'near' ? t('像你喜欢的〈{s}〉', { s: b.title }) : t('从你喜欢的〈{s}〉找到', { s: b.title }))}</span></button>`);
+  if (just) out.push([b.how === 'near' ? t('像刚才那首〈{s}〉', { s: b.title }) : t('从刚才那首〈{s}〉找到', { s: b.title })]);
+  else if (b) out.push([b.how === 'near' ? t('像你喜欢的〈{s}〉', { s: b.title }) : t('从你喜欢的〈{s}〉找到', { s: b.title }), true]);
   if (a && p.familiar != null) {
-    const k = p.familiar ? t('你收藏过 {a} 的 {n} 首', { a, n: p.familiar }) : p.knows === 'follow' ? t('你在 YouTube 订阅了 {a}', { a })
-      : p.knows === 'plays' ? t('你常听 {a}，还没点过喜欢', { a }) : t('你还没收藏过 {a}', { a });
-    out.push(`<span>${esc(k)}</span>`);
+    out.push([p.familiar ? t('你收藏过 {a} 的 {n} 首', { a, n: p.familiar }) : p.knows === 'follow' ? t('你在 YouTube 订阅了 {a}', { a })
+      : p.knows === 'plays' ? t('你常听 {a}，还没点过喜欢', { a }) : t('你还没收藏过 {a}', { a })]);
   }
-  return out.join('<span class="sep">·</span>');
+  return out;
+}
+function becauseHTML(p) {
+  return becauseParts(p).map(([s, play]) => (play
+    ? `<button class="bc-song" data-k="hearmine" title="${t('先放你这首，再回到这首推荐')}">${I.play}<span>${esc(s)}</span></button>`
+    : `<span>${esc(s)}</span>`)).join('<span class="sep">·</span>');
 }
 
 /* ---------- toast ---------- */
@@ -940,6 +947,30 @@ const MS = {
 };
 
 /* ---------- lyrics ---------- */
+// When the voice reaches a new line the sheet jumps there at once, and every line on screen is drawn back from where it
+// was on a spring, each a little after the one above, so the sheet ripples into place instead of sliding as one block.
+const SPRING = (() => {
+  const k = 120, c = 19, w0 = Math.sqrt(k), z = c / (2 * w0), wd = w0 * Math.sqrt(1 - z * z), T = 0.9;   // stiffness, damping (mass 1)
+  const x = (s) => 1 - Math.exp(-z * w0 * s) * (Math.cos(wd * s) + ((z * w0) / wd) * Math.sin(wd * s));
+  const pts = Array.from({ length: 31 }, (_, i) => (i === 30 ? 1 : +x((i / 30) * T).toFixed(4)));
+  return { ms: T * 1000, easing: CSS.supports('animation-timing-function', 'linear(0, 1)') ? `linear(${pts.join(', ')})` : 'cubic-bezier(.23, 1, .32, 1)' };
+})();
+const HOLD_S = 1;   // a word sung this long or longer lifts a little as it fills
+// Words timed apart but written together ("bed" + ", hmm") stay on one line: a held word is an inline block, which
+// would otherwise let the line break between them. Chinese, Japanese and Korean break between any two characters.
+const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+const glued = (a, b) => /\S$/.test(a) && /^\S/.test(b) && !CJK.test(a.at(-1)) && !CJK.test(b[0]);
+// In the stage view a word's size follows how long it is sung: up to 1.28 times for two seconds or more.
+const wordSize = (dur) => +(1 + 0.28 * clamp((dur - 0.5) / 1.5)).toFixed(2);
+
+// Before the first words, in immersive: why this song is here, said from the listener's own data where it can be.
+function introHTML(p) {
+  const main = p && reasonOf(p);
+  if (!main) return '';
+  const sub = becauseParts(p).map(([s]) => s).join(' · ');
+  return `<span class="intro-c"><span class="i-main">${esc(main)}</span>${sub ? `<span class="i-sub">${esc(sub)}</span>` : ''}</span>`;
+}
+
 const Lyr = {
   cache: new Map(), vid: null, data: null, idx: -2, hold: 0, raf: 0, lastF: [],
   tr: store.get('tr') ?? true, ro: store.get('ro') ?? false,
@@ -971,7 +1002,8 @@ const Lyr = {
   },
   prep(d) {
     const lines = [];
-    if (d.lines[0]?.t > 6) lines.push({ t: 0, x: '', gap: true });
+    // before the first words: why the song is here (immersive) or three dots counting in (the panel)
+    if (d.lines[0]?.t > 4) lines.push({ t: 0, x: '', gap: true, intro: true });
     for (const l of d.lines) lines.push({ ...l, gap: !l.x });
     lines.forEach((l, i) => { l.end = lines[i + 1]?.t ?? (l.e || l.t + 6); });
     return { ...d, lines };
@@ -980,9 +1012,19 @@ const Lyr = {
     const d = this.data;
     if (!d) return '';
     const by = [d.source && t('歌词来自{src}', { src: /^[A-Za-z]/.test(d.source) && LANG !== 'en' ? ` ${d.source}` : d.source }), d.tr_by === 'AI' && d.translated && t('翻译由 AI 生成')].filter(Boolean).join(' · ');
+    const intro = introHTML(cur());
     return `<div class="ly-scroll"><div class="ly-in ${this.tr ? 'tr-on' : ''} ${this.ro ? 'ro-on' : ''}">${d.lines.map((l, i) => {
-      if (l.gap) return `<p class="ll gap" data-i="${i}"><span class="dots"><i></i><i></i><i></i></span></p>`;
-      const main = l.w ? l.w.map((w) => `<span class="wd">${esc(w[2])}</span>`).join('') : esc(l.x);
+      if (l.gap) return `<p class="ll gap ${l.intro && intro ? 'intro' : ''}" data-i="${i}"><span class="dots"><i></i><i></i><i></i></span>${l.intro ? intro : ''}</p>`;
+      let main = esc(l.x);
+      if (l.w) {
+        const runs = [];
+        l.w.forEach((w, j) => {
+          const z = wordSize(w[1]);
+          const span = `<span class="wd${w[1] >= HOLD_S ? ' hold' : ''}"${z > 1 ? ` style="--z:${z}"` : ''}>${esc(w[2])}</span>`;
+          j && glued(l.w[j - 1][2], w[2]) ? runs.at(-1).push(span) : runs.push([span]);
+        });
+        main = runs.map((r) => (r.length > 1 ? `<span class="nb">${r.join('')}</span>` : r[0])).join('');
+      }
       return `<p class="ll ${l.w ? 'w' : ''}" data-i="${i}"><span class="lx">${main}</span>${l.tr ? `<span class="lt">${esc(l.tr)}</span>` : ''}${l.ro ? `<span class="lr">${esc(l.ro)}</span>` : ''}</p>`;
     }).join('')}</div></div>
     <div class="ly-foot"><span>${esc(by)}</span>
@@ -994,7 +1036,13 @@ const Lyr = {
       el.innerHTML = this.html();
       const sc = $('.ly-scroll', el);
       if (!sc) continue;
-      const stop = () => { this.hold = performance.now() + 3500; };
+      // reading ahead by hand: the sheet stops following and every line comes into focus until the hand rests
+      const stop = () => {
+        this.hold = performance.now() + 3500;
+        el.classList.add('browse');
+        clearTimeout(this.browseT);
+        this.browseT = setTimeout(() => { el.classList.remove('browse'); this.sync(true, false); }, 3500);
+      };
       sc.addEventListener('wheel', stop, { passive: true });
       sc.addEventListener('touchmove', stop, { passive: true });
     }
@@ -1015,16 +1063,19 @@ const Lyr = {
     while (lo <= hi) { const m = (lo + hi) >> 1; if (L[m].t <= t) { k = m; lo = m + 1; } else hi = m - 1; }
     return k;
   },
-  sync(force) {
+  sync(force, snap = force) {
     if (!this.data) return;
     const t = Player.now() - this.delay + 0.1;
     const k = this.at(t), L = this.data.lines;
     if (k !== this.idx || force) {
       for (const host of this.hosts()) {
-        $$('.ll.on', host).forEach((el) => el.classList.remove('on'));
-        const el = $(`.ll[data-i="${k}"]`, host);
-        el?.classList.add('on');
-        this.follow(host, el);
+        const lines = $$('.ll', host);
+        lines.forEach((el, i) => {
+          el.classList.toggle('on', i === k);
+          el.classList.toggle('prev', i === k - 1);
+          el.style.setProperty('--d', Math.min(6, Math.abs(i - k)));
+        });
+        this.follow(host, lines[k], snap);
       }
       this.idx = k;
       this.lastF = [];
@@ -1046,11 +1097,29 @@ const Lyr = {
       for (const host of this.hosts()) $(`.ll[data-i="${k}"]`, host)?.style.setProperty('--f', f.toFixed(3));
     }
   },
-  follow(host, el) {
+  follow(host, el, snap) {
     const sc = $('.ly-scroll', host);
-    if (!sc || !el || performance.now() < this.hold) return;
-    const top = el.offsetTop - sc.clientHeight * 0.36 + el.offsetHeight / 2;
-    sc.scrollTo({ top, behavior: document.hidden ? 'auto' : 'smooth' });
+    if (!sc || !el || host.classList.contains('one') || performance.now() < this.hold) return;
+    // a third of the way down; one too tall for that (a long intro on a short phone) starts where the fade ends
+    const at = Math.min(el.offsetTop - sc.clientHeight * 0.36 + el.offsetHeight / 2, el.offsetTop - sc.clientHeight * 0.14);
+    const top = Math.round(clamp(at, 0, sc.scrollHeight - sc.clientHeight));
+    const dy = top - sc.scrollTop;
+    if (Math.abs(dy) < 1) return;
+    sc.scrollTop = top;
+    if (snap || document.hidden || REDUCED.matches || Math.abs(dy) > sc.clientHeight) return;   // a seek lands at once
+    const k = +el.dataset.i;
+    for (const line of $$('.ll', host)) {
+      const y = line.offsetTop - top;
+      if (y + line.offsetHeight < Math.min(0, -dy) - 40 || y > sc.clientHeight + Math.max(0, -dy) + 40) continue;
+      let from = dy;
+      const running = line.getAnimations();
+      if (running.length) {   // still settling from the last line: go on from where it is
+        from += new DOMMatrixReadOnly(getComputedStyle(line).transform).m42;
+        running.forEach((a) => a.cancel());
+      }
+      line.animate([{ transform: `translateY(${from}px)` }, { transform: 'translateY(0)' }],
+        { duration: SPRING.ms, easing: SPRING.easing, delay: clamp(+line.dataset.i - k + 1, 0, 8) * 40, fill: 'backwards' });
+    }
   },
   paintPip(reset) {
     if (!Pip.w) return;
@@ -1089,6 +1158,17 @@ function layoutStage() {
   $$('[data-k="tab-lyr"]').forEach((b) => { b.setAttribute('aria-selected', on); b.toggleAttribute('aria-disabled', !has); b.title = why; });
   $$('[data-k="tab-q"]').forEach((b) => b.setAttribute('aria-selected', !on));
   $$('[data-k="lyrics"]').forEach((b) => { b.classList.toggle('on', on); b.toggleAttribute('aria-disabled', !has); b.title = why; });
+  // Immersive on a wide screen can give the words the whole room, YouTube's player in a corner. A song timed word by
+  // word is then shown a line at a time, each word as it is sung.
+  const stage = on && prefs.imm && prefs.stage && !PHONE.matches;
+  document.body.classList.toggle('stage', stage);
+  $$('.lyr').forEach((h) => h.classList.toggle('one', stage && !!Lyr.data?.lines.some((l) => l.w)));
+  room.classList.toggle('has-intro', !!(Lyr.data?.lines[0]?.intro && introHTML(cur())));
+  $$('[data-k="stage"]').forEach((b) => {
+    b.classList.toggle('on', prefs.stage);
+    b.toggleAttribute('aria-disabled', !has);
+    b.title = has ? (prefs.stage ? t('封面和歌词（S）') : t('只看歌词（S）')) : why;
+  });
   // A phone scrolls the page under the station strip and the tab bar: size the cover so play is on the first screen.
   // From the smallest height the screen has (toolbar showing), not the current one, or the cover grows and pushes
   // the page down when the toolbar folds away mid-scroll.
@@ -1109,6 +1189,15 @@ function toggleLyrics(want) {
   else { prefs.lyr = on; store.set('lyr', on); }
   layoutStage();
 }
+function toggleStage() {
+  if (!prefs.imm || PHONE.matches) return;
+  if (!Lyr.data) { toast(t('这首没有找到歌词')); return; }
+  const parts = [$('#frame'), $('#ytHost')], was = parts.map((e) => e?.getBoundingClientRect());
+  prefs.stage = !prefs.stage;
+  store.set('stage', prefs.stage);
+  layoutStage();
+  parts.forEach((e, i) => e && flyFrom(e, was[i]));
+}
 const stageRO = new ResizeObserver(() => layoutStage());
 const PHONE = matchMedia('(max-width: 899px)');
 PHONE.addEventListener('change', () => { if (view === 'listen') { watchFrame(); placeCard(); placeHost(); } });
@@ -1119,27 +1208,31 @@ function immersive(on = !prefs.imm) {
   prefs.imm = on;
   document.body.classList.toggle('imm', on);
   $$('[data-k="imm"]').forEach((b) => { b.innerHTML = on ? I.shrink : I.full; b.title = on ? t('退出沉浸（F / Esc）') : t('沉浸（F）'); });
+  on ? Flow.start() : Flow.stop();
+  wake();
   paintBackdrop();
   placeCard();
   requestAnimationFrame(() => { layoutStage(); placeHost(); });
 }
+// a resting pointer hides with the controls, entered by key or mouse alike
 let idleT = 0;
-addEventListener('mousemove', () => {
-  if (!prefs.imm) return;
+function wake() {
   document.body.classList.remove('idle');
   clearTimeout(idleT);
-  idleT = setTimeout(() => document.body.classList.add('idle'), 2600);
-});
+  if (prefs.imm) idleT = setTimeout(() => document.body.classList.add('idle'), 2600);
+}
+addEventListener('mousemove', () => { if (prefs.imm) wake(); });
 
 // The cover lights the room. Two layers crossfade so a new song washes in instead of cutting.
 function paintBackdrop() {
   const p = cur(), el = $('#backdrop');
   if (!p || !el) return;
   const u = px(cover(p, 120).replace('maxresdefault', 'mqdefault'));
+  Flow.set(u);
   if (el.dataset.u === u) return;
   el.dataset.u = u;
-  if (el.children.length < 2) el.innerHTML = '<i></i><i></i>';
-  const [a, b] = el.children, nx = a.classList.contains('on') ? b : a, old = nx === a ? b : a;
+  if ($$('i', el).length < 2) el.insertAdjacentHTML('afterbegin', '<i></i><i></i>');
+  const [a, b] = $$('i', el), nx = a.classList.contains('on') ? b : a, old = nx === a ? b : a;
   const img = new Image();
   img.onload = () => {
     if (el.dataset.u !== u) return;
@@ -1149,6 +1242,149 @@ function paintBackdrop() {
   };
   img.src = u;
 }
+
+/* ---------- immersive: the cover's colours, slowly flowing ---------- */
+// One small WebGL canvas at an eighth of the window, drawn at most 30 times a second and stretched to fill it: the
+// cover seen through three slowly turning, warped lenses, so its colours drift around the room (one turn in 30-50 s).
+// A new song's cover crossfades in over 700 ms. Reduced motion gets a still frame; without WebGL the blurred cover stays.
+const FLOW_FS = `precision mediump float;
+varying vec2 uv;
+uniform sampler2D a, b;
+uniform float mixv, time;
+uniform vec2 res;
+vec2 rot(vec2 p, float r) { float c = cos(r), s = sin(r); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
+vec3 paint(sampler2D s, vec2 c, float t) {
+  vec3 col = vec3(0.);
+  for (int i = 0; i < 3; i++) {
+    float f = float(i);
+    vec2 q = rot(c, t * (.6 + .25 * f) + f * 2.1) * (.62 + .16 * f);
+    q += .16 * vec2(sin(t * (.9 + .3 * f) + f * 1.7), cos(t * (.7 + .2 * f) + f * 2.9));
+    q += .07 * vec2(sin(q.y * 5. + t * 1.3), cos(q.x * 4. - t * 1.1));
+    col += texture2D(s, q + .5, 2.5).rgb;
+  }
+  return col / 3.;
+}
+void main() {
+  vec2 c = uv - .5;
+  c.x *= res.x / res.y;
+  float t = time * .19635;
+  vec3 col = mix(paint(a, c, t), paint(b, c, t), mixv);
+  float l = dot(col, vec3(.2126, .7152, .0722));
+  // bright covers are pressed down harder, so a white sleeve doesn't put a grey cloud behind white words
+  col = mix(vec3(l), col, 1.35) * .42 / (1. + max(0., l - .45) * 1.6);
+  col *= 1. - .35 * dot(c, c);
+  gl_FragColor = vec4(col, 1.);
+}`;
+const Flow = {
+  gl: null, cv: null, u: null, tex: [], front: 0, from: 0, to: 0, mixAt: -1e9, url: '', want: '', raf: 0, last: 0, on: false, t0: performance.now(),
+  init() {
+    if (this.gl !== null) return !!this.gl;
+    this.gl = false;
+    const cv = document.createElement('canvas');
+    const gl = cv.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
+    if (!gl) return false;
+    const sh = (type, src) => { const x = gl.createShader(type); gl.shaderSource(x, src); gl.compileShader(x); return gl.getShaderParameter(x, gl.COMPILE_STATUS) ? x : null; };
+    const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p; varying vec2 uv; void main() { uv = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }');
+    const fs = sh(gl.FRAGMENT_SHADER, FLOW_FS);
+    if (!vs || !fs) return false;
+    const pr = gl.createProgram();
+    gl.attachShader(pr, vs);
+    gl.attachShader(pr, fs);
+    gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return false;
+    gl.useProgram(pr);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);   // one triangle over the screen
+    const at = gl.getAttribLocation(pr, 'p');
+    gl.enableVertexAttribArray(at);
+    gl.vertexAttribPointer(at, 2, gl.FLOAT, false, 0, 0);
+    this.u = Object.fromEntries(['a', 'b', 'mixv', 'time', 'res'].map((n) => [n, gl.getUniformLocation(pr, n)]));
+    gl.uniform1i(this.u.a, 0);
+    gl.uniform1i(this.u.b, 1);
+    this.tex = [0, 1].map((i) => {
+      const x = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0 + i);
+      gl.bindTexture(gl.TEXTURE_2D, x);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([11, 11, 12, 255]));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+      return x;
+    });
+    cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.stop(); cv.remove(); this.gl = false; });
+    cv.className = 'flow';
+    cv.setAttribute('aria-hidden', 'true');
+    $('#backdrop').append(cv);
+    this.gl = gl;
+    this.cv = cv;
+    return true;
+  },
+  set(u) {
+    this.want = u;
+    if (!this.on || !u || u === this.url) return;
+    const img = new Image();
+    img.onload = () => {
+      if (this.want !== u || !this.gl) return;
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      c.getContext('2d').drawImage(img, 0, 0, 64, 64);
+      const gl = this.gl, first = !this.url, back = first ? this.front : 1 - this.front;
+      gl.activeTexture(gl.TEXTURE0 + back);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex[back]);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      this.url = u;
+      this.from = first ? back : this.front;
+      this.to = back;
+      this.front = back;
+      this.mixAt = first || REDUCED.matches ? -1e9 : performance.now();
+      document.body.classList.add('flow');
+      this.loop();
+    };
+    img.src = u;
+  },
+  size() {
+    if (!this.gl) return;
+    const w = Math.max(32, Math.round(innerWidth / 8)), h = Math.max(18, Math.round(innerHeight / 8));
+    if (this.cv.width !== w || this.cv.height !== h) { this.cv.width = w; this.cv.height = h; }
+    this.gl.viewport(0, 0, w, h);
+    this.gl.uniform2f(this.u.res, w, h);
+    this.draw(performance.now());
+  },
+  draw(now) {
+    const gl = this.gl, f = clamp((now - this.mixAt) / 700);
+    gl.uniform1f(this.u.time, REDUCED.matches ? 0 : (now - this.t0) / 1000);
+    gl.uniform1f(this.u.mixv, this.from + (this.to - this.from) * (f * f * (3 - 2 * f)));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  },
+  loop() {
+    cancelAnimationFrame(this.raf);
+    if (!this.on || !this.gl) return;
+    const step = (now) => {
+      if (!this.on) return;
+      if (now - this.last >= 32) { this.last = now; this.draw(now); }
+      // still frames once the crossfade is done, if motion is reduced; nothing while the tab is away
+      if (!document.hidden && (!REDUCED.matches || now - this.mixAt < 800)) this.raf = requestAnimationFrame(step);
+    };
+    this.raf = requestAnimationFrame(step);
+  },
+  start() {
+    if (!this.init()) return;
+    this.on = true;
+    this.size();
+    if (this.url) document.body.classList.add('flow');
+    this.set(this.want);
+    this.loop();
+  },
+  stop() {
+    this.on = false;
+    cancelAnimationFrame(this.raf);
+    document.body.classList.remove('flow');
+  },
+};
+addEventListener('resize', () => Flow.on && Flow.size());
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Flow.on) Flow.loop(); });
 
 /* ---------- picture-in-picture mini player (stays on top of other apps) ---------- */
 const Pip = {
@@ -1321,12 +1557,16 @@ function placeHost() {
   if ($('#toast').classList.contains('show')) clearOf($('#toast'));   // a note shown before the player appeared
   const moved = hostAt && hostAt !== target.id;
   hostAt = target.id;
-  if (moved && was && was.width && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    host.animate([
-      { transformOrigin: '0 0', transform: `translate(${was.left - r.left}px, ${was.top - r.top}px) scale(${was.width / r.width}, ${was.height / r.height})` },
-      { transformOrigin: '0 0', transform: 'none' },
-    ], { duration: 420, easing: 'cubic-bezier(.32, .72, 0, 1)' });
-  }
+  if (moved) flyFrom(host, was);
+}
+// The element flies from where it was (a rect taken before the layout changed) to where it is now.
+function flyFrom(el, was) {
+  const r = el.getBoundingClientRect();
+  if (!was?.width || !r.width || REDUCED.matches || (Math.abs(was.left - r.left) < 1 && Math.abs(was.top - r.top) < 1 && Math.abs(was.width - r.width) < 1)) return;
+  el.animate([
+    { transformOrigin: '0 0', transform: `translate(${was.left - r.left}px, ${was.top - r.top}px) scale(${was.width / r.width}, ${was.height / r.height})` },
+    { transformOrigin: '0 0', transform: 'none' },
+  ], { duration: 420, easing: 'cubic-bezier(.32, .72, 0, 1)' });
 }
 const ro = new ResizeObserver(() => placeHost());
 // the player card rises into place; measure it again once it has landed
@@ -1543,6 +1783,7 @@ function renderListen() {
       <div class="views">
         <button class="ib sm" data-k="lyrics" title="${t('歌词（G）')}">${I.lyrics}</button>
         <button class="ib sm" data-k="pip" title="${t('小窗（M）')}">${I.pip}</button>
+        <button class="ib sm ${prefs.stage ? 'on' : ''}" data-k="stage" title="${t('只看歌词（S）')}">${I.stage}</button>
         <button class="ib sm" data-k="imm" title="${prefs.imm ? t('退出沉浸（F / Esc）') : t('沉浸（F）')}">${prefs.imm ? I.shrink : I.full}</button>
         <button class="ib sm" data-k="stmenu" title="${t('更多')}" aria-haspopup="menu">${I.more}</button>
       </div>
@@ -2273,7 +2514,7 @@ $('#shareD').addEventListener('click', (e) => {
 
 /* ---------- shortcuts ---------- */
 const KEYS = () => [[t('空格'), t('播放 / 暂停')], ['N', t('下一首')], ['P', t('上一首')], ['L', t('喜欢')], ['X', t('不要')], ['← →', t('快退 / 快进 10 秒')],
-  ['/', t('点歌')], ['1–9', t('换电台')], ['G', t('歌词')], ['T', t('歌词翻译')], ['R', t('罗马音')], ['[ ]', t('歌词早一点 / 晚一点')], ['F', t('沉浸')], ['M', t('小窗')], ['?', t('快捷键')]];
+  ['/', t('点歌')], ['1–9', t('换电台')], ['G', t('歌词')], ['T', t('歌词翻译')], ['R', t('罗马音')], ['[ ]', t('歌词早一点 / 晚一点')], ['F', t('沉浸')], ['S', t('只看歌词')], ['M', t('小窗')], ['?', t('快捷键')]];
 function openKeys() {
   closeMenu();
   const d = $('#keysD');
@@ -3258,6 +3499,7 @@ async function act(k, btn) {
   else if (k === 'blend') setBlend(btn.dataset.v);
   else if (k === 'pip') Pip.toggle().catch(() => toast(t('小窗打不开')));
   else if (k === 'imm') immersive();
+  else if (k === 'stage') toggleStage();
   else if (k === 'lytr' || k === 'lyro') {
     const key = k === 'lytr' ? 'tr' : 'ro';
     Lyr[key] = !Lyr[key];
@@ -3323,7 +3565,7 @@ document.addEventListener('click', async (e) => {
   MS.arm();
   const st = e.target.closest('[data-st]');
   if (st) return selectStation(st.dataset.st);
-  const line = e.target.closest('.ll[data-i]');
+  const line = e.target.closest('.ll[data-i]:not(.gap)');
   if (line && Lyr.data) {
     const l = Lyr.data.lines[+line.dataset.i];
     Lyr.hold = 0;
@@ -3413,6 +3655,7 @@ function onKey(e) {
   else if (k === 'x' && p) nope(p);
   else if (k === 'g') toggleLyrics();
   else if (k === 'f') immersive();
+  else if (k === 's') toggleStage();
   else if (k === 'm') Pip.toggle().catch(() => toast(t('小窗打不开')));
   else if (k === 't' && Lyr.data) act('lytr');
   else if (k === 'r' && Lyr.data) act('lyro');

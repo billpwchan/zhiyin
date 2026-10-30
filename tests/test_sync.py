@@ -134,6 +134,13 @@ def test_a_refused_lyric_translation_is_not_shown(monkeypatch):
     assert not any(l.get("tr") for l in lyrics.for_reader(d, "en")["lines"])
 
 
+def test_section_headings_are_not_shown_as_lyrics():
+    from zhiyin import lyrics
+    xs = ["hook", "[Chorus]", "Pre-Chorus 2:", "副歌：", "So can you just trust me", "Intro to you", ""]
+    d = {"found": True, "lines": [{"t": i, "x": x} for i, x in enumerate(xs)]}
+    assert [l["x"] for l in lyrics.for_reader(d, "zh-Hans")["lines"]] == ["So can you just trust me", "Intro to you", ""]
+
+
 def test_lyrics_with_nothing_to_translate_are_not_sent_again(monkeypatch):
     import json
     import threading

@@ -57,6 +57,9 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .backdrop i { position: absolute; inset: -14%; background: center / cover no-repeat; filter: blur(90px) saturate(1.35) brightness(.5); opacity: 0; transition: opacity 900ms ease-out; }
 .backdrop i.on { opacity: .42; }
 .imm .backdrop i.on { opacity: .75; }
+/* in immersive the cover's colours flow instead (Flow in app.js); the canvas is an eighth of the window, stretched */
+.backdrop .flow { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 700ms ease-out; }
+.imm.flow .backdrop .flow { opacity: 1; }
 
 /* ---------- shell ---------- */
 .app { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100dvh; }
@@ -223,6 +226,7 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .l-head .went:empty { display: none; }
 .views { display: flex; gap: 2px; transition: opacity var(--base) var(--ease); }
 .views [data-k="lyrics"] { display: none; }   /* the panel's own tabs switch it on a wide screen */
+.views [data-k="stage"] { display: none; }    /* immersive on a wide screen only */
 .more { position: relative; }
 
 /* The room: the song on the left half, its words or the station's programme on the right, both as tall as the song's
@@ -311,22 +315,38 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .ly-scroll::-webkit-scrollbar { display: none; }
 /* the words start near the top, as on a lyric sheet; once the song reaches a third of the way down, the sheet scrolls */
 .ly-in { padding: 13vh 0 48vh; }
+/* --d: how many lines from the one being sung (Lyr.sync); the further, the fainter */
 .ll {
   margin: 0 0 0 -14px; padding: 9px 14px; border-radius: 12px;
   font-size: clamp(22px, 2.3cqw, 36px); line-height: 1.32; font-weight: 600; letter-spacing: -.008em; text-wrap: pretty;
-  color: #fff; opacity: .26; cursor: pointer;
-  transition: opacity 380ms var(--ease);
+  color: #fff; opacity: max(.16, .4 - .04 * var(--d, 4)); cursor: pointer;
+  transition: opacity 380ms var(--ease), filter 380ms var(--ease);
 }
-.ll:hover { opacity: .58; }
+.ll:hover, .browse .ll { opacity: .58; }
 .ll.on { opacity: 1; }
-.ll .lt, .ll .lr { display: none; margin-top: 3px; font-size: .58em; font-weight: 500; line-height: 1.45; color: rgba(255, 255, 255, .68); }
+.ll .lt, .ll .lr { display: none; margin-top: 3px; font-size: .58em; font-weight: 500; line-height: 1.45; color: rgba(255, 255, 255, .62); }
 .tr-on .ll .lt, .ro-on .ll .lr { display: block; }
+/* timed word by word: each word fills as it is sung; one held a second or longer lifts and glows a little as it fills */
 .ll.w.on .wd {
   background: linear-gradient(90deg, #fff calc(var(--f, 0) * 108% - 8%), rgba(255, 255, 255, .34) calc(var(--f, 0) * 108%));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+.ll .nb { white-space: nowrap; }
+.ll.w .wd.hold { display: inline-block; white-space: pre; transition: transform 300ms var(--ease); }
+.ll.w.on .wd.hold {
+  transform: translateY(calc(var(--f, 0) * -.05em));
+  text-shadow: 0 0 calc(var(--f, 0) * .4em) rgba(255, 255, 255, calc(var(--f, 0) * .36));
+}
+/* timed by the line only: the whole line lights up in one sweep, with no pretence of following the words */
+.ll:not(.w).on .lx {
+  background: linear-gradient(90deg, #fff 45%, rgba(255, 255, 255, .34) 55%) 100% 0 / 220% 100% no-repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: sweep 650ms var(--ease) forwards;
+}
+@keyframes sweep { to { background-position: 0 0; } }
 .ll.gap { height: 50px; display: flex; align-items: center; cursor: default; opacity: 0; }
 .ll.gap.on { opacity: 1; }
+.ll.gap .intro-c { display: none; }
 .dots { display: inline-flex; gap: 9px; }
 .dots i { width: 9px; height: 9px; border-radius: 50%; background: #fff; opacity: .28; }
 .ll.gap.on .dots i:nth-child(1) { opacity: calc(.28 + .72 * clamp(0, var(--f, 0) * 3, 1)); }
@@ -940,10 +960,56 @@ a.m-acct:hover { background: var(--hover); }
 .imm .room.no-lyr .room-in { grid-template-columns: minmax(0, 1fr); }
 .imm .room.no-lyr .side { display: none; }
 .imm .room.no-lyr .now { --s: clamp(208px, min(100cqh - var(--mh), 100cqw), 760px); }
-.imm .ll { font-size: clamp(24px, 2.4cqw, 40px); }
+.imm .ll { font-size: clamp(24px, 2.4cqw, 40px); filter: blur(calc(max(0, var(--d, 0) - 1) * .5px)); }
+.imm .ll.on, .imm .ll:hover, .imm .browse .ll { filter: none; }
+/* before the first words: why this song is here, in place of the dots */
+.imm .ll.gap.intro { display: block; height: auto; padding-bottom: 40px; }
+.imm .ll.gap.intro .dots { display: none; }
+.imm .ll.gap.intro .intro-c { display: block; transform: translateY(10px); transition: transform 700ms var(--ease); }
+.imm .ll.gap.intro.on .intro-c { transform: none; }
+.intro-c .i-main { display: block; max-width: 22em; font-size: .74em; line-height: 1.42; letter-spacing: -.01em; text-wrap: pretty; }
+.intro-c .i-sub { display: block; margin-top: 14px; font-size: max(13px, .4em); font-weight: 500; line-height: 1.5; color: rgba(255, 255, 255, .62); }
+.imm .room.has-intro .t-why, .imm .room.has-intro .t-bc { display: none; }   /* said in the intro instead */
 .imm .toast { left: 50%; }
+/* the words take the room: YouTube's player in a 240px corner (it may not be smaller than 200), the song beside it */
+@media (min-width: 900px) {
+  .imm .views [data-k="stage"] { display: grid; }
+  .imm.stage .room-in { grid-template-columns: 240px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; column-gap: 28px; row-gap: 12px; }
+  .imm.stage .now { display: contents; }
+  .imm.stage .frame { grid-area: 2 / 1; width: 240px; }
+  .imm.stage .meta { grid-area: 2 / 2; align-self: end; max-width: 640px; padding-top: 0; }
+  .imm.stage .t-title { font-size: 22px; -webkit-line-clamp: 1; }
+  .imm.stage .t-artist { font-size: 16px; }
+  .imm.stage .t-fine, .imm.stage .t-why, .imm.stage .t-bc { display: none; }
+  .imm.stage .prog { margin-top: 16px; }
+  .imm.stage .side { grid-area: 1 / 1 / 2 / 3; max-width: none; justify-self: stretch; padding-left: 0; }
+  .imm.stage .ly-in { max-width: 1120px; margin: 0 auto; }
+  .imm.stage .ll { margin: 0; text-align: center; font-size: clamp(30px, 3.1cqw, 54px); }
+  .imm.stage .intro-c .i-main { margin: 0 auto; }
+}
+/* a song timed word by word, on the stage: one line at a time, faint until each word is sung, the long ones larger */
+.lyr.one .ly-scroll { overflow: hidden; -webkit-mask-image: none; mask-image: none; }
+.lyr.one .ly-in { position: relative; height: 100%; padding: 0; max-width: none; }
+.lyr.one .ll {
+  position: absolute; left: 4%; right: 4%; top: 46%; margin: 0; padding: 0; transform: translateY(-50%);
+  text-align: center; font-size: clamp(40px, 4.4cqw, 84px); line-height: 1.28; opacity: 0; filter: none; pointer-events: none;
+  transition: opacity 420ms var(--ease), transform 700ms var(--ease);
+}
+.lyr.one .ll.on { opacity: 1; pointer-events: auto; }
+.lyr.one .ll.prev { transform: translateY(calc(-50% - .45em)); }
+.lyr.one .ll.w .wd {
+  display: inline-block; white-space: pre; font-size: calc(var(--z, 1) * 1em); background: none; color: #fff;
+  opacity: calc(.16 + .84 * clamp(0, var(--f, 0) * 8, 1)); transform: translateY(calc((1 - clamp(0, var(--f, 0) * 3, 1)) * .12em));
+  filter: blur(calc((1 - clamp(0, var(--f, 0) * 4, 1)) * 3px)); transition: none;
+}
+.lyr.one .ll.w.on .wd.hold { text-shadow: 0 0 calc(var(--f, 0) * .35em) rgba(255, 255, 255, calc(var(--f, 0) * .3)); }
+.lyr.one .ll .lt, .lyr.one .ll .lr { margin-top: .5em; font-size: .4em; }
+.lyr.one .ll.gap { display: block; height: auto; }
+.lyr.one .intro-c .i-main { margin: 0 auto; font-size: .56em; }
 .imm.idle { cursor: none; }
 .imm.idle .views { opacity: 0; }
+/* a hidden pointer resting on the words doesn't light the line that scrolls under it */
+.imm.idle .lyr:not(.browse):not(.one) .ll:not(.on):hover { opacity: max(.16, .4 - .04 * var(--d, 4)); filter: blur(calc(max(0, var(--d, 0) - 1) * .5px)); }
 /* On a phone it is one screen that never scrolls, so YouTube's player stays on its cover: the song on top, the words
    in between, the controls at the thumb. */
 @media (max-width: 899px) {
@@ -967,6 +1033,22 @@ a.m-acct:hover { background: var(--hover); }
   .imm .room .lyr { order: 1; }
   .imm .prog, .imm .ctl { order: 2; }
   .imm .prog { margin-top: auto; padding-top: 12px; }
+}
+/* a short phone (an SE behind Safari's bars): every gap gives way to the words, the source line sits where they have
+   faded out, and the intro keeps only the reason */
+@media (max-width: 899px) and (max-height: 640px) and (orientation: portrait) {
+  .imm .t-title { margin-top: 10px; font-size: 20px; }
+  .imm .t-artist { margin-top: 2px; }
+  .imm .room.lyr-on .lyr { margin-top: 4px; }
+  .imm .ly-scroll {
+    bottom: 0;
+    -webkit-mask-image: linear-gradient(transparent 0, #000 14%, #000 calc(100% - 46px), transparent calc(100% - 30px));
+    mask-image: linear-gradient(transparent 0, #000 14%, #000 calc(100% - 46px), transparent calc(100% - 30px));
+  }
+  .imm .intro-c .i-main { font-size: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .imm .intro-c .i-sub { display: none; }
+  .imm .prog { padding-top: 6px; }
+  .imm .ctl { margin-top: 6px; }
 }
 /* a phone on its side: the cover beside the words */
 @media (max-width: 899px) and (orientation: landscape) {
@@ -1039,4 +1121,9 @@ body.pip {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 1ms !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ll:not(.w).on .lx { animation: none; background: none; color: #fff; }
+  .lyr.one .ll.w .wd { filter: none; transform: none; }
 }

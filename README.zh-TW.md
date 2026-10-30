@@ -115,6 +115,7 @@ uv run zhiyin serve    # 開啟 http://localhost:8817
 | <kbd>/</kbd> | 點歌 |
 | <kbd>G</kbd> | 歌詞；<kbd>T</kbd> 翻譯，<kbd>R</kbd> 羅馬音，<kbd>[</kbd> <kbd>]</kbd> 微調時間 |
 | <kbd>F</kbd> | 沉浸模式，只留封面和歌詞 |
+| <kbd>S</kbd> | 寬螢幕的沉浸模式裡只看歌詞，播放器縮到角落 |
 | <kbd>M</kbd> | 小窗 |
 
 </details>

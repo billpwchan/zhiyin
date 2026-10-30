@@ -35,6 +35,9 @@ _inflight: dict[str, threading.Event] = {}
 _lock = threading.Lock()
 
 CREDIT = re.compile(r"^\s*(作词|作詞|作曲|编曲|編曲|制作人|製作人|监制|監製|词|詞|曲|演唱|原唱|和声|和聲|混音|母带|录音|吉他|贝斯|鼓|钢琴|弦乐|Lyrics?|Composer|Composed by|Arranger|Arranged by|Producer|Produced by|Written by)\s*[:：]\s*(.+)$", re.I)
+# a section heading some uploaders time like a line ("hook", "[Chorus]", "副歌：")
+SECTION = re.compile(r"^\s*[\[(（【]?\s*(hook|verse|chorus|pre-?chorus|post-?chorus|bridge|intro|outro|refrain|interlude|rap|"
+                     r"副歌|主歌|前奏|间奏|間奏|尾奏|桥段|橋段|导歌|導歌|说唱|說唱)\s*\d*\s*[\])）】]?\s*[:：]?\s*$", re.I)
 LRC_TS = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
 YRC_LINE = re.compile(r"^\[(\d+),(\d+)\](.*)$")
 YRC_WORD = re.compile(r"\((\d+),(\d+),\d+\)")
@@ -433,6 +436,7 @@ def for_reader(d: dict, lang: str) -> dict:
     from . import i18n
     if not d.get("found"):
         return d
+    d = {**d, "lines": [l for l in d["lines"] if not SECTION.match(l["x"])]}
     if lang == "en":
         lines = [{**{k: v for k, v in l.items() if k not in ("tr", "tr_en")}, **({"tr": l["tr_en"]} if _fits(l.get("tr_en"), l["x"]) else {})}
                  for l in d["lines"]]

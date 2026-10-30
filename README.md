@@ -131,6 +131,7 @@ To run it on a server for yourself and a few friends, each signing in with their
 | <kbd>/</kbd> | ask |
 | <kbd>G</kbd> | lyrics; <kbd>T</kbd> translation, <kbd>R</kbd> romanization, <kbd>[</kbd> <kbd>]</kbd> nudge timing |
 | <kbd>F</kbd> | immersive view, cover and lyrics only |
+| <kbd>S</kbd> | in the immersive view on a wide screen, lyrics only, with the player in a corner |
 | <kbd>M</kbd> | mini player |
 
 </details>
