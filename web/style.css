@@ -460,6 +460,11 @@ img.lb { transform: scale(1.34); }
 .scope dt { color: var(--fg-3); }
 .scope dd { margin: 0; color: rgba(255, 255, 255, .82); }
 .fine { margin: 28px 0 0; font-size: 13px; line-height: 1.7; color: var(--fg-3); }
+/* the other way in, below Google's: a NetEase likes link */
+.w-163 { margin: 48px 0 0; padding: 28px 0 0; border-top: 1px solid var(--line); }
+.w-163 h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.w-163 > p:not(.fine):not(.mk-err) { margin: 8px 0 16px; font-size: 14px; line-height: 1.65; color: var(--fg-2); text-wrap: pretty; }
+.w-163 .fine { margin-top: 14px; }
 
 /* ---------- your ears ---------- */
 .ear-wrap { container-type: inline-size; height: 100%; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .12) transparent; }
@@ -586,6 +591,10 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 /* on a phone the link gets the whole width; a pasted link is long and the placeholder has to read in English too */
 @container (max-width: 440px) { .mk-row { flex-direction: column; } .mk-row input { flex: none; } .mk-row .btn { width: 100%; } }
 .g-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.g-follow .g-acts .btn { height: 44px; border-radius: 12px; }
+.g-follow h2 small, .g-follow .fine, .g-follow .mk-alt { max-width: 620px; }
+.g-follow .fine { margin-top: 16px; }
+.g-warn { margin: 0 0 14px; font-size: 13px; line-height: 1.6; color: var(--fg-2); }
 .g-acts .tb { height: 36px; padding: 0 12px 0 10px; color: var(--fg); background: rgba(255, 255, 255, .08); }
 .g-acts .tb:hover { background: rgba(255, 255, 255, .13); }
 
@@ -945,6 +954,9 @@ a.m-acct:hover { background: var(--hover); }
   .maker { margin: 0 0 28px; padding: 18px 16px 16px; border-radius: 16px; }
   .maker h2 { font-size: 18px; }
   .welcome { padding: 32px 16px 120px; }
+  .w-163 .mk-row { flex-direction: column; }
+  .w-163 .mk-row input { flex: none; }
+  .w-163 .mk-row .btn { width: 100%; }
   .welcome h1 { font-size: 26px; }
   .scope { grid-template-columns: 1fr; }
   .scope dd { border-top: 0; padding-top: 0; }

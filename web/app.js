@@ -422,7 +422,7 @@ function prepHTML() {
     const j = S.jobs?.setup, step = Math.max(1, j?.step || (me.status === 'building' ? 2 : 1));
     return `<div class="prep"><b>${t('正在准备你的电台 · {n}/3', { n: step })}</b><p>${esc(STEPS()[step - 1])}${t('。')}${step === 1 ? t('要几分钟，可以先听着，好了会告诉你。') : t('大约一刻钟，可以先听着，好了会告诉你。')}</p></div>`;
   }
-  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${t('你在 YouTube 只点过 {n} 首歌的喜欢，至少要 20 首才分得出你的几种口味。先听「先听着」；在 YouTube Music 里多点几首喜欢，攒够了再读一次。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('攒够了，重新读取')}</button></div>`;
+  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${me.netease ? t('你在网易云喜欢的歌里，YouTube Music 上只找得到 {n} 首，至少要 20 首才分得出你的几种口味。先听「先听着」；在网易云多点几首喜欢，攒够了再读一次。', { n: me.last_sync?.songs ?? 0 }) : t('你在 YouTube 只点过 {n} 首歌的喜欢，至少要 20 首才分得出你的几种口味。先听「先听着」；在 YouTube Music 里多点几首喜欢，攒够了再读一次。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('攒够了，重新读取')}</button></div>`;
   if (me.status === 'error' && me.setup_issue === 'nochannel') return `<div class="prep"><b>${t('这个 Google 账号还没有 YouTube 频道')}</b><p>${t('没有频道，YouTube 不让别的应用读你点过的喜欢。建一个频道只要一分钟，不用发视频；建好回来点「再试一次」。')}</p><div class="prep-acts"><a class="tb" href="https://www.youtube.com/create_channel" target="_blank" rel="noopener">${t('去建频道')}</a><button class="tb" data-k="setup">${t('再试一次')}</button></div></div>`;
   if (me.status === 'error') return `<div class="prep"><b>${t('准备电台时出了问题')}</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">${t('再试一次')}</button></div>`;
   return '';
@@ -1754,6 +1754,11 @@ function welcomeHTML() {
     </dl>
     <p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p>
     <p class="fine">${t('你的喜欢和反馈存在{owner}的服务器上，随时可以在设置里断开并全部删除。', { owner: esc(owner) })}</p>
+    <form class="w-163" id="neForm" autocomplete="off"><h2>${t('不用 YouTube Music？')}</h2>
+      <p>${t('用网易云的「我喜欢的音乐」也行：在网易云打开它，点分享，复制链接贴进来。电台照样在 YouTube 上播放。')}</p>
+      <div class="mk-row"><input name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false" placeholder="${t('粘贴网易云的歌单或主页链接')}" aria-label="${t('网易云的歌单或主页链接')}"><button class="btn" type="submit">${t('从这份歌单开始')}</button></div>
+      <p class="mk-err" role="alert"></p>
+      <p class="fine">${t('知音会读这份歌单和公开的听歌排行，之后每 6 小时重读一次；歌名、歌手、喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。')}</p></form>
   </div>`;
 }
 
@@ -1933,7 +1938,10 @@ function accountHTML() {
   if (!me) return '';
   const g = me.google, sy = me.sync, ls = me.last_sync;
   const rows = [];
-  if (!g.configured) {
+  if (me.netease) {
+    const ne = me.netease, busy = S.jobs?.sync?.running;
+    rows.push(`<li><span>${t('网易云音乐「我喜欢」')}<small>${t('{n} 首喜欢', { n: ne.n ?? ls?.videos ?? 0 })}${ne.unmatched ? ` · ${t('其中 {n} 首在 YouTube Music 上没找到：不在电台里放，也不会再推荐给你', { n: ne.unmatched })}` : ''}${me.synced ? ` · ${t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small><small>${t('每 6 小时重读一次，在网易云新点的喜欢会自动进来。')}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
+  } else if (!g.configured) {
     rows.push(`<li><span>YouTube Music<small>${t('连接 YouTube Music 需要先在服务器上配置 Google 登录。')}</small></span><span></span></li>`);
   } else if (g.error === 'revoked') {
     rows.push(`<li><span>YouTube Music<small>${t('连接失效了：可能在 Google 账号里移除了授权。重新连接一下。')}</small></span><a class="tb" href="/auth/google/start">${t('重新连接')}</a></li>`);
@@ -1956,7 +1964,7 @@ function accountHTML() {
     rows.push(`<li><span>${t('退出登录')}<small>${t('只退出这台设备。')}</small></span><button class="tb" data-k="logout">${t('退出')}</button></li>`);
     if (!me.owner) rows.push(`<li><span>${t('断开并删除我的数据')}<small>${t('撤销 Google 授权，删掉你的喜欢、电台和反馈。')}</small></span><button class="tb danger" data-k="delete">${t('删除')}</button></li>`);
   }
-  return `<section class="sh-sec"><h3>${t('账号')}</h3><ul class="plain acct">${rows.join('')}</ul>${g.configured && !g.connected ? `<p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p>` : ''}</section>${me.owner && me.auth ? friendsHTML() : ''}`;
+  return `<section class="sh-sec"><h3>${t('账号')}</h3><ul class="plain acct">${rows.join('')}</ul>${g.configured && !g.connected && !me.netease ? `<p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p>` : ''}</section>${me.owner && me.auth ? friendsHTML() : ''}`;
 }
 
 function linkHTML(url) {
@@ -2646,10 +2654,34 @@ function makerHTML() {
 }
 
 function guestNextHTML() {
+  const follow = followHTML();
   return `<section class="sec g-next"><h2>${t('发给朋友，看谁更大众')}<small>${t('朋友点开你的卡，就能锐评他自己的。')}</small></h2>
     <div class="g-acts"><button class="btn" data-k="share">${I.share}<span>${t('分享这张卡')}</span></button>
       <button class="tb" data-k="gnew">${I.swap}<span>${t('换一份歌单')}</span></button>
-      <button class="tb" data-k="join">${I.go}<span>${t('用 YouTube Music 每周听新歌')}</span></button></div></section>`;
+      ${follow ? '' : `<button class="tb" data-k="join">${I.go}<span>${t('用 YouTube Music 每周听新歌')}</span></button>`}</div></section>${follow}`;
+}
+
+// The card's songs as the start of weekly stations: Google only says who they are, the likes stay NetEase's.
+function followHTML() {
+  const j = S.me?.join;
+  if (!GUEST?.link || !j || j === 'invite' || !S.me.google?.configured) return '';
+  const full = j === 'full';
+  return `<section class="sec g-next g-follow"><h2>${t('按这些歌，每周给你挑新歌')}<small>${full ? t('名额暂时满了。先用 Google 登记，空出位置之后再来，就从这份歌单直接开始。') : t('几分钟后出第一批电台：每首都是你没听过的，写着为什么挑它，在 YouTube 上播放。Google 只用来确认是你，不读你的 YouTube。')}</small></h2>
+    ${Player.down ? `<p class="g-warn">${t('你这里现在连不上 YouTube，电台要能打开 YouTube 才放得出来。')}</p>` : ''}
+    <div class="g-acts"><button class="btn" data-k="follow">${G_LOGO}<span>${full ? t('用 Google 登记') : t('用 Google 继续')}</span></button></div>
+    <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="join">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每周还有几组新歌。')}</p>
+    <p class="fine">${t('知音会读这份歌单和公开的听歌排行，之后每 6 小时重读一次；歌名、歌手、喜欢时间会发给 Anthropic（Claude）来挑歌。随时可以在设置里全部删除。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p></section>`;
+}
+
+async function follow(btn) {
+  btn.disabled = true;
+  try {
+    const r = await api('/api/card/follow', { link: GUEST.link });
+    location.href = r.go;
+  } catch (e) {
+    toast(e.message);
+    btn.disabled = false;
+  }
 }
 
 function paintMaker() {
@@ -2720,7 +2752,7 @@ function listenedHTML() {
   const shown = lovesAll ? loves : loves.slice(0, LOVES_SHOWN);
   const head = loves.length
     ? `<h2>${t('常听，但没点喜欢')}<small>${t('从你的播放和歌单里读出来的，已经算进你的口味。点 ♥ 收进喜欢；不是的，点「不算」。')}</small></h2>`
-    : `<h2>${t('从播放里读口味')}<small>${t('没点喜欢、却一直在听的歌，会列在这里，也算进你的口味。在知音里听得越多越准；导入 YouTube Music 的播放记录，马上就有。')}</small></h2>`;
+    : `<h2>${t('从播放里读口味')}<small>${S.me?.netease ? t('没点喜欢、却一直在听的歌，会列在这里，也算进你的口味。在知音里听得越多越准。') : t('没点喜欢、却一直在听的歌，会列在这里，也算进你的口味。在知音里听得越多越准；导入 YouTube Music 的播放记录，马上就有。')}</small></h2>`;
   return `<section class="sec" id="listened">${head}
     ${loves.length ? `<div class="lv-list">${shown.map((r, i) => loveRow(r, i)).join('')}</div>
       ${loves.length > LOVES_SHOWN ? `<button class="tb lv-more" data-k="lovesmore">${lovesAll ? t('收起') : t('再看 {n} 首', { n: loves.length - LOVES_SHOWN })}</button>` : ''}` : ''}
@@ -2739,7 +2771,7 @@ function loveRow(r, i) {
 
 const monthOf = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString(LANG, { year: 'numeric', month: 'short' }) : '');
 function historyHTML(h) {
-  if (SAMPLE()) return '';
+  if (SAMPLE() || S.me?.netease) return '';
   const pick = `<label class="tb">${h ? t('重新导入') : t('选择文件')}<input type="file" data-hist accept=".zip,.json,.html,application/zip,application/json,text/html" hidden></label>`;
   const busy = histBusy || (S.jobs?.history?.running ? t('正在从播放记录里找你常听的歌') : '');
   if (busy) return `<div class="hist"><div><b>${t('YouTube Music 播放记录')}</b><p class="busy">${esc(busy)}</p></div></div>`;
@@ -3539,6 +3571,7 @@ async function act(k, btn) {
   else if (k === 'replay') replay();
   else if (k === 'grelabel' && GUEST) { btn.disabled = true; await makeCard(GUEST.link, true); }
   else if (k === 'gnew') leaveGuest();
+  else if (k === 'follow' && GUEST) follow(btn);
   else if (k === 'tomaker') { $('#join').close(); toMaker(); }
   else if (k === 'lovesmore') { lovesAll = !lovesAll; renderEar(); }
   else if (k === 'histdel') {
@@ -3677,6 +3710,23 @@ document.addEventListener('submit', async (e) => {
     const link = e.target.link.value.trim();
     if (!link) e.target.link.focus();
     else if (!MK.busy) makeCard(link);
+    return;
+  }
+  if (e.target.id === 'neForm') {
+    e.preventDefault();
+    const f = e.target, link = f.link.value.trim(), b = f.querySelector('button'), err = f.querySelector('.mk-err');
+    if (!link) { f.link.focus(); return; }
+    b.disabled = true;
+    err.textContent = '';
+    try {
+      const r = await api('/api/netease', { link });
+      S.jobs = r.jobs;
+      await reload();
+      poll();
+    } catch (x) {
+      err.textContent = x.message;
+      b.disabled = false;
+    }
     return;
   }
   if (e.target.id !== 'invite') return;

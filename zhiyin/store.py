@@ -170,6 +170,8 @@ def _migrate(con: sqlite3.Connection) -> None:
     for c in ("in_tok", "out_tok", "cw_tok", "cr_tok"):
         if c not in usage_cols:
             _add_column(con, "usage", f"{c} integer not null default 0")
+    if "src" not in {r[1] for r in con.execute("pragma table_info(waitlist)")}:   # the NetEase likes they joined from
+        _add_column(con, "waitlist", "src text")
     if "mine" not in {r[1] for r in con.execute("pragma table_info(users)")}:
         con.execute("alter table users add column mine integer not null default 0")
     for t in ("feedback", "shown", "plays"):

@@ -1,6 +1,8 @@
 import datetime as dt
+import re
+import unicodedata
 
-from . import i18n, store, ytm
+from . import i18n, netease, store, ytm
 from .text import display_title, dur_s, fold, song_key
 
 MV = {"A": "ATV", "O": "OMV", "U": "UGC", "S": "OFFICIAL_SOURCE_MUSIC"}
@@ -160,6 +162,123 @@ def sync_from_google(log=print, glimpsed=None) -> dict:
     store.GLIMPSE.unlink(missing_ok=True)   # only for drawing the record before the library existed; not kept
     return {"videos": len(items), "added": len(added), "removed": len(removed),
             "songs": sum(1 for t in recs if not t["long"]), "first": first}
+
+
+_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
+_HAN_NAME = re.compile(r"[\u3400-\u9fff]{2,4}")
+
+
+def _bare(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", s or "") if not unicodedata.combining(c))
+
+
+def _pinyin(names: list[str]) -> list[str]:
+    """A Chinese name the way YouTube Music often spells it: pinyin, family name first or last (宋冬野 Song Dongye,
+    李荣浩 Ronghao Li)."""
+    from pypinyin import lazy_pinyin
+    out = []
+    for n in names:
+        if _HAN_NAME.fullmatch(n):
+            p = lazy_pinyin(n)
+            out += [" ".join(p), " ".join(p[1:] + p[:1])]
+    return out
+
+
+def match_netease(t: dict) -> dict | None:
+    """The YouTube Music song for a NetEase like: the same title and length, by the same artist. YouTube Music often
+    writes a Chinese or Japanese artist's name in Latin letters (陈奕迅 / Eason Chan, 宋冬野 / Song Dongye), so a name
+    in the other script is checked against its pinyin and the other names NetEase knows them by; a different name in
+    the same script is someone's cover."""
+    from .lyrics import DUR_TOL, VERSION, _artist_sim, _sim
+    names = [a["name"] for a in t["artists"]]
+    alias = None
+    for h in ytm.search(f"{names[0] if names else ''} {t['title']}", "songs", 6):
+        if t["dur"] and h.get("dur") and abs(h["dur"] - t["dur"]) > DUR_TOL:
+            continue
+        if VERSION.search(h["title"]) and not VERSION.search(t["title"]):
+            continue
+        cand = ", ".join(a["name"] for a in h["artists"])
+        # "默 - Mo", "Sofia" for "Sofía": YouTube Music glosses titles and drops accents
+        if not cand or max(_sim(t["title"], h["title"]),
+                           _sim(_bare(t["title"]), _bare(display_title(h["title"], h["artists"])))) < 0.9:
+            continue
+        if _artist_sim(names, cand) >= 0.6:
+            return h
+        if bool(_CJK.search(cand)) == bool(_CJK.search(" ".join(names))):
+            continue
+        if _artist_sim(_pinyin(names), cand) >= 0.9:
+            return h
+        if alias is None:
+            alias = [x for aid in t.get("ne_ar", [])[:2] for x in netease.aliases(aid)]
+        if alias and _artist_sim(alias, cand) >= 0.6:
+            return h
+    return None
+
+
+def sync_from_netease(link: str, log=print, glimpsed=None, got: dict | None = None) -> dict:
+    """The listener's NetEase likes, as YouTube Music songs: the stations are built and played from YouTube's
+    catalogue. A like with no match there is kept aside (`unmatched`) so it is never recommended back to them.
+    Ranks never move, as in sync_from_google; a song they unliked on NetEase leaves."""
+    lib = store.read_json(store.LIBRARY) or {}
+    recs = lib.get("tracks", [])
+    first = not recs
+    got = got or netease.likes(link)
+    ne_tracks = got["tracks"]
+    if first:
+        store.write_json(store.GLIMPSE, {"at": store.now(), "songs": [
+            {"vid": t["vid"], "title": t["title"], "artist": t["artists"][0]["name"] if t["artists"] else "",
+             "at": t["liked_est"] or "", "dur": t["dur"], "ne": t["ne"], "ne_ar": t["ne_ar"]} for t in ne_tracks]})
+        if glimpsed:
+            glimpsed()
+    have = {t["ne"] for t in recs if t.get("ne")}
+    todo = [t for t in ne_tracks if t["ne"] not in have]
+    log(i18n.tr("在 YouTube Music 上找 {n} 首歌", n=len(todo)))
+    done = [0]
+
+    def find(t):
+        h = match_netease(t)
+        # kept aside under every name of its artist, so YouTube Music's spelling of it is recognised too
+        aka = [] if h else [x for aid in t["ne_ar"][:1] for x in netease.aliases(aid)]
+        done[0] += 1
+        if done[0] % 20 == 0:
+            log(i18n.tr("整理歌曲 {d} / {n}", d=done[0], n=len(todo)))
+        return h, aka
+    with store.Pool(6) as ex:
+        found = list(ex.map(find, todo))
+    have_ids = {t[k] for t in recs for k in ("vid", "mv", "ll") if t.get(k)}
+    added, unmatched = [], []
+    for t, (h, aka) in zip(todo, found):
+        if not h:
+            unmatched.append({"ne": t["ne"], "title": t["title"], "artists": [a["name"] for a in t["artists"]] + aka,
+                              "liked_est": t["liked_est"]})
+            continue
+        if h["vid"] in have_ids:
+            continue   # a second NetEase entry of the same recording (a re-release, a duplicate upload)
+        have_ids.add(h["vid"])
+        r = _record(0, h["vid"], h["type"] or "ATV", h["title"], h["artists"], h.get("album"), h.get("dur") or t["dur"], "163")
+        added.append({**r, "liked_est": t["liked_est"], "ne": t["ne"], "ne_title": t["title"],
+                      "ne_artists": [a["name"] for a in t["artists"]]})
+    base = min((t["rank"] for t in recs), default=len(added))
+    for j, r in enumerate(added):  # added is newest first
+        r["rank"] = base - len(added) + j
+    now_ids = {t["ne"] for t in ne_tracks}
+    removed = [t for t in recs if t.get("ne") and t["ne"] not in now_ids]
+    gone = {id(t) for t in removed}
+    recs = added + [t for t in recs if id(t) not in gone]
+    recs.sort(key=lambda t: t["rank"])
+    scores = netease.ranking(got.get("owner"))
+    for t in recs:
+        t["ne_score"] = scores.get(t.get("ne"))
+    store.write_json(store.LIBRARY, {**lib, "synced": store.now(), "source": "163", "tracks": recs, "unmatched": unmatched,
+                                     "netease": {"key": got["key"], "total": got["total"]}})
+    store.GLIMPSE.unlink(missing_ok=True)
+    return {"videos": got["total"], "added": len(added), "removed": len(removed), "unmatched": len(unmatched),
+            "songs": sum(1 for t in recs if not t["long"]), "first": first, "key": got["key"]}
+
+
+def unmatched() -> list[dict]:
+    """NetEase likes with no YouTube Music match: not in the library, but already theirs."""
+    return (store.read_json(store.LIBRARY) or {}).get("unmatched", [])
 
 
 def save(records: list[dict]) -> None:

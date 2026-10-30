@@ -1,14 +1,18 @@
 """A NetEase Cloud Music (网易云音乐) listener's public likes, read for a record and a name without signing in.
 
 Only what anyone can see on their page is read: the playlist of liked songs (or a public playlist they link), when each
-song went into it, and each song's title, artists, album, cover and release date. Nothing here is written to disk."""
+song went into it, each song's title, artists, album, cover and release date, and their 听歌排行. Nothing about a
+listener is written to disk here; the other names of artists are cached."""
 import json
 import re
 import threading
+import time
 from datetime import datetime
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
+
+from . import store
 
 API = "https://music.163.com"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -126,6 +130,7 @@ def likes(text: str) -> dict:
                 raise Unreadable("link")
             if d.get("code") != 200:
                 raise Unreadable("upstream")
+            owner = (d["playlist"].get("creator") or {}).get("userId") or (n if kind == "user" else None)
             refs = [x for x in d["playlist"].get("trackIds") or [] if x.get("id")]
             refs.sort(key=lambda x: -(x.get("at") or 0))
             total = len(refs)
@@ -146,7 +151,56 @@ def likes(text: str) -> dict:
                        "artists": [{"name": a["name"]} for a in s.get("ar") or [] if a.get("name")],
                        "album": {"name": al["name"]} if al.get("name") else None, "dur": (s.get("dt") or 0) // 1000,
                        "liked_est": _date(x.get("at")), "source": "163", "long": False,
-                       "pic": al.get("picUrl") or "", "year": int(pub[:4]) if pub else 0, "pop": s.get("pop")})
+                       "pic": al.get("picUrl") or "", "year": int(pub[:4]) if pub else 0, "pop": s.get("pop"),
+                       "ne": s["id"], "ne_ar": [a["id"] for a in s.get("ar") or [] if a.get("id")]})
     if len(tracks) < MIN_SONGS:
         raise Unreadable("few", len(tracks))
-    return {"key": f"163:{pid}", "tracks": tracks, "total": total}
+    return {"key": f"163:{pid}", "owner": owner, "tracks": tracks, "total": total}
+
+
+def link_of(key: str) -> str:
+    """The playlist a read came from, as a link `likes` reads again."""
+    return f"https://music.163.com/playlist?id={key.removeprefix('163:')}"
+
+
+def ranking(owner: int | None) -> dict[int, int]:
+    """听歌排行, all time: song id -> score (100 is their most played; the top 100 only). {} if they hide it."""
+    if not owner or not _gate.acquire(timeout=30):
+        return {}
+    try:
+        with _client() as c:
+            d = _get(c, "/api/v1/play/record", uid=owner, type=0)
+    except Unreadable:
+        return {}
+    finally:
+        _gate.release()
+    if d.get("code") != 200:
+        return {}
+    return {x["song"]["id"]: int(x.get("score") or 0) for x in d.get("allData") or [] if (x.get("song") or {}).get("id")}
+
+
+ALIAS_DAYS = 90
+ALIASES = store.CACHE / "ne_artist"
+
+
+def aliases(aid: int) -> list[str]:
+    """Other names NetEase knows an artist by ("Eason Chan" for 陈奕迅), which is often how YouTube Music lists them."""
+    path = ALIASES / f"{int(aid)}.json"
+    if path.exists() and time.time() - path.stat().st_mtime < ALIAS_DAYS * 86400:
+        return json.loads(path.read_text())
+    if not _gate.acquire(timeout=30):
+        return []
+    try:
+        with _client() as c:
+            d = _get(c, "/api/artist/head/info/get", id=aid)
+    except Unreadable:
+        return []
+    finally:
+        _gate.release()
+    if d.get("code") != 200:
+        return []
+    a = (d.get("data") or {}).get("artist") or {}
+    out = [x for x in [*(a.get("alias") or []), *(a.get("transNames") or []), a.get("trans") or ""] if x and isinstance(x, str)]
+    ALIASES.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(out, ensure_ascii=False))
+    return out

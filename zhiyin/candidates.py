@@ -54,9 +54,13 @@ class Known:
         self.refused_songs = defaultdict(set)
         self.artist_likes = Counter()
         self.artist_names = {}
+        from . import i18n, library
         for t in tracks:
             names = {fold(a["name"]) for a in t["artists"]}
             self.songs[song_key(t["title"])] |= names
+            if t.get("ne_title"):   # the same song under its NetEase name, in either Chinese script
+                for v in {t["ne_title"], i18n.convert(t["ne_title"], "zh-Hans", "zh-Hant")}:
+                    self.songs[song_key(v)] |= names | {fold(a) for a in t["ne_artists"]}
             if t["long"]:
                 continue
             for a in t["artists"]:
@@ -64,6 +68,9 @@ class Known:
                 self.artist_likes[k] += 1
                 self.artist_likes[fold(a["name"])] += 1
                 self.artist_names[k] = a["name"]
+        for x in library.unmatched():   # a NetEase like YouTube Music has under another name, or not at all
+            for v in {x["title"], i18n.convert(x["title"], "zh-Hans", "zh-Hant")}:
+                self.songs[song_key(v)] |= {fold(a) for a in x["artists"]}
         self.disliked = {r["vid"] for r in fb if r["action"] in ("dislike", "known", "like")}
         self.blocked_artists = {r["artist_id"] or fold(r["artist"] or "") for r in fb if r["scope"] == "artist"}
         self.blocked_artists |= settings.not_me()[1]   # an artist they said isn't them isn't recommended either

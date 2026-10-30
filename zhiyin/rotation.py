@@ -25,7 +25,8 @@ def _ts(day: str | None) -> float | None:
 
 
 def want(t: dict, played: dict | None, heard: dict | None, saved: bool, now: float) -> float:
-    """Liked (more if lately), picked and heard through here, played on YouTube Music (Takeout), kept in a playlist.
+    """Liked (more if lately), picked and heard through here, played on YouTube Music (Takeout), kept in a playlist,
+    among their 100 most played on NetEase (听歌排行, `ne_score` 0-100).
     The play evidence saturates at signals.LOVE, the point where an unliked song counts as a love."""
     liked = _ts(t.get("liked_est"))
     months = (now - liked) / (30.4 * DAY) if liked else 24
@@ -36,6 +37,8 @@ def want(t: dict, played: dict | None, heard: dict | None, saved: bool, now: flo
         w += 0.4 * min(1.0, max(0.0, heard["w"]) / signals.LOVE)
     if saved:
         w += 0.2
+    if t.get("ne_score") is not None:
+        w += 0.2 + 0.2 * t["ne_score"] / 100
     return min(1.0, w)
 
 
@@ -98,7 +101,7 @@ def songs() -> list[dict]:
         again = bool(liked and now - liked > AGAIN_AGE_D * DAY and (not last_known or now - last_known > AGAIN_QUIET_D * DAY))
         out.append({"vid": v, "title": t["title"], "artists": t["artists"][:3], "album": t.get("album"), "dur": t.get("dur"),
                     "type": t.get("type"), "thumb": (ytm.cached("track", v) or {}).get("thumb"), "at": (t.get("liked_est") or "")[:7] or None, "lanes": assign.get(v, []),
-                    "real": t.get("source") == "google",   # a date YouTube gave; a snapshot's is an estimate
+                    "real": t.get("source") in ("google", "163"),   # a date YouTube or NetEase gave; a snapshot's is an estimate
                     "want": round(w, 2), "due": round(due), "last": round(last_known) or None, "n30": s.get("full30", 0),
                     "again": again})
     return out

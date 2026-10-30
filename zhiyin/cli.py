@@ -150,9 +150,9 @@ def main():
             n = con.execute("update waitlist set admitted=? where lower(email)=lower(?)", (time.time(), a.admit)).rowcount
             con.commit()
             print(f"admitted {a.admit}: they get in on their next 'Join with Google'" if n else f"{a.admit} is not on the waitlist")
-        for r in con.execute("select email, name, ts, lang, admitted from waitlist order by ts"):
+        for r in con.execute("select email, name, ts, lang, admitted, src from waitlist order by ts"):
             print(f"{time.strftime('%m-%d %H:%M', time.localtime(r['ts']))}  {r['email']:32} {r['name'] or '-':16} "
-                  f"{r['lang'] or '-':8} {'admitted' if r['admitted'] else 'waiting'}")
+                  f"{r['lang'] or '-':8} {'NetEase' if r['src'] else 'YouTube':8} {'admitted' if r['admitted'] else 'waiting'}")
     elif a.cmd == "about":
         from . import accounts
         if a.text is not None:

@@ -88,6 +88,18 @@ titles and artists of its newest 600 songs go to Anthropic for a name, billed to
 `card_names`, keyed by a hash of the playlist id and language, so the same list is named once a day (three times if
 they ask for another). How many records an address made in the last ten minutes is counted in memory only.
 
+Someone who goes on from such a record to weekly stations ("New songs every week, picked from these",
+`/api/card/follow`) signs in with Google for who they are only (openid, email, profile; no YouTube scope). The link
+waits for that in a signed cookie, `zy_n`, for at most 15 minutes. Their account then keeps the playlist's address in
+its settings (`netease`), and reads the public likes and 听歌排行 on the same clock as YouTube likes: every 6 hours
+while they listen, at least every 25 days while they are away (`library.sync_from_netease`). Each like is looked up
+on YouTube Music by artist and title (`library.match_netease`); a match is kept as a library record with its NetEase
+song id and like date, and a like with no match keeps only its title, artists and date (`unmatched`), so it is never
+recommended back. Of the ranking only each song's score is kept (`ne_score`), as a sign of a favourite. Everything
+downstream is the same as for a YouTube library, and the 30-day rule below applies to it too: a playlist that can't
+be read for 30 days (made private, deleted) takes the library made from it, and the link, with it. With every seat
+taken, the waitlist row keeps the link as well (`src`), and admitting them starts from it.
+
 A card shared by link (`/c/<id>`) is the only thing kept: the 1080×1440 picture in `data/cards/`, and a row with the
 name, the number of liked songs, the first year, the language, the account if one shared it, a hash of the key that
 takes it down, and how often it was opened. It stays until the browser that made it takes it down, the account that
@@ -131,7 +143,8 @@ says so.
 | Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
-| NetEase Cloud Music | the playlist or profile id someone pasted to make a record without signing in | read that public playlist |
+| NetEase Cloud Music | the playlist or profile id someone pasted to make a record without signing in, or to start stations from; the ids of the artists in it | read that public playlist and 听歌排行; other names of an artist (Eason Chan for 陈奕迅) to find its songs on YouTube Music |
+| YouTube Music (unauthenticated) | the artist and title of each NetEase like | find the same song to play |
 | The YouTube embedded player, in your browser | the video being played | playback, under YouTube's own terms |
 
 Your Google token is only used for your own account. It is never sent anywhere but Google.

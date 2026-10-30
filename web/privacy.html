@@ -31,7 +31,7 @@
     <li>如果你导入 YouTube Music 的播放记录：文件只在你的浏览器里读，存下的只有放过两次以上的歌：视频 id、歌名、歌手、次数、天数、第一次和最近一次的日期，以及按远近加权的天数，随时可以在「你的耳朵」里删掉；</li>
     <li>你的 Google 账号 id、邮箱、名字和访问凭证，凭证在服务器上加密保存；</li>
     <li>每天为你调用了多少次 Claude、大约花了多少钱；</li>
-    <li>名额满时用 Google 登记的人：账号 id、邮箱、名字、语言和登记时间，进来或被移除后就删掉。</li>
+    <li>名额满时用 Google 登记的人：账号 id、邮箱、名字、语言和登记时间，从网易云唱片来的还有那份歌单的地址，进来或被移除后就删掉。</li>
   </ul>
   <p>没有登录时听示例电台，知音不会记下关于你的东西，只放一个 cookie 记住你是从哪个链接来的（保存 30 天），用来数每个链接带来了多少人。知音每天只记人数：多少人来过、加入、做出唱片、分享了卡片，不记是谁。新账号会带着它的来源最多 30 天，也只用来计数。</p>
   <p>这些都存在运营者的服务器上，运营者能看到。每个账号的数据彼此分开，一个账号看不到另一个账号的喜欢和反馈。歌曲的声音特征是所有人共用的，试听音频只在内存里解码，不保存。</p>
@@ -56,6 +56,10 @@
   <h2>不登录做唱片</h2>
   <p>你贴一个网易云音乐的歌单或主页链接，知音会读取那份公开歌单：歌名、歌手、专辑、封面、发行日期，以及每首歌是什么时候加进去的、在网易云的热度。唱片画好就交给你的浏览器，歌单本身不保存。最近的 600 首歌名和歌手，连同数量、年份和热度这几个数，会发给 Anthropic（Claude）起名字、写一句锐评；名字和锐评用歌单 id 的哈希值记 7 天，同一份歌单再来就不用重新写。为了防止滥用，服务器在内存里按 IP 地址数一下每十分钟做了几张，不写进磁盘。</p>
   <p>只有你点「生成链接」，知音才保存这张卡的图片，以及卡上的名字、锐评、大众度、喜欢的数量和起始年份。拿到链接的任何人都能看到它；知音只记它被打开了几次，不记是谁。在做卡的浏览器里可以随时收回，图片和记录立刻删除；登录后分享的卡，删除账号时也一起删掉。</p>
+
+
+  <h2 id="netease">从网易云歌单开始电台</h2>
+  <p>在唱片下面点「按这些歌，每周给你挑新歌」时，Google 只用来确认是你（账号 id、邮箱和名字），不请求任何 YouTube 权限。知音保存这份网易云歌单的地址，之后每 6 小时读一次公开的「我喜欢的音乐」和听歌排行（只用排行里每首歌的分数，认出你最常听的歌）。每首歌按歌名、歌手和时长在 YouTube Music 上找同一首，所以 YouTube Music 会收到歌手和歌名；找到的存成你的喜欢（歌名、歌手、专辑、时长、喜欢的日期和网易云的歌曲 id），找不到的只存歌名、歌手和日期，用来不再推荐给你。之后和其他账号一样：歌名、歌手和喜欢的月份发给 Anthropic（Claude）来生成电台和推荐理由，歌在页面里的 YouTube 播放器播放。如果 30 天里一直读不到这份歌单（比如改成了仅自己可见），由它做出的音乐库、唱片和电台会删掉，账号保留。删除账号时立即全部删除。</p>
 
   <h2>删除</h2>
   <p>在设置里点「断开并删除我的数据」，知音会撤销 Google 授权，删掉你的喜欢、电台、反馈、播放和导入的播放记录。你也可以随时在 <a href="https://myaccount.google.com/permissions">Google 账号的第三方访问</a>里撤销知音的权限；撤销后知音读不到新的喜欢，从上次读取算起 30 天内会删掉从 YouTube 读来的一切。</p>
@@ -85,7 +89,7 @@
     <li>如果你匯入 YouTube Music 的播放記錄：檔案只在你的瀏覽器裡讀，存下的只有放過兩次以上的歌：影片 ID、歌名、歌手、次數、天數、第一次和最近一次的日期，以及按遠近加權的天數，隨時可以在「你的耳朵」裡刪掉；</li>
     <li>你的 Google 帳戶 ID、電子郵件、名字和存取憑證，憑證在伺服器上加密保存；</li>
     <li>每天為你呼叫了多少次 Claude、大約花了多少錢；</li>
-    <li>名額滿時用 Google 登記的人：帳戶 ID、電子郵件、名字、語言和登記時間，進來或被移除後就刪掉。</li>
+    <li>名額滿時用 Google 登記的人：帳戶 ID、電子郵件、名字、語言和登記時間，從網易雲唱片來的還有那份歌單的地址，進來或被移除後就刪掉。</li>
   </ul>
   <p>沒有登入時聽範例電台，知音不會記下關於你的東西，只放一個 cookie 記住你是從哪個連結來的（保存 30 天），用來數每個連結帶來了多少人。知音每天只記人數：多少人來過、加入、做出唱片、分享了卡片，不記是誰。新帳戶會帶著它的來源最多 30 天，也只用來計數。</p>
   <p>這些都存在營運者的伺服器上，營運者看得到。每個帳戶的資料彼此分開，一個帳戶看不到另一個帳戶的喜歡和回饋。歌曲的聲音特徵是所有人共用的，試聽音訊只在記憶體裡解碼，不保存。</p>
@@ -110,6 +114,10 @@
   <h2>不登入做唱片</h2>
   <p>你貼一個網易雲音樂的歌單或主頁連結，知音會讀取那份公開歌單：歌名、歌手、專輯、封面、發行日期，以及每首歌是什麼時候加進去的、在網易雲的熱度。唱片畫好就交給你的瀏覽器，歌單本身不保存。最近的 600 首歌名和歌手，連同數量、年份和熱度這幾個數，會傳給 Anthropic（Claude）取名字、寫一句銳評；名字和銳評用歌單 id 的雜湊值記 7 天，同一份歌單再來就不用重新寫。為了防止濫用，伺服器在記憶體裡按 IP 位址數一下每十分鐘做了幾張，不寫進磁碟。</p>
   <p>只有你點「產生連結」，知音才保存這張卡的圖片，以及卡上的名字、銳評、大眾度、喜歡的數量和起始年份。拿到連結的任何人都能看到它；知音只記它被打開了幾次，不記是誰。在做卡的瀏覽器裡可以隨時收回，圖片和記錄立刻刪除；登入後分享的卡，刪除帳號時也一起刪掉。</p>
+
+
+  <h2 id="netease">從網易雲歌單開始電台</h2>
+  <p>在唱片下面點「按這些歌，每週幫你挑新歌」時，Google 只用來確認是你（帳戶 ID、電子郵件和名字），不請求任何 YouTube 權限。知音保存這份網易雲歌單的地址，之後每 6 小時讀一次公開的「我喜歡的音樂」和聽歌排行（只用排行裡每首歌的分數，認出你最常聽的歌）。每首歌按歌名、歌手和時長在 YouTube Music 上找同一首，所以 YouTube Music 會收到歌手和歌名；找到的存成你的喜歡（歌名、歌手、專輯、時長、喜歡的日期和網易雲的歌曲 ID），找不到的只存歌名、歌手和日期，用來不再推薦給你。之後和其他帳戶一樣：歌名、歌手和喜歡的月份傳給 Anthropic（Claude）來產生電台和推薦理由，歌在頁面裡的 YouTube 播放器播放。如果 30 天裡一直讀不到這份歌單（例如改成僅自己可見），由它做出的音樂庫、唱片和電台會刪掉，帳戶保留。刪除帳戶時立即全部刪除。</p>
 
   <h2>刪除</h2>
   <p>在設定裡點「中斷連接並刪除我的資料」，知音會撤銷 Google 授權，刪掉你的喜歡、電台、回饋、播放和匯入的播放記錄。你也可以隨時在 <a href="https://myaccount.google.com/permissions">Google 帳戶的第三方存取權</a>裡撤銷知音的權限；撤銷後知音讀不到新的喜歡，從上次讀取算起 30 天內會刪除從 YouTube 讀來的一切。</p>
@@ -139,7 +147,7 @@
     <li>If you import your YouTube Music history: the file is read in your browser, and only the songs played more than once are kept, as video ID, title, artist, number of plays, number of days, the first and latest date, and a count of days weighted toward recent ones. You can delete them on Your Ear at any time;</li>
     <li>Your Google account ID, email address, name, access and refresh tokens, with both token types encrypted on the server;</li>
     <li>How many times Claude was called for you each day, and roughly what it cost;</li>
-    <li>For people who signed up with Google while there was no free place: their account ID, email address, name, language and when they signed up, deleted once they are let in or removed.</li>
+    <li>For people who signed up with Google while there was no free place: their account ID, email address, name, language and when they signed up, and for those who came from a NetEase record, that playlist's address; deleted once they are let in or removed.</li>
   </ul>
   <p>Listening to the sample stations without signing in records nothing about you, except a cookie that remembers which link brought you (kept for 30 days), used to count how many people each link brings. Each day Zhiyin keeps only counts: how many people came, joined, got their record and shared a card, never who. A new account carries the link it came from for at most 30 days, and only for these counts.</p>
   <p>All of this sits on the operator's server, and the operator can see it. Each account's data is kept apart: one account can't see another's likes or feedback. The sound features of songs are shared by everyone; preview audio is decoded in memory and never saved.</p>
@@ -164,6 +172,10 @@
   <h2>A record without signing in</h2>
   <p>When you paste a NetEase Cloud Music playlist or profile link, Zhiyin reads that public playlist: titles, artists, albums, covers, release dates, when each song was added, and how popular it is on NetEase. The record is handed to your browser once it's drawn; the playlist itself is not kept. The titles and artists of the newest 600 songs, with a few numbers (how many, which years, how popular), go to Anthropic (Claude) to name the taste and write a one-line roast; both are kept for 7 days under a hash of the playlist's ID, so the same playlist isn't written up again. To stop abuse, the server counts in memory how many records each IP address made in the last ten minutes; this is never written to disk.</p>
   <p>Only when you choose "Make a link" does Zhiyin keep the card's picture, with the name, the roast, the mainstream score, the number of liked songs and the first year shown on it. Anyone with the link can see it; Zhiyin counts how often it's opened, never by whom. The browser that made it can take it down at any time, and the picture and its record are deleted at once; cards shared while signed in are also deleted with the account.</p>
+
+
+  <h2 id="netease">Stations from your NetEase likes</h2>
+  <p>When you choose "New songs every week, picked from these" under a record, Google is used only to confirm it's you (account ID, email address and name); no YouTube permission is asked for. Zhiyin keeps the address of that NetEase playlist and reads your public "My Liked Music" and listening ranking again every 6 hours (from the ranking it uses only each song's score, to tell which songs you play most). Each song is looked up on YouTube Music by title, artist and length, so YouTube Music gets the artist and title; the ones found are kept as your likes (title, artist, album, length, the date you liked it and its NetEase song ID), and the ones not found keep only title, artist and date, so they're never recommended back to you. From there it works like any other account: titles, artists and the month you liked them go to Anthropic (Claude) to make your stations and reasons, and songs play in the YouTube player on the page. If the playlist can't be read for 30 days (say you made it private), the library, record and stations made from it are deleted and the account stays. Deleting the account deletes everything at once.</p>
 
   <h2>Deleting</h2>
   <p>In Settings, choose "Disconnect and delete my data": Zhiyin revokes Google access and deletes your likes, stations, feedback, plays and any imported history. You can also remove Zhiyin's access at any time under <a href="https://myaccount.google.com/permissions">third-party access in your Google Account</a>; Zhiyin then can't read your likes any more, and deletes everything read from YouTube within 30 days of the last read.</p>

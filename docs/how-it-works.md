@@ -22,6 +22,14 @@ song with its language, energy and the moments it suits. Then it groups the libr
 the kinds of music you actually listen to. For one listener that might be Cantonese R&B, Japanese city-pop groove,
 vocal jazz and K-pop girl groups.
 
+Your likes can also come from NetEase Cloud Music: the public "My Liked Music" behind a link you paste. Each one is
+found on YouTube Music by artist, title and length (`library.match_netease`). YouTube Music often spells a Chinese or
+Japanese artist in Latin letters, so a name in the other script is checked against the other names NetEase knows
+them by (陈奕迅 is also Eason Chan), while a different name in the same script is taken for someone's cover and
+refused. What is found becomes your library with the date you really liked it; what isn't stays out of the stations
+but is still yours (section 3). NetEase's 听歌排行 marks your favourites, which then come round more often between the
+new songs.
+
 Likes you mark as not your taste (a song a child asked for, a phase, a joke) stay liked but are left out of all
 of this: they don't seed stations, define them, or speak for you in the portrait. You can leave out a whole artist
 the same way.
@@ -69,7 +77,8 @@ For each station, Zhiyin collects about 600 candidates:
 
 ## 3. What you already know is filtered out
 
-- songs you've liked or refused, here or with a thumbs-down on YouTube, and songs in playlists you made;
+- songs you've liked or refused, here or with a thumbs-down on YouTube, and songs in playlists you made; NetEase likes
+  count under their NetEase title too, in either Chinese script, including those YouTube Music doesn't have;
 - songs you've heard, for good: anything you played to the end, skipped, or left after the first half minute,
   under any of its videos. Pressing play alone doesn't count. Songs played twice or more in an imported YouTube Music
   history count as heard, and so does a song YouTube won't play outside its own site;

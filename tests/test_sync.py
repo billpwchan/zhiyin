@@ -600,3 +600,132 @@ def test_only_the_owner_sees_who_else_listens(monkeypatch):
     owner = TestClient(server.app)
     owner.cookies.set(accounts.COOKIE, accounts.new_session(store.OWNER))
     assert {u["name"] for u in owner.get("/api/users").json()["users"]} >= {"Ming"}
+
+
+def _ne(i, title, artist, dur=200, ar=None):
+    return {"vid": f"n{i}", "ne": i, "ne_ar": ar or [i * 10], "title": title, "artists": [{"name": artist}], "album": None,
+            "dur": dur, "liked_est": f"2026-0{1 + i % 9}-01", "source": "163", "long": False, "pic": "", "year": 0, "pop": 50}
+
+
+def _hit(vid, title, artist, dur=200, kind="ATV"):
+    return {"vid": vid, "title": title, "artists": [{"name": artist, "id": f"UC{vid}"}], "album": None, "type": kind, "dur": dur}
+
+
+def test_a_netease_like_is_found_on_youtube_music_by_title_length_and_artist_in_either_script(monkeypatch):
+    from zhiyin import library, netease, ytm
+    asked = []
+    monkeypatch.setattr(netease, "aliases", lambda aid: asked.append(aid) or (["Eason Chan"] if aid == 10 else []))
+    hits = {
+        "陈奕迅 爱情转移": [_hit("cover0000a", "爱情转移", "陈影"),                 # the same script, another singer: a cover
+                        _hit("karaoke00a", "愛情轉移 (Karaoke)", "Eason Chan"),
+                        _hit("easonchan1", "愛情轉移", "Eason Chan")],            # NetEase knows him by this name too
+        "许巍 曾经的你": [_hit("xuwei00000", "曾经的你 - The Way You Are", "Xu Wei", dur=230)],   # half a minute off
+        "Charlie Puth LA Girls": [_hit("davidtort1", "LA Girls", "David Tort")],
+        "五月天 拥抱": [_hit("mayday0001", "擁抱", "五月天", dur=203)],
+        "宋冬野 斑马，斑马": [_hit("songdongye", "斑马，斑马", "Song Dongye")],     # pinyin, and no NetEase alias
+        "那英 默": [_hit("nayingmo01", "默 - Mo", "Na Ying")],
+        "Álvaro Soler Sofía": [_hit("alvarosofi", "Sofia", "Alvaro Soler")],
+        "宋冬野 安和桥": [_hit("songdongy2", "安和桥", "Sun Yanzi")],
+    }
+    monkeypatch.setattr(ytm, "search", lambda q, kind="songs", limit=10: hits.get(q, []))
+    assert library.match_netease(_ne(1, "爱情转移", "陈奕迅"))["vid"] == "easonchan1" and asked == [10]
+    assert library.match_netease(_ne(2, "曾经的你", "许巍")) is None
+    assert library.match_netease(_ne(3, "LA Girls", "Charlie Puth")) is None
+    assert library.match_netease(_ne(4, "拥抱", "五月天"))["vid"] == "mayday0001"
+    assert library.match_netease(_ne(5, "斑马，斑马", "宋冬野"))["vid"] == "songdongye"
+    assert library.match_netease(_ne(6, "默", "那英"))["vid"] == "nayingmo01"
+    assert library.match_netease(_ne(7, "Sofía", "Álvaro Soler"))["vid"] == "alvarosofi"
+    assert library.match_netease(_ne(8, "安和桥", "宋冬野")) is None   # another singer's pinyin
+
+
+def test_netease_likes_become_the_library_and_an_unliked_song_leaves(monkeypatch):
+    from zhiyin import accounts, candidates, library, netease
+    uid = accounts.redeem(accounts.invite("Lin"))
+    likes = [_ne(1, "爱情转移", "陈奕迅"), _ne(2, "孤岛", "思敏哥哥"), _ne(3, "拥抱", "五月天")]
+    found = {1: _hit("easonchan1", "愛情轉移", "Eason Chan"), 3: _hit("mayday0001", "擁抱", "五月天")}
+    monkeypatch.setattr(library, "match_netease", lambda t: found.get(t["ne"]))
+    monkeypatch.setattr(netease, "aliases", lambda aid: [])
+    monkeypatch.setattr(netease, "ranking", lambda owner: {3: 100} if owner == 77 else {})
+
+    def got():
+        return {"key": "163:5", "owner": 77, "tracks": list(likes), "total": len(likes)}
+    seen = []
+    with store.as_user(uid):
+        r = library.sync_from_netease("x", log=lambda *a, **k: None, glimpsed=lambda: seen.append(store.read_json(store.GLIMPSE)), got=got())
+        assert r["first"] and r["songs"] == 2 and r["unmatched"] == 1 and len(seen[0]["songs"]) == 3
+        lib = library.load()
+        assert [(t["vid"], t["rank"], t["ne_score"]) for t in lib] == [("easonchan1", 0, None), ("mayday0001", 1, 100)]
+        assert lib[0]["liked_est"] == "2026-02-01" and lib[0]["source"] == "163" and not store.GLIMPSE.exists()
+        known = candidates.Known(lib, {})
+        # the one YouTube Music has under another name is already theirs, in either script
+        assert known.reject({"vid": "other00001", "title": "孤島", "artists": [{"name": "思敏哥哥"}]}) == "same song"
+        assert known.reject({"vid": "other00002", "title": "爱情转移 (Live)", "artists": [{"name": "陈奕迅"}]}) == "same song"
+
+        likes[:] = [_ne(4, "红玫瑰", "陈奕迅"), likes[0], likes[1]]   # one new like; 拥抱 unliked on NetEase
+        found[4] = _hit("easonchan2", "紅玫瑰", "Eason Chan")
+        r = library.sync_from_netease("x", log=lambda *a, **k: None, got=got())
+        assert (r["added"], r["removed"], r["first"]) == (1, 1, False)
+        assert [(t["vid"], t["rank"]) for t in library.load()] == [("easonchan2", -1), ("easonchan1", 0)]
+
+
+def test_a_netease_card_becomes_an_account_with_google_saying_only_who_they_are(monkeypatch):
+    from urllib.parse import parse_qs, urlparse
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, google, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "HOSTED", True)
+    monkeypatch.setattr(llm, "API_KEY", True)
+    monkeypatch.setattr(google, "client", lambda: {"id": "x", "secret": "y"})
+    started = []
+    monkeypatch.setattr(server, "_start", lambda kind, fn: started.append((store.uid(), kind)))
+    monkeypatch.setattr(server, "SEATS", accounts.joined() + 1)
+    link = "分享歌单: https://music.163.com/playlist?id=24381616&userid=1 (来自@网易云音乐)"
+
+    def come(who):
+        monkeypatch.setattr(google, "exchange", lambda code, v: {"id_token": who, "scope": "openid email"})
+        monkeypatch.setattr(google, "claims", lambda tok: {"sub": tok, "email": f"{tok}@example.com", "name": tok.title()})
+        c = TestClient(server.app)
+        assert c.post("/api/card/follow", json={"link": "not a link"}).status_code == 422
+        r = c.post("/api/card/follow", json={"link": link})
+        assert r.json()["go"] == "/auth/google/start?mode=join&src=163" and "zy_n" in r.cookies
+        r = c.get(r.json()["go"], follow_redirects=False)
+        assert "youtube" not in r.headers["location"]      # nothing is asked of their YouTube
+        state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
+        return c.get(f"/auth/google/callback?state={state}&code=x", follow_redirects=False)
+
+    r = come("mei")
+    uid = accounts.by_google("mei")
+    assert r.headers["location"] == "/" and accounts.COOKIE in r.cookies and uid
+    assert accounts.prefs(uid)["netease"] == {"link": link} and started == [(uid, "setup")]
+    assert accounts.get(uid)["email"] == "mei@example.com" and not google.connected(uid)
+    with store.as_user(uid):
+        assert server._netease() == link and server._can_read(accounts.get(uid))
+
+    r = come("kai")                                        # no seat left: waits, and the link waits too
+    assert r.headers["location"] == "/login?e=full" and accounts.by_google("kai") is None
+    con = store.db()
+    assert con.execute("select src from waitlist where sub='kai'").fetchone()["src"] == link
+    con.execute("update waitlist set admitted=1 where sub='kai'")
+    con.commit()
+    r = _join(TestClient(server.app), monkeypatch, "kai", mode="login")   # let in: signing in starts from NetEase
+    uid = accounts.by_google("kai")
+    assert r.headers["location"] == "/" and accounts.prefs(uid)["netease"] == {"link": link} and started[-1] == (uid, "setup")
+
+
+def test_an_account_without_likes_yet_can_start_from_netease_but_not_change_source(monkeypatch):
+    from fastapi import HTTPException
+    from zhiyin import accounts, google, netease
+    uid = accounts.redeem(accounts.invite("Yu"))
+    started = []
+    monkeypatch.setattr(server, "_start", lambda kind, fn: started.append(kind))
+    monkeypatch.setattr(netease, "likes", lambda link: {"key": "163:9", "owner": 1, "tracks": [], "total": 30})
+    with store.as_user(uid):
+        server.netease_use(server.NeteaseReq(link="https://music.163.com/#/user/home?id=1"))
+        assert accounts.prefs(uid)["netease"] == {"link": "https://music.163.com/playlist?id=9"} and started == ["setup"]
+        monkeypatch.setattr(google, "connected", lambda u=None: True)
+        with pytest.raises(HTTPException) as e:
+            server.netease_use(server.NeteaseReq(link="https://music.163.com/playlist?id=9"))
+        assert e.value.status_code == 409
+    monkeypatch.setattr(google, "disconnect", lambda u: None)
+    server._forget_youtube(uid)                            # unreadable for 30 days: the link goes with the likes
+    assert "netease" not in accounts.prefs(uid)

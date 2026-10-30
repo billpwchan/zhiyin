@@ -242,6 +242,10 @@ EN = {
     "没有新的喜欢": "No new likes",
     "改写 {n} 段": ("Rewriting {n} passage", "Rewriting {n} passages"),
     "读取你在 YouTube 点过的喜欢": "Reading what you liked on YouTube",
+    "读取你在网易云喜欢的歌": "Reading the songs you liked on NetEase",
+    "在 YouTube Music 上找 {n} 首歌": ("Finding {n} song on YouTube Music", "Finding {n} songs on YouTube Music"),
+    "这个账号已经在用别的喜欢了": "This account already gets its likes from somewhere else",
+    "现在只能通过朋友的邀请加入": "Right now you can only join through a friend's invite",
     "了解你的口味": "Learning your taste",
     "挑第一批电台": "Picking the first stations",
     "需要重新登录": "Please sign in again",
@@ -342,6 +346,8 @@ HANT = {
     "现在起不了名字，唱片先画好了": "現在取不了名字，唱片先畫好了",
     "{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。": "{n} 首喜歡，{y} 年至今，每一圈是一年。做一張你自己的。",
     "这份歌单只有 {n} 首，至少要 20 首才画得出来": "這份歌單只有 {n} 首，至少要 20 首才畫得出來",
+    "这个账号已经在用别的喜欢了": "這個帳戶已經在用別的喜歡了",
+    "现在只能通过朋友的邀请加入": "現在只能透過朋友的邀請加入",
 }
 
 

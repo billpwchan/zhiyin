@@ -9,7 +9,7 @@ UNKNOWN_LISTENER = "Nothing is known about the listener beyond these likes; infe
 def listener() -> str:
     from . import accounts
     tracks = library.load()
-    dated = tracks and all(t.get("source") == "google" for t in tracks)
+    dated = tracks and all(t.get("source") in ("google", "163") for t in tracks)
     when = ("'Liked around' is the date of the like." if dated else
             "'Liked around' is the estimated month of the like (a lower bound from upload dates).")
     return f"{accounts.prefs().get('about') or UNKNOWN_LISTENER} Lower ranks are more recent likes. {when}"
@@ -281,10 +281,10 @@ def label() -> str:
         rows = [((t.get("liked_est") or "")[:7], t["title"], ", ".join(a["name"] for a in t["artists"][:2])) for t in tracks]
     else:
         rows = [(x["at"][:7], x["title"], x["artist"]) for x in (store.read_json(store.GLIMPSE) or {}).get("songs", [])]
-    from . import settings
+    from . import accounts, settings
     nm = settings.not_me()
     rows = [r for r, t in zip(rows, tracks or [None] * len(rows)) if not (t and settings.is_not_me(t, nm))]
-    return name_taste(rows, i18n.of())
+    return name_taste(rows, i18n.of(), service="NetEase Cloud Music" if accounts.prefs().get("netease") else "YouTube")
 
 
 def sample(rows: list, lines: int) -> list:

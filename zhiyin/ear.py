@@ -114,7 +114,7 @@ def build() -> dict:
         return {"songs": [], "sectors": [], "span": [0, 0], "eras": [], "facts": [], "real_dates": False, "stage": stage,
                 "center": None, "label": None, "built": time.time()}
     nm = settings.not_me()
-    real = any(t.get("source") == "google" for t in tracks)
+    real = any(t.get("source") in ("google", "163") for t in tracks)
     rl = i18n.of()
     if stage != "full":
         ts = dict(zip((t["rank"] for t in tracks), _times(tracks)))

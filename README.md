@@ -75,6 +75,14 @@ tap turns it into a card to share: the name, the disc, and the year by which hal
 The app speaks English, Simplified Chinese and Traditional Chinese, and the editor writes in the one you choose.
 Song titles, artists and lyrics stay in their own language and script.
 
+### If your likes are on NetEase Cloud Music
+
+Paste the link to your "My Liked Music" at [/card](https://zhiyin.billpwchan.art/card) and you get a
+record in ten seconds, without signing in. "New songs every week, picked from these" then makes it your library:
+Google only confirms it's you, each like is found on YouTube Music by artist, title and length (about four in five
+are; the rest still count as songs you know), and the stations play there like everyone else's. Your 听歌排行 tells it
+which old songs are your favourites. Playing needs a network that reaches YouTube.
+
 ## How it picks
 
 <p align="center">

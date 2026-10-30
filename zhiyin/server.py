@@ -276,10 +276,30 @@ def _read_signals(log) -> None:
         traceback.print_exc()
 
 
+def _netease(uid: str | None = None) -> str | None:
+    """The NetEase likes this listener's stations come from instead of YouTube's (a link `netease.likes` reads)."""
+    return (accounts.prefs(uid).get("netease") or {}).get("link")
+
+
+def _can_read(u: dict) -> bool:
+    return bool((u["prefs"].get("netease") or {}).get("link")) or (google.configured() and google.connected(u["id"]))
+
+
+def _read_likes(log, glimpsed=None, got: dict | None = None) -> dict:
+    ne = _netease()
+    if ne:
+        r = library.sync_from_netease(ne, log=log, glimpsed=glimpsed, got=got)
+        # the playlist itself from now on, not the share text or short link it was found through
+        accounts.set_prefs(store.uid(), netease={"link": netease.link_of(r["key"]), "n": r["videos"], "unmatched": r["unmatched"]})
+        return r
+    return library.sync_from_google(log=log, glimpsed=glimpsed) if glimpsed else library.sync_from_google(log=log)
+
+
 def _sync_likes(log):
-    r = library.sync_from_google(log=log)
+    r = _read_likes(log)
     accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)   # the read worked, whatever follows
-    _read_signals(log)
+    if not _netease():
+        _read_signals(log)
     if profile.absorb_new(log=log) and audio.REMOTE:   # also likes a re-read took in while the listener was away
         audio.ensure([t for t in library.load() if not t["long"]], log=log)
     log(i18n.tr("新增 {n} 首", n=r["added"]) if r["added"] else i18n.tr("没有新的喜欢"))
@@ -288,7 +308,7 @@ def _sync_likes(log):
 
 def _auto_sync():
     u = accounts.get()
-    if not (u and u["status"] == "ready" and google.configured() and google.connected()):
+    if not (u and u["status"] == "ready" and _can_read(u)):
         return
     if time.time() - u["prefs"].get("synced", 0) < LIKE_SYNC_H * 3600:
         return
@@ -311,10 +331,12 @@ SYNC_RETRY_H = 6
 
 def _reread_likes(log):
     """YouTube's rules: likes kept from its API are refreshed (or deleted) within 30 days. A listener who has been
-    away gets the list re-read and nothing else; the new likes join their stations when they come back."""
-    r = library.sync_from_google(log=log)
+    away gets the list re-read and nothing else; the new likes join their stations when they come back. NetEase
+    likes are re-read on the same clock."""
+    r = _read_likes(log)
     accounts.set_prefs(store.uid(), synced=time.time(), last_sync=r)
-    _read_signals(log)
+    if not _netease():
+        _read_signals(log)
     return r
 
 
@@ -341,7 +363,8 @@ def _unread_too_long(u: dict) -> bool:
 
 def _forget_youtube(uid: str) -> None:
     """What YouTube returned for this listener couldn't be read again within 30 days (access taken away, the
-    connection dropped, or every read failing): it is deleted. The account stays, and connecting again starts over."""
+    connection dropped, or every read failing): it is deleted. The account stays, and connecting again starts over.
+    A library from NetEase likes that stopped being readable (made private, deleted) goes the same way."""
     print(f"zhiyin: likes of {uid} not re-read in {KEEP_DAYS} days, deleting what was read from YouTube", flush=True)
     google.disconnect(uid)
     for k in FROM_YOUTUBE:
@@ -359,7 +382,7 @@ def _forget_youtube(uid: str) -> None:
     cards.drop(uid)
     accounts.set_status(uid, "new")
     accounts.set_prefs(uid, synced=None, last_sync=None, setup_fails=None, setup_issue=None, google_error=None,
-                       ref=None, counted=None, forgot=time.time())
+                       ref=None, counted=None, netease=None, forgot=time.time())
 
 
 FORGET_GRACE_DAYS = 3   # rollout grace for libraries still inside the 30-day limit
@@ -418,7 +441,7 @@ def _scheduler():
                     if u["status"] in ("importing", "building") and not (j and j["running"]):
                         _start("setup", _setup)   # the server restarted in the middle of a first run
                     elif (u["status"] == "error" and u["prefs"].get("setup_fails", 0) < 3
-                          and google.connected(u["id"]) and not llm.unavailable(u["id"])
+                          and _can_read(u) and not llm.unavailable(u["id"])
                           and (store.is_owners(u["id"]) or not llm.API_KEY
                                or llm.first_run_left(u["id"], (u["prefs"].get("last_sync") or {}).get("songs", 0)) > 0)
                           and not (j and (j["running"] or time.time() - j.get("ended", 0) < 1800))):
@@ -429,7 +452,7 @@ def _scheduler():
                         _auto_sync()
                     elif (u["status"] in ("ready", "thin", "error") and u["prefs"].get("google_error") != "revoked"
                           and time.time() - _last_read(u) > REREAD_DAYS * 86400
-                          and google.configured() and google.connected(u["id"]) and not _sync_waits(u["id"])
+                          and _can_read(u) and not _sync_waits(u["id"])
                           and not (_jobs.get((u["id"], "setup")) or {}).get("running")):
                         _start("sync", _reread_likes)
             except Exception:
@@ -462,30 +485,32 @@ def _want_label():
         pass
 
 
-def _setup(log):
-    """First run for a listener who just connected Google: read likes, learn the lanes, pick the first stations.
-    Their record is drawn from the liked videos as soon as those are read, and named a few seconds later."""
+def _setup(log, got: dict | None = None):
+    """First run for a listener who just connected Google (or gave their NetEase likes; `got` is that list if it
+    was just read): read likes, learn the lanes, pick the first stations. Their record is drawn from the likes as
+    soon as those are read, and named a few seconds later."""
     with llm.first_run():
-        return _first_setup(log)
+        return _first_setup(log, got)
 
 
-def _first_setup(log):
+def _first_setup(log, got: dict | None = None):
     uid = store.uid()
     accounts.set_status(uid, "importing")
     try:
-        log(i18n.tr("读取你在 YouTube 点过的喜欢"), step=1)
+        log(i18n.tr("读取你在网易云喜欢的歌") if _netease() else i18n.tr("读取你在 YouTube 点过的喜欢"), step=1)
 
         def glimpsed():
             _milestone("first_disc")
             _want_label()
-        r = library.sync_from_google(log=log, glimpsed=glimpsed)
+        r = _read_likes(log, glimpsed=glimpsed, got=got)
         accounts.set_prefs(uid, synced=time.time(), last_sync=r)
         llm.first_run_songs(r["songs"])
         if r["songs"] < MIN_LIKES:
             accounts.set_status(uid, "thin")
             _milestone("thin")
             return r
-        _read_signals(log)
+        if not _netease():
+            _read_signals(log)
         if audio.REMOTE:
             audio.ensure([t for t in library.load() if not t["long"]], log=log)
         accounts.set_status(uid, "building")
@@ -619,6 +644,7 @@ def _me() -> dict:
             "sync_likes": u["prefs"].get("sync_likes", True) and (not ok or google.writes_back(u["id"])),
             "writes_back": ok and google.writes_back(u["id"]), "sync": _sync_view(u["id"]),
             "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"), "read": _read_view() if ok else None,
+            "netease": u["prefs"].get("netease"),
             "worker": audio.worker_online() if audio.REMOTE else None,
             "claude": llm.view(u["id"]) if AUTH else None}
 
@@ -922,13 +948,19 @@ def logout(request: Request):
 
 
 @app.get("/auth/google/start")
-def google_start(request: Request, mode: str = "connect", write: int = 0, yt: int = 0,
+def google_start(request: Request, mode: str = "connect", write: int = 0, yt: int = 0, src: str = "",
                  as_: Annotated[str, Query(alias="as", max_length=254)] = ""):
     """mode=login&as=<email> is a bookmark that goes straight back into that listener's account. mode=join is
-    signing up with Google in one step (no invite), asking only to read YouTube; write=1 adds writing likes back."""
+    signing up with Google in one step (no invite), asking only to read YouTube; write=1 adds writing likes back.
+    mode=join&src=163 comes from a NetEase card (/api/card/follow): Google is asked only who they are."""
     if not google.configured():
         raise HTTPException(503, i18n.tr("Google 登录还没配置", i18n.from_request(request)))
     uid = accounts.session_uid(request.cookies.get(accounts.COOKIE)) if AUTH else store.OWNER
+    ne = None
+    if src == "163" and mode == "join" and not uid:
+        ne = (cards.unsign(request.cookies.get("zy_n") or "") or {}).get("link")
+        if not ne:
+            return RedirectResponse("/card", 303)   # the cookie ran out: paste the link again
     join = mode == "join" and AUTH and not uid and _join_state() != "invite"
     if join and not yt:
         store.count("join_start", _ref_cookie(request))
@@ -936,7 +968,7 @@ def google_start(request: Request, mode: str = "connect", write: int = 0, yt: in
         mode = "login"
     # With every seat taken, getting on the waitlist asks Google only who they are: YouTube is asked once there is room.
     register = join and _join_state() == "full" and not yt   # yt=1: let in from the waitlist, or room came up
-    connect = (mode == "connect" or join) and not register
+    connect = (mode == "connect" or join) and not register and not ne
     if connect and not uid and not join:
         return RedirectResponse("/login", 303)
     asked_write = bool(write)
@@ -948,7 +980,7 @@ def google_start(request: Request, mode: str = "connect", write: int = 0, yt: in
     con.execute("delete from kv where k like 'oauth:%' and json_extract(v, '$.t') < ?", (time.time() - 900,))
     con.commit()
     store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "join": join, "register": register, "uid": uid,
-                                    "t": time.time(),
+                                    "t": time.time(), "ne": ne if join else None,
                                     "lang": i18n.from_request(request), "write_on": asked_write})
     named = "" if connect else as_
     hint = named or ((accounts.get(uid) or {}).get("email") if uid else None)
@@ -972,12 +1004,16 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
         return RedirectResponse("/?google=cancelled" if st["connect"] and not st.get("join") else "/login?e=cancelled", 303)
     tok = google.exchange(code, st["v"])
     c = google.claims(tok["id_token"])
+    if st.get("ne"):
+        return _join_netease(request, c, st["ne"], st.get("lang"))
     if st.get("join"):
         st["uid"] = accounts.by_google(c["sub"])
         if not st["uid"]:
-            w = con.execute("select admitted from waitlist where sub=?", (c["sub"],)).fetchone()
+            w = con.execute("select admitted, src from waitlist where sub=?", (c["sub"],)).fetchone()
+            if w and w["admitted"] and w["src"]:   # let in, and they had come from a NetEase card
+                return _join_netease(request, c, w["src"], st.get("lang"))
             if not _seats_left() and not (w and w["admitted"]):
-                con.execute("insert or ignore into waitlist values (?, ?, ?, ?, ?, null)",
+                con.execute("insert or ignore into waitlist(sub, email, name, ts, lang) values (?, ?, ?, ?, ?)",
                             (c["sub"], c.get("email", ""), c.get("name", ""), time.time(), st.get("lang")))
                 con.commit()
                 store.count("join_full", _ref_cookie(request))
@@ -995,8 +1031,10 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     if not st["connect"]:
         uid = accounts.by_google(c["sub"])
         if not uid:
-            w = con.execute("select admitted from waitlist where sub=?", (c["sub"],)).fetchone()
+            w = con.execute("select admitted, src from waitlist where sub=?", (c["sub"],)).fetchone()
             if w and w["admitted"] and _join_state() != "invite":
+                if w["src"]:   # came from a NetEase card: their likes come from there
+                    return _join_netease(request, c, w["src"], st.get("lang"))
                 return RedirectResponse("/auth/google/start?mode=join&yt=1", 303)   # let in from the waitlist: joins now
             return RedirectResponse("/login?e=unknown", 303)
         return _signed_in(RedirectResponse("/", 303), uid, request)
@@ -1027,6 +1065,37 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
             pass
     r = RedirectResponse("/", 303)
     return _signed_in(r, uid, request) if st.get("join") else r
+
+
+def _join_netease(request: Request, c: dict, link: str, lang: str | None) -> Response:
+    """Someone from a NetEase card, back from Google with who they are. A seat makes them an account whose stations
+    come from that link; with none left they wait, and the link waits with them."""
+    con = store.db()
+    ref = _ref_cookie(request)
+    uid = accounts.by_google(c["sub"])
+    if not uid:
+        w = con.execute("select admitted from waitlist where sub=?", (c["sub"],)).fetchone()
+        if not _seats_left() and not (w and w["admitted"]):
+            con.execute("insert into waitlist(sub, email, name, ts, lang, src) values (?, ?, ?, ?, ?, ?) "
+                        "on conflict(sub) do update set src=excluded.src",
+                        (c["sub"], c.get("email", ""), c.get("name", ""), time.time(), lang, link))
+            con.commit()
+            store.count("join_full", ref)
+            r = RedirectResponse("/login?e=full", 303)
+            r.delete_cookie("zy_n")
+            return r
+        uid = accounts.create(c.get("name", ""))
+        accounts.link_google(uid, c["sub"], c.get("email", ""), c.get("name", ""))
+        accounts.set_prefs(uid, joined=True, lang=lang, sync_likes=False, ref=ref)
+        store.count("join_ok", ref)
+        con.execute("delete from waitlist where sub=?", (c["sub"],))
+        con.commit()
+    u = accounts.get(uid)
+    if u["status"] in ("new", "thin", "error") and not google.connected(uid):
+        _use_netease(uid, link)
+    r = _signed_in(RedirectResponse("/", 303), uid, request)
+    r.delete_cookie("zy_n")
+    return r
 
 
 @app.get("/")
@@ -1390,7 +1459,7 @@ def playlist(p: PlaylistReq):
 @app.post("/api/setup")
 def setup():
     u = accounts.get()
-    if not u or u["status"] not in ("thin", "error", "new") or not google.connected():
+    if not u or u["status"] not in ("thin", "error", "new") or not _can_read(u):
         raise HTTPException(400, i18n.tr("现在不需要重新准备"))
     _start("setup", _setup)
     return jobs()
@@ -1398,7 +1467,7 @@ def setup():
 
 @app.post("/api/sync")
 def sync():
-    if not (google.configured() and google.connected()):
+    if not _can_read(accounts.get() or {"id": store.uid(), "prefs": {}}):
         raise HTTPException(400, i18n.tr("还没连接 YouTube Music"))
     _start("sync", _sync_likes)
     return jobs()
@@ -1410,7 +1479,16 @@ def warmup():
     nm = settings.not_me()
     tracks = [t for t in library.load() if not t["long"] and t["type"] in ("ATV", "OMV") and not settings.is_not_me(t, nm)][:3]
     mine = set()
-    if not tracks and google.configured() and google.connected():
+    if not tracks and _netease():
+        # still matching: the newest few likes, found on YouTube Music the same way (the import reuses the lookups)
+        for x in (store.read_json(store.GLIMPSE) or {}).get("songs", [])[:8]:
+            h = library.match_netease({"title": x["title"], "artists": [{"name": x["artist"]}], "dur": x["dur"],
+                                       "ne_ar": x.get("ne_ar", [])})
+            if h and h["type"] in ("ATV", "OMV"):
+                tracks.append(h)
+                if len(tracks) == 3:
+                    break
+    elif not tracks and google.configured() and google.connected():
         # Still importing: the first page of likes is enough to start.
         items = google.likes(store.uid(), pages=1)
         mine = {it["vid"] for it in items}
@@ -1503,6 +1581,68 @@ def account_delete(request: Request):
     accounts.delete(uid)
     r = JSONResponse({"ok": True})
     r.delete_cookie(accounts.COOKIE)
+    return r
+
+
+class NeteaseReq(BaseModel):
+    link: Annotated[str, Field(max_length=2000)]
+
+
+def _read_netease(link: str, lang: str) -> dict:
+    try:
+        return netease.likes(link)
+    except netease.Unreadable as e:
+        raise HTTPException(422, i18n.tr(CARD_WHY[e.why], lang, n=e.n)) from None
+
+
+def _use_netease(uid: str, link: str, got: dict | None = None) -> None:
+    """This listener's stations come from their NetEase likes from now on; the first run starts."""
+    if (accounts.prefs(uid).get("netease") or {}).get("link") != link:   # another source: start over, never mix two
+        for k in FROM_YOUTUBE:
+            f = store.USERS / uid / store._PER_USER[k]
+            if f.is_dir():
+                shutil.rmtree(f)
+            else:
+                f.unlink(missing_ok=True)
+    accounts.set_prefs(uid, netease={"link": link}, setup_fails=0, setup_issue=None)
+    with store.as_user(uid):
+        try:
+            _start("setup", lambda log: _setup(log, got))
+        except HTTPException:
+            pass
+
+
+@app.post("/api/netease")
+def netease_use(b: NeteaseReq):
+    """Stations from the listener's NetEase likes instead of YouTube's, for an account that has none yet."""
+    u = accounts.get()
+    if store.is_sample() or not u:
+        raise HTTPException(403)
+    if google.connected(u["id"]) or u["status"] not in ("new", "thin", "error"):
+        raise HTTPException(409, i18n.tr("这个账号已经在用别的喜欢了"))
+    got = _read_netease(b.link, i18n.of())
+    _use_netease(u["id"], netease.link_of(got["key"]), got)
+    return {"me": _me(), "jobs": jobs()}
+
+
+@app.post("/api/card/follow")
+def card_follow(b: NeteaseReq, request: Request):
+    """From a NetEase card to weekly stations: the link waits in a signed cookie while Google says who they are
+    (only that: nothing is read from YouTube)."""
+    lang = i18n.from_request(request)
+    try:
+        netease.parse(b.link)
+    except netease.Unreadable as e:
+        raise HTTPException(422, i18n.tr(CARD_WHY[e.why], lang, n=e.n)) from None
+    if AUTH and accounts.session_uid(request.cookies.get(accounts.COOKIE)):
+        netease_use(b)
+        return {"go": "/"}
+    if _join_state() == "invite":
+        raise HTTPException(403, i18n.tr("现在只能通过朋友的邀请加入", lang))
+    store.count("join_163", _ref_cookie(request))
+    r = JSONResponse({"go": "/auth/google/start?mode=join&src=163"})
+    r.set_cookie("zy_n", cards.sign({"link": b.link, "exp": time.time() + 900}), max_age=900, httponly=True,
+                 samesite="lax", secure=google.public_url().startswith("https"))
     return r
 
 

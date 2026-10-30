@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.28.1",
     "numpy>=2.5.4",
     "opencc>=1.4.2",
+    "pypinyin>=0.55.0",
     "tzdata>=2025.2",
     "uvicorn>=0.54.0",
     "ytmusicapi>=1.12.3,<2",
