@@ -151,7 +151,7 @@ def _migrate(con: sqlite3.Connection) -> None:
         con.execute("alter table plays add column artist text")
     # how a song started and what the page showed with it (see /api/play); what the editor said, kept per edition
     for c in ("src text", "dur real", "idle real", "vis text", "test integer not null default 0", "fit real", "slot integer",
-              "fam integer", "probe text"):
+              "fam integer", "probe text", "kind text"):
         if c.split()[0] not in cols:
             _add_column(con, "plays", c)
     shown_cols = {r[1] for r in con.execute("pragma table_info(shown)")}

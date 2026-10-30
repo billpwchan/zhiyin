@@ -100,11 +100,12 @@ def follows() -> tuple[set[str], set[str]]:
 
 def listens(uid: str | None = None, since: float = 0) -> list[dict]:
     """Each start in the log joined to how it ended: {"vid", "lane", "src", "ts", "end", "pos", "dur", "idle",
-    "replays", and what the page showed with the song: "fit", "slot", "fam", "probe"}; "end" is done | skip | left |
+    "replays", and what the page showed with the song: "fit", "slot", "fam", "probe", or "kind" for one of their own
+    likes played between new songs}; "end" is done | skip | left |
     stop | error, or None when the page never said (closed mid-song before the log was complete). Test sessions are left
     out."""
     rows = store.db().execute(
-        "select vid, lane, ts, ev, pos, src, dur, idle, fit, slot, fam, probe from plays where uid=? and ts>=? and test=0"
+        "select vid, lane, ts, ev, pos, src, dur, idle, fit, slot, fam, probe, kind from plays where uid=? and ts>=? and test=0"
         " order by ts", (uid or store.uid(), since)).fetchall()
     out, open_ = [], {}
     for r in rows:
@@ -114,7 +115,7 @@ def listens(uid: str | None = None, since: float = 0) -> list[dict]:
                 out.append(open_.pop(r["vid"]))
             open_[r["vid"]] = {"vid": r["vid"], "lane": r["lane"], "src": r["src"], "ts": r["ts"], "end": None,
                                "pos": 0.0, "dur": r["dur"], "idle": None, "replays": 0,
-                               **{k: r[k] for k in ("fit", "slot", "fam", "probe")}}
+                               **{k: r[k] for k in ("fit", "slot", "fam", "probe", "kind")}}
             continue
         x = open_.get(r["vid"])
         if not x:

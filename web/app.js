@@ -109,6 +109,7 @@ function when(ts) {
   return days === 0 ? t('今天 {hm}', { hm }) : days === 1 ? t('昨天 {hm}', { hm }) : d.toLocaleDateString(LANG, { month: 'short', day: 'numeric' });
 }
 function reasonOf(p) {
+  if (p.kind) return mineLine(p);
   if (p.mine) return t('这首是你喜欢过的');
   if (Q?.key === 'ear' && p.t) return t('你在 {when}点了喜欢', { when: whenLiked(p.t) });
   if (p.reason) return p.reason;
@@ -118,8 +119,12 @@ function reasonOf(p) {
 // the one like of theirs it is shown with (play it, then the pick, and judge), and whether they have the artist.
 function becauseHTML(p) {
   if (!p || p.mine || Q?.key === 'ear') return '';
+  if (p.kind) return p.bridge ? `<span>${esc(p.bridge === 'near' ? t('下一首新歌听感像这首') : t('下一首新歌是从这首找到的'))}</span>` : '';
   const out = [], b = p.because, a = p.artists?.[0]?.name;
-  if (b) out.push(`<button class="bc-song" data-k="hearmine" title="${t('先放你这首，再回到这首推荐')}">${I.play}<span>${esc(b.how === 'near' ? t('像你喜欢的〈{s}〉', { s: b.title }) : t('从你喜欢的〈{s}〉找到', { s: b.title }))}</span></button>`);
+  // just heard as the song before: say so, nothing to play first
+  const just = b && cur() === p && Q.tracks[Q.i - 1]?.vid === b.vid && Q.played.has(b.vid);
+  if (just) out.push(`<span>${esc(b.how === 'near' ? t('像刚才那首〈{s}〉', { s: b.title }) : t('从刚才那首〈{s}〉找到', { s: b.title }))}</span>`);
+  else if (b) out.push(`<button class="bc-song" data-k="hearmine" title="${t('先放你这首，再回到这首推荐')}">${I.play}<span>${esc(b.how === 'near' ? t('像你喜欢的〈{s}〉', { s: b.title }) : t('从你喜欢的〈{s}〉找到', { s: b.title }))}</span></button>`);
   if (a && p.familiar != null) {
     const k = p.familiar ? t('你收藏过 {a} 的 {n} 首', { a, n: p.familiar }) : p.knows === 'follow' ? t('你在 YouTube 订阅了 {a}', { a })
       : p.knows === 'plays' ? t('你常听 {a}，还没点过喜欢', { a }) : t('你还没收藏过 {a}', { a });
@@ -233,6 +238,151 @@ function orderMix(lanes) {
   return { tracks: out, reserve };
 }
 
+/* ---------- your own likes, woven in between the new songs (rotation.py) ---------- */
+// How many of the listener's likes play between two new songs: familiar, balanced (the default), new only.
+const BLEND = { fam: 4, bal: 2, new: 0 };
+const BLEND_NOTE = () => ({ fam: t('每 4 首你的收藏放 1 首新歌'), bal: t('每 2 首你的收藏放 1 首新歌'), new: t('只放新歌') });
+const HUSH_D = 60;   // "not for a while": rotation.HUSH_D
+let MINE = null;   // { songs, by, picks, ed, skew }: each like with how much it is wanted and when it is next due
+let mineAt = 0;
+const famHeard = new Set();   // likes started this visit, in any station: not again until the next visit
+const nowS = () => (Date.now() + (MINE?.skew || 0)) / 1000;
+const woven = (st) => st.group === 'lane' && st.key !== 'focus';
+const blendOf = (key) => (store.get(acct('blend')) || {})[key] || 'bal';
+
+async function loadMine(force = false) {
+  if (!force && Date.now() - mineAt < (MINE ? 3 * 3600e3 : 60e3) && (!MINE || MINE.ed === S?.edition?.id)) return;
+  mineAt = Date.now();
+  try {
+    const r = await api('/api/mine');
+    MINE = { songs: r.songs, by: new Map(r.songs.map((x) => [x.vid, x])), picks: r.picks, ed: r.ed, skew: r.now * 1000 - Date.now() };
+  } catch { /* until it loads, stations play new songs only */ }
+}
+// The picks' sound comes packed with the same basis as the likes', so a new song can be placed after the like it
+// sounds closest to. Every state load brings fresh pick objects, so this runs after each.
+function packPicks() {
+  if (!MINE) return;
+  for (const l of S.edition?.lanes || []) for (const p of [...l.picks, ...(l.reserve || [])]) {
+    const x = MINE.picks[p.vid];
+    if (x) { p.v = x.v; if (x.en != null) p.en = x.en; }
+  }
+}
+
+function seeded(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
+}
+
+// The likes a station can play, in the order it would play them: each drawn by how much it is wanted, how long since
+// it was heard and how well it suits the hour, at random but the same order all day.
+function picker(st) {
+  if (!MINE) return null;
+  const pool = MINE.songs.filter((x) => (st.key === 'mix' || x.lanes.includes(st.key)) && x.due <= nowS());
+  if (!pool.length) return null;
+  const lw = st.key === 'mix' ? laneWeights() : null, sum = lw ? Object.values(lw).reduce((a, b) => a + b, 0) || 1 : 1;
+  const target = (hourWant() - 2.5) * 0.8, now = nowS();
+  const score = (x) => {
+    let w = x.want * (x.last ? 0.7 + 0.3 * Math.min(1, (now - x.last) / (30 * 86400)) : 1);
+    if (typeof x.en === 'number') w *= 0.6 + 0.4 * Math.exp(-((x.en - target) ** 2) / 2);
+    if (lw) w *= Math.sqrt((((lw[x.lanes[0]] || 0) / sum) + 0.02) * 8);   // stations liked most lately come round more
+    return Math.max(0.01, w);
+  };
+  const rnd = seeded(`${S.edition?.id}|${st.key}|${new Date().toDateString()}`);
+  const order = pool.map((x) => [rnd() ** (1 / score(x)), x]).sort((a, b) => b[0] - a[0]).map((y) => y[1]);
+  return { order, taken: new Set() };
+}
+
+function famTrack(x, key) {
+  return { vid: x.vid, title: x.title, artists: x.artists, album: x.album, dur: x.dur, type: x.type, thumb: x.thumb, v: x.v, en: x.en,
+    at: x.at, real: x.real, last: x.last, n30: x.n30, kind: x.again ? 'again' : 'fav', from: key === 'mix' ? x.lanes[0] || null : key };
+}
+// The next like for a queue: `prefer` (the like a new song was found from) when it is free, else the first free one,
+// or, while the listener is steering (quieter, a song kept or skipped), the best of the next few for that.
+function take(q, prefer) {
+  const pk = q.pk, free = (x) => x && !pk.taken.has(x.vid) && !famHeard.has(x.vid) && !q.played.has(x.vid);
+  let x = null;
+  if (prefer) {
+    x = pk.order.find((y) => y.vid === prefer) || MINE.by.get(prefer);
+    if (!free(x) || x.due > nowS()) return null;
+  } else {
+    const next = [];
+    for (const y of pk.order) { if (free(y)) next.push(y); if (next.length >= 6) break; }
+    if (!next.length) return null;
+    const sess = q.sess;
+    x = sess && (sess.steer || sess.pos.length || sess.neg.length) ? next.reduce((a, b) => (sessScore(b, sess) > sessScore(a, sess) ? b : a)) : next[0];
+  }
+  pk.taken.add(x.vid);
+  return famTrack(x, q.key);
+}
+function sessScore(c, sess) {
+  const v = vec(c);
+  let sc = 3 * Math.max(0, near(v, sess.pos) - NEAR) - 4 * Math.max(0, near(v, sess.neg) - NEAR);
+  if (sess.steer && typeof c.en === 'number') sc += 0.55 * sess.steer * clamp(c.en, -2.5, 2.5);
+  return sc;
+}
+
+// Lay the likes in between the new songs still to come (`news`, by default the ones already there): `gap` of them
+// before each new song, the last of which is the like it was found from, so the two are heard back to back. A station
+// opens on one like, the first new song's. Likes already planned go back in the pool first, so laying them again
+// after a change keeps the same songs where it can.
+function weave(q, { news, from = q.i + 1 } = {}) {
+  const head = q.tracks.slice(0, from), tail = q.tracks.slice(from);
+  if (q.pk) for (const p of tail) if (p.kind) q.pk.taken.delete(p.vid);
+  news ||= tail.filter((p) => !p.kind);
+  if (!q.pk || !q.gap) { q.tracks = [...head, ...news]; return; }
+  let since = from ? 0 : q.gap - 1, trail = 0;
+  for (let j = head.length - 1; j >= 0 && head[j].kind; j--) since++;
+  for (let j = tail.length - 1; j >= 0 && tail[j].kind; j--) trail++;   // a station out of new songs goes on with likes
+  const out = [];
+  for (const n of news) {
+    const need = Math.max(0, q.gap - since);
+    const br = need && n.because?.vid ? take(q, n.because.vid) : null;
+    for (let k = 0; k < need - (br ? 1 : 0); k++) { const f = take(q); if (f) out.push(f); }
+    if (br) { br.bridge = n.because.how === 'near' ? 'near' : 'from'; out.push(br); }
+    out.push(n);
+    since = 0;
+  }
+  for (let k = 0; k < trail; k++) { const f = take(q); if (f) out.push(f); }
+  q.tracks = [...head, ...out];
+}
+// A woven station's likes, drawn once it has both a queue and the likes (they may arrive after the queue).
+function blendQueue(q, from) {
+  if (!woven(q.st) || q.pk || !MINE) return;
+  q.pk = picker(q.st);
+  q.base = q.gap = q.pk ? BLEND[blendOf(q.key)] : 0;
+  weave(q, { from });
+}
+// A new song heard through or loved brings the next one a song sooner; one skipped early pushes it back. Within one
+// of the listener's setting below and two above, and back to it on the next visit.
+function blendShift(p, d) {
+  if (!Q?.pk || !Q.base || p.kind || p.mine) return;
+  const g = clamp(Q.gap + d, Math.max(1, Q.base - 1), Q.base + 2);
+  if (g === Q.gap) return;
+  Q.gap = g;
+  weave(Q);
+  renderQueue();
+  Lyr.prefetch();
+}
+function setBlend(v) {
+  if (!Q?.pk || !(v in BLEND)) return;
+  store.set(acct('blend'), { ...(store.get(acct('blend')) || {}), [Q.key]: v });
+  Q.base = Q.gap = BLEND[v];
+  weave(Q);
+  sessionOf(Q).note = BLEND_NOTE()[v];
+  renderQueue();
+  Lyr.prefetch();
+}
+// What the page says with one of the listener's own likes: when they liked it, and how it has been heard lately.
+function mineLine(p) {
+  const [y, m] = (p.at || '').split('-').map(Number);
+  const out = [];
+  out.push(!y ? t('你收藏的歌') : (p.real || y === new Date().getFullYear()) && m ? t('你 {when}收藏的', { when: new Date(y, m - 1).toLocaleDateString(LANG, { year: 'numeric', month: 'long' }) }) : t('你 {y} 年前后收藏的', { y }));
+  if (p.n30 >= 2) out.push(t('近 30 天听完 {n} 次', { n: p.n30 }));
+  else if (p.last && nowS() - p.last > 30 * 86400) out.push(t('上次听是 {when}', { when: new Date(p.last * 1000).toLocaleDateString(LANG, { year: 'numeric', month: 'long' }) }));
+  return out.join(t('，'));
+}
+
 function stHTML(s) {
   const imgs = s.tracks.slice(0, s.tracks.length >= 4 ? 4 : 1).map((p) => imgTag(p, 120)).join('');
   return `<button class="st ${s.pending ? 'pending' : ''}" data-st="${esc(s.key)}" ${Q?.key === s.key ? 'aria-current="true"' : ''} title="${esc(s.when || '')}">
@@ -307,13 +457,17 @@ function queueOf(st) {
   if (!q) {
     const tracks = st.tracks.filter((p) => fb.get(p.vid) !== 'dislike');
     const fresh = tracks.filter((p) => !h.has(p.vid));
-    q = { key: st.key, tracks: fresh.length ? fresh : tracks, reserve: (st.reserve || []).filter((p) => !h.has(p.vid)), i: 0, played: new Set() };
+    q = { key: st.key, st, tracks: fresh.length ? fresh : tracks, reserve: (st.reserve || []).filter((p) => !h.has(p.vid)), i: 0, played: new Set() };
+    blendQueue(q, 0);
     queues.set(id, q);
-  } else if (h.size) {
-    const ahead = q.tracks.slice(q.i + 1).filter((p) => !h.has(p.vid) || q.played.has(p.vid));
+  } else if (h.size || famHeard.size) {
+    // (songs heard in another station since: a new one is never recommended again, a like waits for the next visit)
+    const ahead = q.tracks.slice(q.i + 1).filter((p) => !(p.kind ? famHeard : h).has(p.vid) || q.played.has(p.vid));
     q.tracks = [...q.tracks.slice(0, q.i + 1), ...ahead];
+    weave(q);
   }
   q.st = st;
+  blendQueue(q);
   return q;
 }
 
@@ -383,16 +537,17 @@ let touched = performance.now();
 for (const e of ['pointerdown', 'keydown']) addEventListener(e, () => { touched = performance.now(); }, { capture: true, passive: true });
 
 function logPlay(p, ev, pos = 0, extra = {}, send = api) {
-  if (p && !['start', 'away', 'replay', 'stop'].includes(ev) && Q?.key !== 'ear' && !p.mine) markHeard(p.vid);
+  if (p && !['start', 'away', 'replay', 'stop'].includes(ev) && Q?.key !== 'ear' && !p.mine && !p.kind) markHeard(p.vid);
   if (!p || SAMPLE()) return;
   const r = send('/api/play', { vid: p.vid, lane: p.from || Q?.key, ev, pos: Math.round(pos), title: p.title, artist: p.artists?.[0]?.name, test: TEST, ...extra });
   r?.catch?.(() => {});
 }
 function startListen(p) {
-  const shown = p.mine || Q?.key === 'ear' ? {} : {
+  const shown = p.kind ? { kind: p.kind } : p.mine || Q?.key === 'ear' ? {} : {
     fit: typeof p.fit === 'number' ? p.fit : null, slot: Number.isInteger(p.slot) ? p.slot : null,
     fam: p.familiar == null ? null : p.familiar ? 1 : p.knows ? 2 : 0, probe: p.probe || null };
   L = { p, ended: false };
+  if (p.kind) famHeard.add(p.vid);
   logPlay(p, 'start', 0, { src: p.mine ? 'compare' : startSrc, dur: Player.time()[1] || p.dur || null, vis: document.visibilityState, ...shown });
   startSrc = 'auto';
 }
@@ -419,8 +574,9 @@ async function next(play = true, by = 'next') {
     Q.played.add(p.vid);
     const [t, d] = Player.time();
     // Leaving within the first half is the strongest "not now" signal a listener gives without saying anything.
-    // (one of your own likes, played to compare with a pick, says nothing about the station when you leave it)
-    if (Player.playing && t < heardAt(d) && !p.mine) adapt('neg', p);
+    // (one of your own likes, played to compare with a pick or between new songs, says nothing about the station when
+    // you leave it: the server rests it a fortnight)
+    if (Player.playing && t < heardAt(d) && !p.mine && !p.kind) { blendShift(p, 1); adapt('neg', p); }
     leaving(api, by === 'next');
   }
   if (Q.i >= Q.tracks.length - 1) await extend(true);
@@ -440,19 +596,21 @@ function prev() {
 
 async function extend(silent) {
   if (!Q) return;
-  if (Q.reserve.length) {
-    Q.tracks.push(...Q.reserve.splice(0, 4).filter((p) => fb.get(p.vid) !== 'dislike'));
-    renderQueue();
-    return;
+  const n = Q.tracks.length;
+  let failed = false;
+  if (Q.reserve.length) Q.tracks.push(...Q.reserve.splice(0, Q.gap ? 2 : 4).filter((p) => fb.get(p.vid) !== 'dislike'));
+  else {
+    const seed = cur() || Q.tracks[Q.tracks.length - 1];
+    if (!seed) return;
+    try {
+      const r = await api(`/api/more?vid=${seed.vid}&exclude=${Q.tracks.map((p) => p.vid).join(',')}`);
+      Q.tracks.push(...r.tracks.slice(0, 8));
+    } catch { failed = true; }
   }
-  const seed = cur() || Q.tracks[Q.tracks.length - 1];
-  if (!seed) return;
-  try {
-    const r = await api(`/api/more?vid=${seed.vid}&exclude=${Q.tracks.map((p) => p.vid).join(',')}`);
-    Q.tracks.push(...r.tracks.slice(0, 8));
-    renderQueue();
-    if (!r.tracks.length && !silent) toast(t('这条线暂时没有更多了'));
-  } catch { if (!silent) toast(t('没取到更多的歌，稍后再试')); }
+  weave(Q);
+  if (Q.tracks.length === n && Q.gap) for (let k = 0; k < 4; k++) { const f = take(Q); if (f) Q.tracks.push(f); }
+  renderQueue();
+  if (Q.tracks.length === n && !silent) toast(failed ? t('没取到更多的歌，稍后再试') : t('这条线暂时没有更多了'));
 }
 
 async function continueFrom(btn) {
@@ -463,6 +621,7 @@ async function continueFrom(btn) {
     const r = await api(`/api/more?vid=${p.vid}&exclude=${Q.tracks.map((x) => x.vid).join(',')}`);
     const add = r.tracks.slice(0, 8);
     Q.tracks.splice(Q.i + 1, 0, ...add);
+    weave(Q);
     renderQueue();
     toast(add.length ? t('接下来沿着〈{s}〉放 {n} 首', { s: p.title, n: add.length }) : t('这首的电台里没有新的了'));
   } catch { toast(t('没取到，稍后再试')); }
@@ -497,7 +656,7 @@ function adapt(event, p) {
   if (!Q) return;
   const s = sessionOf(Q), x = vec(p);
   if (event && x) (event === 'neg' ? s.neg : s.pos).push(x);
-  const upcoming = Q.tracks.slice(Q.i + 1);
+  const upcoming = Q.tracks.slice(Q.i + 1).filter((c) => !c.kind);
   if (!upcoming.length && !Q.reserve.length) return;
   const score = (c, k, inReserve) => {
     const v = vec(c);
@@ -511,13 +670,13 @@ function adapt(event, p) {
   pool.sort((a, b) => b[1] - a[1]);
   const n = Math.max(upcoming.length, Math.min(6, pool.length));
   const keep = pool.slice(0, n).map((x) => x[0]);
-  const before = upcoming.map((c) => c.vid).join();
-  Q.tracks = [...Q.tracks.slice(0, Q.i + 1), ...keep];
+  const same = keep.map((c) => c.vid).join() === upcoming.map((c) => c.vid).join();
   Q.reserve = pool.slice(n).map((x) => x[0]);
-  if (keep.map((c) => c.vid).join() === before) return;
+  if (same && !(Q.pk && !event)) return;   // (a switch flipped still changes which likes come round)
+  weave(Q, { news: keep });
   renderQueue();
   Lyr.prefetch();
-  if (event && p) s.note = event === 'neg' ? t('少放和〈{s}〉相近的', { s: p.title }) : t('多放和〈{s}〉相近的', { s: p.title });
+  if (event && p && !same) s.note = event === 'neg' ? t('少放和〈{s}〉相近的', { s: p.title }) : t('多放和〈{s}〉相近的', { s: p.title });
   paintSteer();
 }
 
@@ -542,6 +701,11 @@ function paintSteer() {
   $$('[data-k="calm"]').forEach((b) => b.classList.toggle('on', s.steer === -1));
   $$('[data-k="up"]').forEach((b) => b.classList.toggle('on', s.steer === 1));
   $$('[data-k="fresh"]').forEach((b) => b.classList.toggle('on', !!s.fresh));
+  const bl = $('#qBlend');
+  if (bl) {
+    bl.hidden = !Q?.pk;
+    for (const b of $$('button', bl)) { const on = !!Q?.pk && BLEND[b.dataset.v] === Q.base; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
+  }
   const w = $('#qWhen'), n = $('#sNote');
   if (w && Q) w.textContent = Q.st.when || '';
   if (n) n.textContent = s.note || '';
@@ -639,7 +803,9 @@ const Player = {
   },
   onError(code) {
     this.steady();
-    toast(t('〈{s}〉不允许在网页里播放，已跳过', { s: cur()?.title || '' }));
+    // (one of their own likes between the new songs is passed over without a word, and not woven in again)
+    if (cur()?.kind) famHeard.add(cur().vid);
+    else toast(t('〈{s}〉不允许在网页里播放，已跳过', { s: cur()?.title || '' }));
     // gone, private, or not allowed in other sites: it never will play here, so it isn't recommended again
     if ([100, 101, 150].includes(code)) logPlay(cur(), 'error', 0, { src: startSrc });
     setTimeout(() => next(!this.cued, 'auto'), 400);   // a song only loaded, not started, is replaced by one only loaded
@@ -670,7 +836,8 @@ const Player = {
     if (s === 0 && p) {
       endListen('done');
       Q.played.add(p.vid);
-      next(true, 'auto').then(() => adapt('pos', p));   // only after the next song is fixed, or the queue could move under it
+      // only after the next song is fixed, or the queue could move under it
+      next(true, 'auto').then(() => { if (!p.kind) { blendShift(p, -1); adapt('pos', p); } });
     }
   },
   toggle() {
@@ -1076,6 +1243,7 @@ function paintNow() {
   set('#nArtist', names(p.artists));
   set('#nAlbum', [p.album?.name && p.album.name !== p.title ? p.album.name : '', p.year].filter(Boolean).join(' · '));
   set('#nWhy', reasonOf(p));
+  $$('[data-k="nope"]').forEach((b) => { b.title = p.kind ? t('这阵子先不听（X）') : t('不要这首（X）'); });
   const bc = $('#nBc');
   if (bc) bc.innerHTML = becauseHTML(p);
   set('#dTitle', p.title);
@@ -1171,10 +1339,11 @@ function track(p) { return { vid: p.vid, lane: p.from || Q?.key, title: p.title,
 
 async function like(p) {
   if (SAMPLE()) return openJoin('like');
+  if (p.kind) return toast(t('这首已经在你的喜欢里'));
   const on = fb.get(p.vid) === 'like';
   on ? fb.delete(p.vid) : fb.set(p.vid, 'like');
   paintLikes();
-  if (!on) adapt('pos', p);
+  if (!on) { blendShift(p, -1); adapt('pos', p); }
   try {
     const r = await api('/api/feedback', { ...track(p), action: on ? 'undo' : 'like' });
     if (!on && r.sync === 'queued' && !store.get(acct('syncHint'))) {
@@ -1190,16 +1359,18 @@ async function like(p) {
     toast(t('没保存上，稍后再试'));
   }
 }
+const liked = (p) => !!p && (!!p.kind || fb.get(p.vid) === 'like');
 function paintLikes() {
-  const p = cur();
-  const on = !!p && fb.get(p.vid) === 'like';
+  const on = liked(cur());
   $$('.ib.like[data-k]').forEach((b) => b.classList.toggle('on', on));
   Pip.w && $$('.ib.like', Pip.w.document).forEach((b) => b.classList.toggle('on', on));
+  // (a row keeps its heart lit for a song liked here; one of their own likes shows it only under the pointer)
   $$('.tr').forEach((r) => $('.ib.like', r)?.classList.toggle('on', fb.get(Q.tracks[+r.dataset.i]?.vid) === 'like'));
 }
 
 function nope(p) {
   if (SAMPLE()) return openJoin('nope');
+  if (p.kind) return hushMine(p);
   if (p.mine || Q.key === 'ear') return notMe(p);
   const idx = Q.tracks.indexOf(p);
   if (idx < 0) return;
@@ -1264,6 +1435,29 @@ function notMe(p) {
       setNotMe({ artist: a, on: true }).then(() => toast(t('{a} 的歌都不算进你的口味了，也不会推给你', { a }), [[t('撤销'), () => setNotMe({ artist: a, on: false })]]))
         .catch(() => toast(t('没保存上，稍后再试')));
     }]] : []),
+  ]);
+}
+
+// One of their likes between the new songs, "not for a while": out of every station for two months. Only when they
+// say so is it "not my taste" too; it stays liked on YouTube either way.
+function hushMine(p) {
+  const put = dropFromQueue(p), m = MINE?.by.get(p.vid), was = { due: m?.due, heard: famHeard.has(p.vid) };
+  famHeard.add(p.vid);
+  if (m) m.due = nowS() + HUSH_D * 86400;
+  const hush = (days) => api('/api/mine/hush', { vid: p.vid, days });
+  hush(HUSH_D).catch(() => toast(t('没保存上，稍后再试')));
+  toast(t('〈{s}〉这阵子先不放，两个月后再回来', { s: p.title }), [
+    [t('撤销'), () => {
+      put?.();
+      if (!was.heard) famHeard.delete(p.vid);
+      if (m) m.due = was.due;
+      hush(0).catch(() => {});
+    }],
+    [t('已经不是我的口味'), () => {
+      setNotMe({ vid: p.vid, on: true })
+        .then(() => toast(t('〈{s}〉不算进你的口味了，仍在你的喜欢里', { s: p.title }), [[t('撤销'), () => setNotMe({ vid: p.vid, on: false })]]))
+        .catch(() => toast(t('没保存上，稍后再试')));
+    }],
   ]);
 }
 
@@ -1384,7 +1578,8 @@ function renderListen() {
         <section class="queue" role="tabpanel" aria-label="${t('接下来')}">
           <div class="s-head">
             <h3>${t('接下来')}</h3>
-            <button class="tb" data-k="calm" title="${t('接下来放安静一点的')}">${t('更安静')}</button><button class="tb" data-k="up" title="${t('接下来放带劲一点的')}">${t('更带劲')}</button><button class="tb" data-k="fresh" title="${t('多放你没收藏过的歌手')}">${t('多些新歌手')}</button>
+            <span class="blend" id="qBlend" role="radiogroup" aria-label="${t('收藏和新歌')}" hidden>${Object.entries({ fam: t('熟悉'), bal: t('平衡'), new: t('全新') }).map(([v, l]) => `<button class="tb" role="radio" data-k="blend" data-v="${v}" title="${BLEND_NOTE()[v]}">${l}</button>`).join('')}</span>
+            <span class="steer"><button class="tb" data-k="calm" title="${t('接下来放安静一点的')}">${t('更安静')}</button><button class="tb" data-k="up" title="${t('接下来放带劲一点的')}">${t('更带劲')}</button><button class="tb" data-k="fresh" title="${t('多放你没收藏过的歌手')}">${t('多些新歌手')}</button></span>
             <span class="s-note" id="sNote"></span>
           </div>
           <p class="q-promise" id="qPromise"></p>
@@ -1409,13 +1604,13 @@ function renderQueue() {
   if (!list || !Q) return;
   $('#qName').textContent = Q.st.name;
   // the promise every station but your own likes keeps (candidates.Known)
-  $('#qPromise').textContent = Q.key === 'ear' ? '' : t('这里的歌都不在你的喜欢里，你听过的也不会再推。');
+  $('#qPromise').textContent = Q.key === 'ear' ? '' : Q.gap ? t('带圆点的是新歌，都不在你的喜欢里，听过的也不会再推；其余是你自己的收藏。') : t('这里的歌都不在你的喜欢里，你听过的也不会再推。');
   paintSteer();
   list.innerHTML = Q.tracks.map((p, i) => `
     <li class="tr ${i === Q.i ? 'cur' : ''} ${i !== Q.i && Q.played.has(p.vid) ? 'done' : ''}" data-i="${i}" title="${esc(p.title)} · ${esc(names(p.artists))}${p.dur ? ` · ${fmt(p.dur)}` : ''}">
       <div class="cv">${imgTag(p, 226)}<span class="eq"><i></i><i></i><i></i></span></div>
-      <div class="mid"><div class="tt">${esc(p.title)}</div><div class="ar">${esc(names(p.artists))}</div></div>
-      <div class="end"><span class="d num">${p.dur ? fmt(p.dur) : ''}</span><span class="acts"><button class="ib like ${fb.get(p.vid) === 'like' ? 'on' : ''}" data-a="like" aria-label="${t('喜欢')}">${I.heart}</button><button class="ib" data-a="nope" aria-label="${t('不要')}">${I.x}</button></span></div>
+      <div class="mid"><div class="tt">${Q.gap && !p.kind && !p.mine ? `<i class="nw" title="${t('新歌')}"></i>` : ''}${esc(p.title)}</div><div class="ar">${esc(names(p.artists))}</div></div>
+      <div class="end"><span class="d num">${p.dur ? fmt(p.dur) : ''}</span><span class="acts"><button class="ib like ${fb.get(p.vid) === 'like' ? 'on' : p.kind ? 'mine' : ''}" data-a="like" aria-label="${t('喜欢')}">${I.heart}</button><button class="ib" data-a="nope" aria-label="${p.kind ? t('这阵子先不听') : t('不要')}">${I.x}</button></span></div>
     </li>`).join('') + `<li class="tile more"><button data-k="extend"><span class="cv">${I.plus}</span><span class="tt">${t('再来几首')}</span></button></li>`;
   $$('.st').forEach((b) => b.toggleAttribute('aria-current', b.dataset.st === Q.key));
   keepCurrentRowVisible();
@@ -3060,6 +3255,7 @@ async function act(k, btn) {
   else if (k === 'tab-lyr') toggleLyrics(true);
   else if (k === 'tab-q') { if (Lyr.data) toggleLyrics(false); }
   else if (k === 'calm' || k === 'up' || k === 'fresh') steer(k);
+  else if (k === 'blend') setBlend(btn.dataset.v);
   else if (k === 'pip') Pip.toggle().catch(() => toast(t('小窗打不开')));
   else if (k === 'imm') immersive();
   else if (k === 'lytr' || k === 'lyro') {
@@ -3368,7 +3564,10 @@ async function loadWarm() {
 }
 
 async function reload() {
-  S = await api('/api/state');
+  const [s] = await Promise.all([api('/api/state'), loadMine()]);
+  S = s;
+  if (MINE && MINE.ed !== S.edition?.id) await loadMine(true);
+  packPicks();
   const k = `${S.profile_built}|${S.library.songs}`;
   if (k !== earKey) { earKey = k; earStale = true; }
   if (!ready() && S.me.status !== 'new' && !WARM) loadWarm();
@@ -3385,6 +3584,7 @@ async function reload() {
     Q.st = st;
     const why = new Map([...st.tracks, ...(st.reserve || [])].map((p) => [p.vid, p.reason]));
     for (const p of [...Q.tracks, ...Q.reserve]) if (why.has(p.vid)) p.reason = why.get(p.vid);
+    blendQueue(Q);
     if (view === 'listen' && $('#qName')) { renderQueue(); paintNow(); }
   }
   renderStations();

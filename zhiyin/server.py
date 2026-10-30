@@ -23,7 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import (accounts, ask, audio, candidates, cards, ear, edition, google, i18n, library, llm, lyrics, netease, profile,
-               quality, settings, signals, store, ytm)
+               quality, rotation, settings, signals, store, ytm)
 from .text import display_title, fold, is_version
 
 WEB = store.ROOT / "web"
@@ -36,7 +36,7 @@ LIKE_SYNC_H = 6
 # user cap (100 while Google hasn't verified the app) hold. 0 keeps the server invite-only.
 SEATS = int(os.environ.get("ZHIYIN_SEATS", 0))
 SAMPLE_DIR = store.ROOT / "demo"
-SAMPLE_GETS = ("/api/state", "/api/ear", "/api/jobs", "/api/img", "/api/more", "/api/lyrics")
+SAMPLE_GETS = ("/api/state", "/api/mine", "/api/ear", "/api/jobs", "/api/img", "/api/more", "/api/lyrics")
 # Signed-out visitors reach YouTube and the lyrics sites through the server's one address, which every listener shares,
 # so what they make it fetch is capped per ten minutes, all of them together. Anything already cached is free.
 SAMPLE_FETCHES = {"img": 400, "lyrics": 60, "more": 30}
@@ -1135,6 +1135,25 @@ def not_me(b: NotMe):
     return {"ok": True, "not_me": _not_me_view([t for t in library.load() if not t["long"]])}
 
 
+@app.get("/api/mine")
+def mine():
+    """The listener's own likes, with how much each is wanted and when it is next due, for the stations to play
+    between the new songs (rotation.py)."""
+    return rotation.view()
+
+
+class Hush(BaseModel):
+    vid: Vid
+    days: float = Field(rotation.HUSH_D, ge=0, le=365)
+
+
+@app.post("/api/mine/hush")
+def mine_hush(b: Hush):
+    """One of their likes kept out of the stations for a while ("not for a while"); 0 days lets it back."""
+    rotation.hush(b.vid, b.days)
+    return {"ok": True}
+
+
 @app.get("/api/ear")
 def ear_view():
     out = ear.build()
@@ -1257,6 +1276,7 @@ class Play(BaseModel):
     slot: int | None = Field(None, ge=-1, le=200)
     fam: int | None = Field(None, ge=0, le=2)
     probe: Literal["low", "graph"] | None = None
+    kind: Literal["fav", "again"] | None = None   # one of their own likes, woven in between new songs (rotation.py)
     title: str | None = Field(None, max_length=300)
     artist: str | None = Field(None, max_length=200)
 
@@ -1264,10 +1284,10 @@ class Play(BaseModel):
 @app.post("/api/play")
 def play(p: Play):
     con = store.db()
-    con.execute("insert into plays (vid, lane, ts, ev, pos, uid, title, artist, src, dur, idle, vis, test, fit, slot, fam, probe)"
-                " values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    con.execute("insert into plays (vid, lane, ts, ev, pos, uid, title, artist, src, dur, idle, vis, test, fit, slot, fam, probe, kind)"
+                " values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (p.vid, p.lane, store.now(), p.ev, p.pos, store.uid(), p.title, p.artist, p.src, p.dur, p.idle, p.vis,
-                 int(p.test), p.fit, p.slot, p.fam, p.probe))
+                 int(p.test), p.fit, p.slot, p.fam, p.probe, p.kind))
     con.commit()
     return {"ok": True}
 

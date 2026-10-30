@@ -3,7 +3,8 @@
 A good first listen is one heard through (or 80% of the way) and not refused. An early skip is one left within ten
 seconds. Counted overall and split the ways that say what to change: by station, by the editor's confidence (does
 "fit" mean anything?), by whether the artist was new to them, by place in the station, and for the probe songs the
-editor would not have sent out (is its judgement worth what it costs?)."""
+editor would not have sent out (is its judgement worth what it costs?). The listener's own likes played between the
+new songs are counted apart, every listen of them: a favourite skipped often means it comes round too soon."""
 import os
 import time
 from collections import defaultdict
@@ -106,6 +107,9 @@ def report(days: int = 14, uid: str | None = None) -> dict:
         add("slot", _slot_bin(x), x)
         add("arm", "probe:" + x["probe"] if x["probe"] else "editor" if x["slot"] is not None and x["slot"] >= 0 else None, x)
         add("start", "chosen" if x["src"] in signals.CHOSEN else "played on" if x["src"] else None, x)
+    for x in signals.listens(uid, since):
+        if x["kind"] and x["src"] != "compare":
+            add("mine", x["kind"], {**x, "out": outcome(x, False), "like": False, "nope": False})
     return {"days": days, "since": since, "groups": {d: dict(v) for d, v in groups.items()}}
 
 

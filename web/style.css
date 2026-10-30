@@ -16,6 +16,7 @@
   --sel: rgba(255, 255, 255, .09);
   --danger: #ff6b5e;
   --heart: #ff5d73;
+  --amber: #E9A55B;
   --ease: cubic-bezier(.23, 1, .32, 1);
   --drawer: cubic-bezier(.32, .72, 0, 1);
   --fast: 120ms;
@@ -344,6 +345,11 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .s-head .tb { height: 28px; font-size: 12px; color: var(--fg-3); }
 .s-head .tb:first-of-type { margin-left: -10px; }
 .s-head .tb:hover, .s-head .tb.on { color: var(--fg); }
+/* how many of your own likes play between new songs: one choice of three, set apart from the switches */
+.s-head .blend, .s-head .steer { display: inline-flex; }   /* each wraps as one */
+.s-head .blend { margin-right: 6px; padding-right: 6px; border-right: 1px solid var(--line); }
+.s-head .blend[hidden] { display: none; }
+.s-head .blend:not([hidden]) ~ .steer .tb { margin-left: 0; }
 .s-note { flex-basis: 100%; min-width: 0; font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .s-note:empty { display: none; }
 .q-promise { margin: 0 0 8px; font-size: 12px; line-height: 1.5; color: var(--fg-3); }
@@ -365,6 +371,7 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .tr .tt { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255, 255, 255, .86); }
 .tr .ar { margin-top: 1px; font-size: 13px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tr.cur .tt { color: var(--fg); }
+.tr .tt .nw { display: inline-block; width: 6px; height: 6px; margin: 0 7px 0 1px; border-radius: 50%; background: var(--amber); vertical-align: 2px; }
 .tr.done { opacity: .42; }
 .tr.done:hover { opacity: .8; }
 .tr .end { display: flex; align-items: center; justify-content: flex-end; min-width: 76px; }
@@ -372,7 +379,8 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .tr .acts { display: none; gap: 0; }
 .tr .acts .ib { width: 36px; height: 36px; color: rgba(255, 255, 255, .7); }
 .tr .acts .ib svg { width: 17px; height: 17px; }
-.tr .acts .ib.like.on { color: var(--heart); }
+.tr .acts .ib.like.on, .tr .acts .ib.like.mine { color: var(--heart); }
+.tr .acts .ib.like.mine svg { fill: currentColor; }
 .tr:has(.like.on) .acts { display: flex; }
 .tr:has(.like.on) .acts .ib:not(.like), .tr:has(.like.on) .d { display: none; }
 @media (hover: hover) { .tr:hover .acts, .tr:hover .acts .ib:not(.like) { display: flex; } .tr:hover .d { display: none; } }
@@ -855,6 +863,10 @@ a.m-acct:hover { background: var(--hover); }
   .s-head { padding: 14px 12px 4px 16px; }
   .s-head h3 { display: block; }
   .s-head .tb:first-of-type { margin-left: 0; }
+  /* a phone has no room for both on one line: the switches go under the choice, lined up with the heading */
+  .s-head .blend { margin-right: 0; padding-right: 0; border-right: 0; }
+  .s-head .blend:not([hidden]) ~ .steer { flex-basis: 100%; }
+  .s-head .blend:not([hidden]) ~ .steer .tb:first-of-type { margin-left: -10px; }
   .s-note { margin: 2px 0 0; }
   .q-promise { margin: 0; padding: 0 16px 8px; }
   .s-list { overflow: visible; margin: 0; padding: 0 4px; -webkit-mask-image: none; mask-image: none; }

@@ -222,6 +222,15 @@ def track(vid: str) -> dict | None:
     return _cached("track", vid, 90 * DAY, fn)
 
 
+def cached(kind: str, key: str) -> dict | None:
+    """What song(), track() and the like last fetched, from the cache only, never the network: None if never."""
+    path = store.CACHE / kind / f"{hashlib.sha1(key.encode()).hexdigest()[:16]}.json"
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
 COVER_HOSTS = ("i.ytimg.com", "lh3.googleusercontent.com", "yt3.googleusercontent.com", "yt3.ggpht.com")
 COVER_MAX = 2 << 20
 
