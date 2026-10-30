@@ -153,8 +153,17 @@ Zhiyin becomes a like on YouTube Music only for listeners who turn that on; "not
    `data/google_client.json`. No restart is needed.
 
 The scopes are `openid email profile` to sign in and `youtube.readonly` to read likes. Writing likes back needs
-`youtube`, which Zhiyin asks for only when a listener turns it on in Settings. Tokens are encrypted at rest with a
-key in `data/secret.key`.
+`youtube` by default, which Zhiyin asks for only when a listener turns it on in Settings; this also enables saving
+stations as private playlists. Enabling synchronization queues previous Zhiyin likes too. Tokens are encrypted at
+rest with a key in `data/secret.key`. Data directories are restricted to the service's OS account (`0700`); this
+does not encrypt the entire library or backups, whose protection remains the operator's responsibility.
+
+For Google verification, run `docker exec zhiyin zhiyin oauth-scopes` to print the actual scope set without
+credentials. An isolated review deployment can explicitly set
+`ZHIYIN_YOUTUBE_WRITE_SCOPE=https://www.googleapis.com/auth/youtube.force-ssl` in its container environment (for
+example, its own `secrets/zhiyin.env`) and restart. This permission supports the app's rating and playlist write
+methods; existing `youtube` grants remain usable. Keep newly requested, unverified scopes away from production
+traffic. Match the review deployment, Console Data Access and video exactly before submitting.
 
 ### 4. Let people in
 

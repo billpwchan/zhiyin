@@ -331,7 +331,8 @@ def _last_read(u: dict) -> float:
 
 
 def _unread_too_long(u: dict) -> bool:
-    if store.is_owners(u["id"]) or u["status"] == "new":
+    # Local imports belong to their operator; OAuth-derived libraries follow the same retention rule for everyone.
+    if (store.is_owners(u["id"]) and not u.get("google_sub")) or u["status"] == "new":
         return False
     if any(j["running"] for (uid, _), j in list(_jobs.items()) if uid == u["id"]):
         return False   # a slow read may be about to land; deleting under it would leave its files behind
@@ -349,24 +350,37 @@ def _forget_youtube(uid: str) -> None:
             shutil.rmtree(f)
         else:
             f.unlink(missing_ok=True)
+    # Keep the listener's own requests, but remove recommendations derived from the expired Google library.
+    requests = store.read_json(store.USERS / uid / store._PER_USER["ASKS"])
+    if isinstance(requests, list):
+        store.write_json(store.USERS / uid / store._PER_USER["ASKS"], [
+            {**{k: q[k] for k in ("q", "created", "lang") if k in q}, "picks": []} for q in requests
+        ])
+    cards.drop(uid)
     accounts.set_status(uid, "new")
     accounts.set_prefs(uid, synced=None, last_sync=None, setup_fails=None, setup_issue=None, google_error=None,
                        ref=None, counted=None, forgot=time.time())
 
 
-FORGET_GRACE_DAYS = 3   # after this rule first runs on a server, so listeners already past 30 days get a re-read first
+FORGET_GRACE_DAYS = 3   # rollout grace for libraries still inside the 30-day limit
 
 
 def _forget_stale(users: list[dict]) -> set[str]:
     stale = [u for u in users if _unread_too_long(u)]
+    # Neither rollout grace nor a broad outage may extend the maximum retention period.
+    expired = [u for u in stale if time.time() - _last_read(u) >= KEEP_DAYS * 86400]
+    forgotten = {u["id"] for u in expired}
+    for u in expired:
+        _forget_youtube(u["id"])
+    stale = [u for u in stale if u["id"] not in forgotten]
     if not (start := store.kv_get("forget_from")):
         store.kv_set("forget_from", start := time.time() + FORGET_GRACE_DAYS * 86400)
     if time.time() < start:
         for u in stale:
             print(f"zhiyin: likes of {u['id']} not re-read in {KEEP_DAYS} days; deleted from "
                   f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(start))} unless a read works first", flush=True)
-        return set()
-    listeners = sum(1 for u in users if not store.is_owners(u["id"]))
+        return forgotten
+    listeners = sum(1 for u in users if not store.is_owners(u["id"]) or u.get("google_sub"))
     if len(stale) > 3 and len(stale) > listeners / 4:
         # many at once means reading is broken for everyone (a changed OAuth client, Google down), not that they left:
         # hold off a little for the operator to fix it, never past KEEP_DAYS
@@ -376,11 +390,11 @@ def _forget_stale(users: list[dict]) -> set[str]:
             print(f"zhiyin: {len(stale)} of {listeners} listeners not re-read in {FORGET_DAYS} days; deleting from "
                   f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(held + HOLD_DAYS * 86400))} unless the Google "
                   "connection is fixed first", flush=True)
-            return set()
+            return forgotten
     store.kv_set("forget_held", None)
     for u in stale:
         _forget_youtube(u["id"])
-    return {u["id"] for u in stale}
+    return forgotten | {u["id"] for u in stale}
 
 
 def _scheduler():
@@ -856,6 +870,7 @@ def _doc_page(request: Request, name: str) -> HTMLResponse:
     html = re.sub(r"<!--lang:([\w-]+)-->(.*?)<!--/lang-->", lambda m: m.group(2) if m.group(1) == lang else "", html, flags=re.S)
     html = re.sub(r"<!--cdn-->(.*?)<!--/cdn-->", lambda m: m.group(1).replace("{cdn}", escape(CDN)) if CDN else "",
                   html, flags=re.S)
+    html = html.replace("{youtube_write_scope}", escape(google.WRITE_SCOPE.rsplit("/", 1)[-1]))
     return HTMLResponse(html, headers={"Cache-Control": HTML_CACHE})
 
 
@@ -918,7 +933,7 @@ def google_start(request: Request, mode: str = "connect", write: int = 0, yt: in
         return RedirectResponse("/login", 303)
     asked_write = bool(write)
     # Someone who already reads and writes keeps both: include_granted_scopes only adds.
-    write = asked_write or (uid is not None and google.writes_back(uid)) or not AUTH
+    write = asked_write or (uid is not None and google.writes_back(uid))
     state = secrets.token_urlsafe(24)
     verifier, challenge = google.pkce()
     con = store.db()
@@ -987,6 +1002,8 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
     accounts.link_google(uid, c["sub"], c.get("email", ""), c.get("name", ""))
     google.save_tokens(uid, tok)
     accounts.set_prefs(uid, google_error=None)
+    if google.writes_back(uid) and st.get("write_on"):
+        accounts.set_prefs(uid, sync_likes=True)
     con.execute("update outbox set next_try=null where uid=? and done is null", (uid,))
     con.commit()
     _wake.set()
@@ -1000,8 +1017,6 @@ def google_callback(request: Request, state: str = "", code: str = "", error: st
                 _start("sync", _sync_likes)
         except HTTPException:
             pass
-    if google.writes_back(uid) and st.get("write_on"):
-        accounts.set_prefs(uid, sync_likes=True)
     r = RedirectResponse("/", 303)
     return _signed_in(r, uid, request) if st.get("join") else r
 

@@ -1,8 +1,55 @@
 # Privacy
 
-Zhiyin is meant to run on a machine you control, for you, the people you invite and, if you open seats, people
-who join on their own. Nothing is sent to the author of this project. The only analytics are daily counts kept on
-the server itself (below).
+Updated October 28, 2026. The public-facing policy is served at `/privacy` in English, Simplified Chinese and
+Traditional Chinese. Bill Chan operates `zhiyin.billpwchan.art`; a self-hosted copy has its own operator. Self-hosted
+copies do not automatically send data to the project author. For the official deployment, privacy requests can be
+sent to [billpwchan@gmail.com](mailto:billpwchan@gmail.com), the configured Google OAuth support address.
+The operator of a hosted service receives and stores the data needed to run it. The only analytics are daily counts kept on the server itself (below).
+
+## How Google user data is used
+
+Google account ID, email and name identify the listener, link their account and let them sign in again. Access and
+refresh tokens authorize Google requests, including background library refreshes while the page is closed.
+`youtube.readonly` reads liked videos and dates, ratings, subscriptions and own-playlist entries. The API can return
+non-music videos and channels before filtering; categories, durations and channel topics identify music.
+
+Music IDs, titles, artists and dates build the library, Your Ear disc, taste name and portrait, stations and weekly
+recommendation explanations. Disliked music is excluded; playlist entries identify songs already known; subscribed
+artists guide discovery. Relevant music preferences are sent to Anthropic for inference, as disclosed below and
+before connecting Google. Google account identifiers, email and OAuth tokens are not included in Claude prompts.
+
+An optional write grant lets the listener synchronize likes (including previously recorded Zhiyin likes when
+enabled), remove their rating when undoing a like, and save a station as a **private** YouTube playlist. Saved
+playlists remain on YouTube until the listener removes them there. The deployment's selected write permission is
+`youtube` by default; `ZHIYIN_YOUTUBE_WRITE_SCOPE=https://www.googleapis.com/auth/youtube.force-ssl` opts a review
+deployment into the alternative supported by these write methods. No new scope should reach production users
+before verification. Run `zhiyin oauth-scopes` for the actual requested scope set.
+
+Zhiyin does not read Gmail, Drive or contacts, or use these permissions to upload, comment on or delete YouTube
+videos. It does not sell Google user data, use it for advertising, share it with data brokers, or use it for credit
+assessment or lending. Use and transfer comply with the
+[Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including
+Limited Use. Google Workspace API data and other Google API data must not be used to develop, improve or train
+generalized, non-personalized AI/ML models, by Zhiyin or its providers. The AI calls here perform inference for the
+listener's visible features; the audio model runs inference on separately sourced previews and is not trained here.
+
+## How sensitive data is protected
+
+- Google OAuth, YouTube Data API and Anthropic API calls use HTTPS/TLS. Public deployments must use HTTPS.
+- OAuth access and refresh tokens are encrypted with Fernet in SQLite. `data/secret.key` is created with mode
+  `0600`; the data, cache and users directories have mode `0700`, restricting other operating-system accounts.
+- Session and invitation tokens are random and stored as SHA-256 hashes. Session and OAuth cookies are HttpOnly,
+  SameSite=Lax and Secure when `ZHIYIN_PUBLIC_URL` is HTTPS. OAuth state is bound to its browser cookie, expires
+  after 15 minutes, is consumed once, and is paired with PKCE S256.
+- Hosted API requests resolve the signed-in listener and reject writes from a stale account tab; per-user files
+  and database rows are accessed in that user's context. Worker endpoints require a separate shared secret.
+- Ordinary account responses omit OAuth tokens. The Google password is never received by Zhiyin.
+
+These are specific application controls, **not** full database or backup encryption. Listening files and account
+details are not individually encrypted by the application; the operator is responsible for encrypted volumes,
+backup protection and restricting administrative access. Humans may read specific Google user data only with the
+listener's affirmative agreement, where necessary for security, or as required by law. The operator must verify
+the actual host/CDN and Anthropic account settings before publishing claims about them.
 
 ## What is stored
 
@@ -66,6 +113,10 @@ including its Limited Use requirements, and YouTube's rule that data from its AP
   the library is written;
 - facts about a video from YouTube's API (category, length, channel), shared by all listeners, are fetched again
   when needed after 30 days, and deleted if nobody needed them in that time;
+- the same limits apply to the operator's accounts connected through Google; a local library imported without
+  Google OAuth remains operator-managed. Rollout grace and outage holds cannot extend the 30-day limit;
+- when a Google library expires, its shared cards and personalized picks from Ask are removed too. The user's
+  original request text, its date and language are kept;
 - deleting an account deletes everything about it at once.
 
 The owner of the server can read all of it. The join sheet and the welcome page link to the privacy page, which
@@ -76,7 +127,7 @@ says so.
 | Sent to | What | Why |
 |---|---|---|
 | YouTube Music (unauthenticated) | song and artist ids | radio, related songs, artist pages, playlists, cover art |
-| YouTube Data API, with your Google token | your likes, thumbs-down music, subscriptions and own playlists; the songs you like in Zhiyin, once you turn on writing likes back | read likes and the other signals, like songs back |
+| YouTube Data API, with your Google token | your likes, thumbs-down music, subscriptions and own playlists; song IDs and ratings when syncing likes; a title, description and song IDs when saving a station | read likes and the other signals, synchronize ratings, create a private playlist at your request |
 | Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
@@ -84,6 +135,13 @@ says so.
 | The YouTube embedded player, in your browser | the video being played | playback, under YouTube's own terms |
 
 Your Google token is only used for your own account. It is never sent anywhere but Google.
+
+The operator's hosting provider processes stored service data; a fronting CDN, if configured, sees network requests
+and IP addresses. Set `ZHIYIN_CDN` to its real name so `/privacy` identifies it. Deliberately shared cards disclose
+the picture and taste summary to anyone with the link. Other disclosure is limited to consented user-facing
+features, necessary security investigations and applicable legal requirements; data is not transferred for other
+purposes. Third-party services apply their own privacy and retention terms to the data they receive; deleting
+Zhiyin's account cannot retract a card someone has copied or a playlist kept in the listener's YouTube account.
 
 When the server has no Claude login of its own, the owner's calls (and only the owner's) are run by the owner's
 Mac worker, so those prompts pass through that Mac on their way to Anthropic. Lyric translations are kept per song

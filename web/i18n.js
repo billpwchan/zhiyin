@@ -18,6 +18,11 @@ let LANG = detectLang();
 
 const STRINGS = {
   en: {
+    "连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。": "When you connect, Zhiyin sends song titles, artists, like dates and other music preferences read from Google to Anthropic (Claude) to generate your stations and taste portrait. Your Google email and access credentials are not sent. Continuing to connect consents to this processing; see the privacy policy for details.",
+    "你喜欢和不喜欢的音乐、订阅的音乐频道、自建歌单，用来做推荐": "Your liked and disliked music, subscribed music channels and own playlists, to build recommendations",
+    "同步你在这里点的喜欢，或保存电台为私人歌单。要你在设置里打开，Google 会再问一次": "Sync your likes here, or save a station as a private playlist. Enable it in Settings; Google will ask again",
+    "授权后也能把电台存成私人 YouTube 歌单；开启同步会同步之前点过的喜欢。": " You can also save stations as private YouTube playlists after granting access. Enabling sync also syncs earlier Zhiyin likes.",
+
     "YouTube Music 播放记录": "YouTube Music history",
     "用你的 Claude API key，按用量计费。": "Runs on your Claude API key, billed by use.",
     "今天 {calls} 次调用，读 {in}、写 {out} token，${usd}；近 7 天 ${week}。": "Today {calls} calls, {in} tokens in and {out} out, ${usd}; last 7 days ${week}.",
@@ -513,6 +518,11 @@ const STRINGS = {
     "用网易云歌单画一张唱片": "Draw a record from a NetEase playlist",
   },
   'zh-Hant': {
+    "连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。": "連接後，知音會把從 Google 讀取的歌名、歌手、喜歡時間及其他音樂偏好傳給 Anthropic（Claude），用於產生你的電台和口味畫像；不傳送 Google 電子郵件或存取憑證。繼續連接即同意這些處理，詳情見隱私政策。",
+    "你喜欢和不喜欢的音乐、订阅的音乐频道、自建歌单，用来做推荐": "你喜歡和不喜歡的音樂、訂閱的音樂頻道、自建歌單，用來做推薦",
+    "同步你在这里点的喜欢，或保存电台为私人歌单。要你在设置里打开，Google 会再问一次": "同步你在這裡按的喜歡，或儲存電台為私人歌單。要你在設定裡開啟，Google 會再問一次",
+    "授权后也能把电台存成私人 YouTube 歌单；开启同步会同步之前点过的喜欢。": "授權後也能把電台存成私人 YouTube 歌單；開啟同步會同步之前按過的喜歡。",
+
     "用你的 Claude API key，按用量计费。": "用你的 Claude API key，按用量計費。",
     "今天 {calls} 次调用，读 {in}、写 {out} token，${usd}；近 7 天 ${week}。": "今天 {calls} 次呼叫，讀 {in}、寫 {out} token，${usd}；近 7 天 ${week}。",
     "保存": "儲存",

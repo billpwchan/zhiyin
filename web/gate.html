@@ -50,6 +50,7 @@ if (G.mode === 'switch') {
   el.innerHTML = `${MARK}
     <h1>${t('一个私人的推荐电台')}</h1>
     <p>${pitch}</p>
+    ${G.google && open ? `<p class="gate-note">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')}</p>` : ''}
     ${G.error ? `<p class="gate-err">${esc(errors[G.error] || G.error)}</p>` : ''}
     ${G.google ? `<div class="gate-acts">${main}${sample}</div>${note ? `<p class="gate-note">${note}</p>` : ''}`
       : sample ? `<div class="gate-acts">${sample}</div>` : ''}

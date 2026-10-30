@@ -21,6 +21,7 @@ CARDS = "cards"
 
 for d in (DATA, CACHE, USERS):
     d.mkdir(parents=True, exist_ok=True)
+    d.chmod(0o700)   # listening data and OAuth secrets belong only to the OS account running Zhiyin
 
 # Whose library, profile and stations the current request or job is about. Set once at the edge (HTTP middleware,
 # job thread, CLI) and read everywhere below, so the engine code stays single-listener.

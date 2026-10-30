@@ -380,7 +380,7 @@ def test_likes_not_read_again_in_30_days_are_deleted_but_the_account_stays(monke
     from zhiyin import accounts, google
     monkeypatch.setattr(google, "disconnect", lambda uid: None)
     owner_prefs = accounts.prefs(store.OWNER)
-    old, now = time.time() - 31 * 86400, time.time()
+    old, now = time.time() - 29 * 86400, time.time()
     gone = accounts.redeem(accounts.invite("Gone"))
     here = accounts.redeem(accounts.invite("Here"))
     mine = accounts.redeem(accounts.invite("Mine", mine=True))

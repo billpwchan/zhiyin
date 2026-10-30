@@ -11,6 +11,7 @@ def main():
     p = sub.add_parser("import", help="load a liked-songs TSV exported from the browser")
     p.add_argument("tsv")
     sub.add_parser("auth", help="connect your YouTube Music account (you paste request headers)")
+    sub.add_parser("oauth-scopes", help="print this deployment's exact Google OAuth scopes (no credentials)")
     sub.add_parser("sync", help="re-read likes from your account (needs auth)")
     p = sub.add_parser("profile", help="rebuild the taste profile (tags, lanes, portrait)")
     p.add_argument("--model", default="opus")
@@ -61,6 +62,10 @@ def main():
         library.estimate_like_dates(recs)
         library.save(recs)
         print(f"{len(recs)} likes imported")
+    elif a.cmd == "oauth-scopes":
+        import json
+        from . import google
+        print(json.dumps(google.scope_manifest(), indent=2))
     elif a.cmd == "auth":
         print("1. In Chrome open https://music.youtube.com (signed in), DevTools > Network, filter 'browse',\n"
               "   click any request, copy its Request Headers.\n"

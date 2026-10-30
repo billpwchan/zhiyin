@@ -25,6 +25,12 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 API = "https://www.googleapis.com/youtube/v3"
 YT_SCOPE = "https://www.googleapis.com/auth/youtube"
+YT_FORCE_SSL = "https://www.googleapis.com/auth/youtube.force-ssl"
+# Keep existing deployments on their submitted scopes. Try force-ssl in an isolated review deployment first;
+# switch production only after its exact scope set is verified. Both support ratings and private playlists.
+WRITE_SCOPE = os.environ.get("ZHIYIN_YOUTUBE_WRITE_SCOPE", YT_SCOPE)
+if WRITE_SCOPE not in (YT_SCOPE, YT_FORCE_SSL):
+    raise ValueError("ZHIYIN_YOUTUBE_WRITE_SCOPE must be the full youtube or youtube.force-ssl scope URL")
 # Joining asks only to read; writing likes back is asked for when the listener turns it on, so the first consent
 # screen says "view your YouTube account" instead of "see, edit, and permanently delete".
 YT_READ = "https://www.googleapis.com/auth/youtube.readonly"
@@ -91,17 +97,31 @@ def pkce() -> tuple[str, str]:
 HL = {"zh-Hans": "zh-CN", "zh-Hant": "zh-TW", "en": "en"}   # Google's page in the language the app is shown in
 
 
+def requested_scopes(connect: bool = False, write: bool = False) -> list[str]:
+    return BASE_SCOPES.split() + ([WRITE_SCOPE if write else YT_READ] if connect else [])
+
+
+def scope_manifest() -> dict:
+    """The scopes this deployment actually requests; safe to copy into verification materials."""
+    flows = {"sign_in": requested_scopes(), "connect": requested_scopes(True),
+             "optional_write": requested_scopes(True, True)}
+    return {"flows": flows, "all_requested_scopes": sorted({s for scopes in flows.values() for s in scopes}),
+            "note": "Google may also return previously granted scopes through include_granted_scopes. "
+                    "Record with a fresh review account; compare against Cloud Console Data Access."}
+
+
 def auth_url(state: str, challenge: str, connect: bool, hint: str | None = None, pick: bool = True,
-             write: bool = True, lang: str | None = None) -> str:
+             write: bool = False, lang: str | None = None) -> str:
     c = client()
     q = {"client_id": c["id"], "redirect_uri": redirect_uri(), "response_type": "code", "state": state,
-         "code_challenge": challenge, "code_challenge_method": "S256", "include_granted_scopes": "true"}
+         "code_challenge": challenge, "code_challenge_method": "S256", "include_granted_scopes": "true",
+         "scope": " ".join(requested_scopes(connect, write))}
     if connect:
         # prompt=consent guarantees a refresh token even if the listener granted access before.
-        q |= {"scope": f"{BASE_SCOPES} {YT_SCOPE if write else YT_READ}", "access_type": "offline", "prompt": "consent"}
+        q |= {"access_type": "offline", "prompt": "consent"}
     else:
         # without the account picker, signing in as a named account already in the browser takes one click
-        q |= {"scope": BASE_SCOPES} | ({"prompt": "select_account"} if pick else {})
+        q |= {"prompt": "select_account"} if pick else {}
     if hint:
         q["login_hint"] = hint
     if lang in HL:
@@ -128,13 +148,13 @@ def claims(id_token: str) -> dict:
 
 def has_youtube(tok: dict) -> bool:
     # Google's consent screen lets people untick individual permissions.
-    return bool({YT_SCOPE, YT_READ} & set((tok.get("scope") or "").split()))
+    return bool({YT_SCOPE, YT_FORCE_SSL, YT_READ} & set((tok.get("scope") or "").split()))
 
 
 def writes_back(uid: str | None = None) -> bool:
     """Allowed to put likes into the listener's YouTube Music, not only to read them."""
     t = _load(uid or store.uid())
-    return bool(t and YT_SCOPE in (t.get("scope") or "").split())
+    return bool(t and {YT_SCOPE, YT_FORCE_SSL} & set((t.get("scope") or "").split()))
 
 
 def save_tokens(uid: str, tok: dict) -> None:

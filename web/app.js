@@ -150,7 +150,7 @@ function buildStations() {
   if (WARM?.tracks?.length) out.push({ key: 'warm', group: 'warm', name: WARM.name, sub: WARM.sub, when: WARM.seeds?.length ? t('从〈{s}〉等你最近的喜欢出发', { s: WARM.seeds[0] }) : '', tracks: WARM.tracks, reserve: [] });
   if (pendingAsk) out.push({ key: 'ask:pending', group: 'ask', name: pendingAsk, sub: t('正在找…'), tracks: [], pending: true });
   (S.asks || []).slice(0, 4).forEach((a) => out.push({
-    key: `ask:${a.created}`, group: 'ask', name: a.intent, sub: artistLine(a.picks), when: t('你说：{q}', { q: a.q }), tracks: a.picks, reserve: [],
+    key: `ask:${a.created}`, group: 'ask', name: a.intent || a.q, sub: artistLine(a.picks), when: t('你说：{q}', { q: a.q }), tracks: a.picks, reserve: [],
   }));
   const mix = mixOf(ed);
   if (mix) out.push({ key: 'mix', group: 'lane', name: t('精选'), sub: t('来自全部 {n} 个电台', { n: mix.n }), when: t('每个电台最有把握的几首，轮流放'), tracks: mix.tracks, reserve: mix.reserve });
@@ -1313,10 +1313,11 @@ function welcomeHTML() {
     <p class="lede">${t('知音从你在 YouTube Music 点过的喜欢出发，每周挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')}</p>
     <a class="btn" href="/auth/google/start">${t('连接 YouTube Music')}</a>
     <dl class="scope">
-      <dt>${t('会读取')}</dt><dd>${t('你点过喜欢的歌和视频，只用来给你算推荐')}</dd>
-      <dt>${t('可以写回')}</dt><dd>${t('你在这里点的喜欢。要你在设置里打开，Google 会再问一次')}</dd>
+      <dt>${t('会读取')}</dt><dd>${t('你喜欢和不喜欢的音乐、订阅的音乐频道、自建歌单，用来做推荐')}</dd>
+      <dt>${t('可以写回')}</dt><dd>${t('同步你在这里点的喜欢，或保存电台为私人歌单。要你在设置里打开，Google 会再问一次')}</dd>
       <dt>${t('不会')}</dt><dd>${t('发布、评论、删除，或碰你的其他 Google 数据')}</dd>
     </dl>
+    <p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p>
     <p class="fine">${t('你的喜欢和反馈存在{owner}的服务器上，随时可以在设置里断开并全部删除。', { owner: esc(owner) })}</p>
   </div>`;
 }
@@ -1505,7 +1506,7 @@ function accountHTML() {
     const busy = S.jobs?.sync?.running;
     rows.push(`<li><span>YouTube Music<small>${esc(g.email || t('已连接'))}${me.synced ? ` · ${ls?.added ? t('{when} 读过一次，新增 {n} 首', { when: ago(me.synced), n: ls.added }) : t('{when} 读过一次', { when: ago(me.synced) })}` : ''}</small></span><button class="tb" data-k="resync" ${busy ? 'disabled' : ''}>${busy ? t('读取中…') : t('现在读取')}</button></li>`);
     const state = !me.writes_back ? t('现在只读不写。打开时 Google 会再问一次，允许知音把这里的 ♥ 写回 YouTube Music') : sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
-    rows.push(`<li><span>${t('把这里的喜欢同步到 YouTube Music')}<small>${esc(state)}${t('。「不要」只记在知音，不会变成 YouTube 上的踩。')}</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="${t('同步喜欢')}"></button></li>`);
+    rows.push(`<li><span>${t('把这里的喜欢同步到 YouTube Music')}<small>${esc(state)}${t('。「不要」只记在知音，不会变成 YouTube 上的踩。')}${t('授权后也能把电台存成私人 YouTube 歌单；开启同步会同步之前点过的喜欢。')}</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="${t('同步喜欢')}"></button></li>`);
   }
   if (me.mine && me.claude) {
     const c = me.claude;
@@ -1517,7 +1518,7 @@ function accountHTML() {
     rows.push(`<li><span>${t('退出登录')}<small>${t('只退出这台设备。')}</small></span><button class="tb" data-k="logout">${t('退出')}</button></li>`);
     if (!me.owner) rows.push(`<li><span>${t('断开并删除我的数据')}<small>${t('撤销 Google 授权，删掉你的喜欢、电台和反馈。')}</small></span><button class="tb danger" data-k="delete">${t('删除')}</button></li>`);
   }
-  return `<section class="sh-sec"><h3>${t('账号')}</h3><ul class="plain acct">${rows.join('')}</ul></section>${me.owner && me.auth ? friendsHTML() : ''}`;
+  return `<section class="sh-sec"><h3>${t('账号')}</h3><ul class="plain acct">${rows.join('')}</ul>${g.configured && !g.connected ? `<p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')} <a href="/privacy">${t('知音怎么用你的数据')}</a></p>` : ''}</section>${me.owner && me.auth ? friendsHTML() : ''}`;
 }
 
 function linkHTML(url) {
@@ -1596,6 +1597,7 @@ function openJoin(why) {
     <svg class="j-mark" viewBox="8 26 84 52" aria-hidden="true"><path d="M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33"/><circle cx="69" cy="52" r="7"/></svg>
     <h2>${title}</h2>
     <ol class="${steps.length > 1 ? 'steps' : ''}">${steps.map((x) => `<li>${x}</li>`).join('')}</ol>
+    ${!full && !invite ? `<p class="fine">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')}</p>` : ''}
     ${invite ? `<a class="btn j-go" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`
       : `<a class="btn j-go" href="/auth/google/start?mode=join">${G_LOGO}${full ? t('用 Google 登记') : t('用 Google 继续')}</a>`}
     ${SAMPLE() ? `<p class="j-163">${t('不用 YouTube Music？')}<button class="lnk" data-k="tomaker">${t('用网易云歌单画一张唱片')}</button></p>` : ''}
@@ -2097,7 +2099,7 @@ function composerHTML() {
   const ideas = IDEAS()[h >= 22 || h < 5 ? 'night' : h < 11 ? 'morning' : h < 17 ? 'day' : 'evening'];
   const asks = (S.asks || []).slice(0, 4);
   return `<div class="c-h">${t('试试')}</div><div class="chips">${ideas.map((x) => `<button class="chip" data-idea="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-    ${asks.length ? `<div class="c-h">${t('你点过的')}</div>${asks.map((a) => `<button class="c-row" data-st="ask:${a.created}"><span class="mosaic ${a.picks.length < 4 ? 'one' : ''}">${a.picks.slice(0, 4).map((p) => imgTag(p, 120)).join('')}</span><span><b>${esc(a.intent)}</b><span>${t('你说：{q}', { q: esc(a.q) })}</span></span></button>`).join('')}` : ''}`;
+    ${asks.length ? `<div class="c-h">${t('你点过的')}</div>${asks.map((a) => `<button class="c-row" data-st="ask:${a.created}"><span class="mosaic ${a.picks.length < 4 ? 'one' : ''}">${a.picks.slice(0, 4).map((p) => imgTag(p, 120)).join('')}</span><span><b>${esc(a.intent || a.q)}</b><span>${t('你说：{q}', { q: esc(a.q) })}</span></span></button>`).join('')}` : ''}`;
 }
 function openAsk() {
   closeMenu();

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0b0c">
-<title>知音</title>
+<title>知音 · Privacy Policy</title>
 <link rel="stylesheet" href="/static/style.css">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 </head>
@@ -13,11 +13,15 @@
   <a class="mark" href="/" aria-label="知音" data-i18n-label="知音"><svg class="lg" viewBox="8 26 84 52" aria-hidden="true"><path d="M14 70 C21 70 26 36 37 36 C48 36 49 70 61 70 C75 70 86 62 86 49 C86 37 77 30 67 33"/><circle cx="69" cy="52" r="7"/></svg><span class="wm-t" data-i18n="知音">知音</span></a>
 <!--lang:zh-Hans-->
   <h1>知音怎么用你的数据</h1>
-  <p>知音是一个私人的推荐电台，由一个人运营在自己的服务器上，给他邀请的人，以及在他开放名额时自己加入的人用。项目作者收不到任何数据。网站没有广告，也不用第三方统计，只记下面说的人数。</p>
+  <p class="gate-note">更新日期：2026 年 10 月 30 日</p>
+  <p>本隐私政策适用于知音（Zhiyin）的 Google 登录和 YouTube 音乐推荐功能。zhiyin.billpwchan.art 由 Bill Chan 运营；如果你使用别人自行部署的知音，你的数据由该部署的运营者管理。数据保存在运营者的服务器上；自行部署的实例不会把数据自动发给项目作者。网站没有广告，也不用第三方统计，只记下面说的人数。</p>
 
+  <h2 id="google-data-use">Google 用户数据的用途</h2>
+  <p>Google 账号 ID 用于识别和关联你的账号，邮箱和名字用于显示账号及再次登录。只读权限 <code>youtube.readonly</code> 用于读取你点过喜欢的视频、评分、订阅和自建播放列表；YouTube API 返回的列表可能包含非音乐视频或频道，知音根据视频分类和频道主题筛选音乐。视频 ID、歌名、歌手、频道、时长和喜欢或加入歌单的时间用于整理音乐库、画出「你的耳朵」、生成口味画像、电台及推荐理由，并排除你拒绝或已收藏的歌。</p>
+  <p>写入权限 <code>{youtube_write_scope}</code> 仅在你打开「同步喜欢」时请求，用于写入或撤销你在知音里的喜欢，以及在你选择保存电台时创建私人 YouTube 播放列表并添加歌曲。开启同步时，之前在知音点过的喜欢也会排队同步；关闭后不再同步新的喜欢。保存的播放列表会留在你的 YouTube 账号里，由你在 YouTube 管理。离线访问凭证用于你离开网页后刷新授权、同步收藏和更新电台。知音不通过这些权限读取 Gmail、Google Drive 或通讯录，不上传视频、不发表评论、不删除你的 YouTube 视频。</p>
   <h2>从 Google 读什么</h2>
   <p>你用 Google 登录时，知音拿到你的账号 id、邮箱和名字。你连接 YouTube Music 时，它读取你点过的喜欢；随喜欢一起（最多每天一次），还读取你在 YouTube 上点过「不喜欢」的音乐、你订阅的音乐频道，以及你自己建的播放列表里的歌，用来不推你不喜欢的歌和已经收藏的歌，并认出你订阅的歌手。这些都只读不写。如果你在设置里打开「同步喜欢」（Google 会再请你同意一次），你在知音里点的喜欢也会出现在 YouTube Music 上，随时可以关掉。「不要这首」只留在知音，不会写到 YouTube。</p>
-  <p>这些数据只用来给你推荐歌和同步喜欢：不出售，不用于广告，也不拿去做别的事。</p>
+  <p>这些数据只用来给你推荐歌、同步喜欢和保存你选择的私人歌单：不出售，不用于广告，也不拿去做别的事。</p>
 
   <h2>存了什么</h2>
   <ul>
@@ -32,16 +36,22 @@
   <p>没有登录时听示例电台，知音不会记下关于你的东西，只放一个 cookie 记住你是从哪个链接来的（保存 30 天），用来数每个链接带来了多少人。知音每天只记人数：多少人来过、加入、做出唱片、分享了卡片，不记是谁。新账号会带着它的来源最多 30 天，也只用来计数。</p>
   <p>这些都存在运营者的服务器上，运营者能看到。每个账号的数据彼此分开，一个账号看不到另一个账号的喜欢和反馈。歌曲的声音特征是所有人共用的，试听音频只在内存里解码，不保存。</p>
 
-  <h2>发给了谁</h2>
+  <h2 id="google-data-sharing">Google 用户数据的共享、转移和披露</h2>
+  <p>为提供你授权的音乐推荐功能，知音会把从 Google 获得的部分音乐数据及由它们生成的内容发送给下列服务。Anthropic 会收到音乐偏好数据，但不会收到你的 Google 账号 ID、邮箱、Google 密码或 OAuth 凭证。点击连接 YouTube Music 前，页面会提示这项处理并链接到本政策。Google 授权不是对数据出售或广告使用的同意。</p>
+  <p>这些服务仅用于下列功能；知音不出售 Google 用户数据，不向广告平台、数据经纪商或信息转售商提供这些数据，也不用于信用评估或放贷。运营者及其服务器托管服务负责运行服务和保存数据；如配置了前置 CDN，会在下方列出。运营者只应在你明确同意查看具体数据、排查安全问题或履行法律义务时人工访问相关 Google 数据。除提供你同意的功能、保障安全或遵守适用法律外，不作其他披露。你主动分享的卡片会披露给持有链接的人，内容见下文。</p>
   <ul>
-    <li><b>Anthropic（Claude）</b>：你喜欢的歌名和歌手、你常听或存进自己歌单但没点喜欢的歌名和歌手、候选歌、你拒绝的歌和原因（包括在 YouTube 上点过不喜欢的歌名）、候选歌的歌手是不是你在 YouTube 上订阅的、点歌时输入的话、需要翻译的歌词，以及在中英文之间切换语言时它之前写的画像和理由，用来生成电台、挑歌和改写；</li>
-    <li><b>YouTube</b>：读取你的喜欢、不喜欢、订阅和播放列表，你打开同步后写回你的喜欢，以及网页里的播放器；</li>
+    <li><b>Anthropic（Claude）</b>：你喜欢的歌名、歌手和喜欢的月份、你常听或存进自己歌单但没点喜欢的歌名和歌手、候选歌、你拒绝的歌和原因（包括在 YouTube 上点过不喜欢的歌名）、候选歌的歌手是不是你在 YouTube 上订阅的、点歌时输入的话、需要翻译的歌词，以及在中英文之间切换语言时它之前写的画像和理由，用来生成电台、挑歌和改写；</li>
+    <li><b>YouTube</b>：读取你的喜欢、不喜欢、订阅和播放列表，你打开同步后写回你的喜欢，在你选择时创建私人歌单，以及网页里的播放器；</li>
     <li><b>Deezer、Apple iTunes</b>：歌名和歌手，用来找 30 秒试听；</li>
     <li><b>网易云音乐、LRCLIB、YouTube Music</b>：歌名、歌手和时长，用来找歌词；你不登录做唱片时，网易云音乐还会收到你贴的歌单或主页 id；</li>
     <!--cdn--><li><b>{cdn}</b>：网站经过它转发，它能看到你的 IP 地址和访问的网址，用来加速和挡住攻击。</li><!--/cdn-->
   </ul>
   <p>你的 Google 凭证只用于你自己的账号，除了 Google 不会发给任何地方。知音使用 YouTube API 服务，适用 <a href="https://www.youtube.com/t/terms">YouTube 服务条款</a>和 <a href="https://policies.google.com/privacy">Google 隐私权政策</a>。</p>
-  <p>知音对从 Google API 获得的信息的使用和转移，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服务用户数据政策</a>，包括其中的「有限使用」要求：这些数据只用来给你本人做推荐，不卖、不用于广告，也不用来训练任何模型。从 YouTube 读到的喜欢、不喜欢、订阅和播放列表至少每 30 天重新读取一次；如果 30 天里一直读不到（比如你撤销了授权），从 YouTube 读来的这些和由它们做出的唱片、电台都会删掉，账号保留，重新连接就从头开始。删除账号时立即全部删除。</p>
+  <p>知音对从 Google API 获得的信息的使用和转移，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服务用户数据政策</a>，包括其中的「有限使用」要求：这些数据只用来提供本文说明的音乐功能，不卖、不用于广告，也不用来训练任何模型。从 YouTube 读到的喜欢、不喜欢、订阅和播放列表至少每 30 天重新读取一次；如果 30 天里一直读不到（比如你撤销了授权），从 YouTube 读来的这些和由它们做出的唱片、电台、点歌推荐及关联分享卡片都会删掉，账号保留，重新连接就从头开始。这个规则也适用于用 Google 连接的运营者账号；你自己输入的点歌文字会保留。删除账号时立即全部删除。</p>
+
+  <h2 id="data-protection">敏感数据保护</h2>
+  <ul><li><b>传输保护：</b>Google OAuth、YouTube Data API 和 Anthropic API 通过 HTTPS/TLS 通信；公开部署应使用 HTTPS，浏览器的会话与 OAuth cookie 在 HTTPS 部署中设置 Secure、HttpOnly 和 SameSite=Lax。</li><li><b>凭证保护：</b>Google access token 和 refresh token 在数据库中使用 Fernet 加密，密钥文件限运行服务的系统账号读写；凭证只发送给 Google，不能通过普通账号接口读取。知音不接收或保存 Google 密码。</li><li><b>访问控制：</b>服务器为每个账号检查登录会话并隔离音乐库和反馈；会话和邀请令牌在数据库中仅保存 SHA-256 哈希。OAuth 使用随机 state、15 分钟有效期和 PKCE S256，防止授权请求被冒用。</li><li><b>官方部署：</b>zhiyin.billpwchan.art 运行在 Bill Chan 专用的 AWS Lightsail 服务器上。对外只开放 HTTPS（443）、会跳转到 HTTPS 的 80 端口，以及管理用的 SSH；SSH 只接受密钥登录，不接受密码。应用在容器里以非 root 账号运行，数据库不对外开放，只有运营者本人有服务器管理权限。</li><li><b>存储边界：</b>数据目录限运行服务的系统账号访问。这不等于整库加密：音乐库、账号信息和听歌记录并未在应用层逐项加密；磁盘、备份和服务器管理权限由部署运营者负责。任何系统都无法保证绝对安全。</li></ul>
+  <p id="limited-use">知音不会使用通过 Google Workspace API 或其他 Google API 获得的数据来开发、改进或训练通用、非个性化 AI 或机器学习模型。发送音乐数据给 Claude 是为了推理并生成你看到的推荐、画像和文字，不是训练模型；运营者也不得授权服务提供商将这些 Google 用户数据用于通用模型训练。</p>
 
   <h2>不登录做唱片</h2>
   <p>你贴一个网易云音乐的歌单或主页链接，知音会读取那份公开歌单：歌名、歌手、专辑、封面、发行日期，以及每首歌是什么时候加进去的、在网易云的热度。唱片画好就交给你的浏览器，歌单本身不保存。最近的 600 首歌名和歌手，连同数量、年份和热度这几个数，会发给 Anthropic（Claude）起名字、写一句锐评；名字和锐评用歌单 id 的哈希值记 7 天，同一份歌单再来就不用重新写。为了防止滥用，服务器在内存里按 IP 地址数一下每十分钟做了几张，不写进磁盘。</p>
@@ -50,15 +60,22 @@
   <h2>删除</h2>
   <p>在设置里点「断开并删除我的数据」，知音会撤销 Google 授权，删掉你的喜欢、电台、反馈、播放和导入的播放记录。你也可以随时在 <a href="https://myaccount.google.com/permissions">Google 账号的第三方访问</a>里撤销知音的权限；撤销后知音读不到新的喜欢，从上次读取算起 30 天内会删掉从 YouTube 读来的一切。</p>
 
+  <h2 id="contact">联系与变更</h2>
+  <p>你可以在设置里删除账号；隐私问题或无法登录时的数据删除请求，请联系此实例的运营者。官方部署的隐私联系邮箱为 <a href="mailto:billpwchan@gmail.com">billpwchan@gmail.com</a>（Bill Chan），自行部署的实例请联系邀请你的人。本政策如有更新会在本页修改日期；如 Google 数据用途或共享方式发生实质变化，会先告知并重新征得你的同意。</p>
+
   <p class="gate-note"><a href="/about">知音是什么</a> · 技术细节见 <a href="https://github.com/billpwchan/zhiyin/blob/main/docs/privacy.md">docs/privacy.md</a>。</p>
 <!--/lang-->
 <!--lang:zh-Hant-->
   <h1>知音怎麼用你的資料</h1>
-  <p>知音是一個私人的推薦電台，由一個人架在自己的伺服器上，給他邀請的人，以及在他開放名額時自己加入的人用。專案作者收不到任何資料。網站沒有廣告，也不用第三方統計，只記下面說的人數。</p>
+  <p class="gate-note">更新日期：2026 年 10 月 30 日</p>
+  <p>本隱私政策適用於知音（Zhiyin）的 Google 登入和 YouTube 音樂推薦功能。zhiyin.billpwchan.art 由 Bill Chan 營運；如果你使用別人自行部署的知音，你的資料由該部署的營運者管理。資料保存在營運者的伺服器上；自行部署的執行個體不會把資料自動傳給專案作者。網站沒有廣告，也不用第三方統計，只記下面說的人數。</p>
 
+  <h2 id="google-data-use">Google 使用者資料的用途</h2>
+  <p>Google 帳戶 ID 用於識別和連結你的帳戶，電子郵件和名字用於顯示帳戶及再次登入。唯讀權限 <code>youtube.readonly</code> 用於讀取你按過喜歡的影片、評分、訂閱和自建播放清單；YouTube API 回傳的清單可能包含非音樂影片或頻道，知音依據影片分類和頻道主題篩選音樂。影片 ID、歌名、歌手、頻道、長度和喜歡或加入歌單的時間用於整理音樂庫、畫出「你的耳朵」、產生口味畫像、電台及推薦理由，並排除你拒絕或已收藏的歌。</p>
+  <p>寫入權限 <code>{youtube_write_scope}</code> 僅在你開啟「同步喜歡」時請求，用於寫入或撤銷你在知音裡的喜歡，以及在你選擇儲存電台時建立私人 YouTube 播放清單並加入歌曲。開啟同步時，之前在知音按過的喜歡也會排隊同步；關閉後不再同步新的喜歡。儲存的播放清單會留在你的 YouTube 帳戶裡，由你在 YouTube 管理。離線存取憑證用於你離開網頁後更新授權、同步收藏和更新電台。知音不透過這些權限讀取 Gmail、Google Drive 或通訊錄，不上傳影片、不發表留言、不刪除你的 YouTube 影片。</p>
   <h2>從 Google 讀取什麼</h2>
   <p>你用 Google 登入時，知音拿到你的帳戶 ID、電子郵件和名字。你連接 YouTube Music 時，它讀取你按過的喜歡；隨喜歡一起（最多每天一次），還讀取你在 YouTube 上按過「不喜歡」的音樂、你訂閱的音樂頻道，以及你自己建的播放清單裡的歌，用來不推薦你不喜歡的歌和已經收藏的歌，並認出你訂閱的歌手。這些都只讀不寫。如果你在設定裡開啟「同步喜歡」（Google 會再請你同意一次），你在知音裡按的喜歡也會出現在 YouTube Music 上，隨時可以關掉。「不要這首」只留在知音，不會寫到 YouTube。</p>
-  <p>這些資料只用來給你推薦歌和同步喜歡：不出售，不用於廣告，也不拿去做別的事。</p>
+  <p>這些資料只用來給你推薦歌、同步喜歡和儲存你選擇的私人歌單：不出售，不用於廣告，也不拿去做別的事。</p>
 
   <h2>存了什麼</h2>
   <ul>
@@ -73,16 +90,22 @@
   <p>沒有登入時聽範例電台，知音不會記下關於你的東西，只放一個 cookie 記住你是從哪個連結來的（保存 30 天），用來數每個連結帶來了多少人。知音每天只記人數：多少人來過、加入、做出唱片、分享了卡片，不記是誰。新帳戶會帶著它的來源最多 30 天，也只用來計數。</p>
   <p>這些都存在營運者的伺服器上，營運者看得到。每個帳戶的資料彼此分開，一個帳戶看不到另一個帳戶的喜歡和回饋。歌曲的聲音特徵是所有人共用的，試聽音訊只在記憶體裡解碼，不保存。</p>
 
-  <h2>傳給了誰</h2>
+  <h2 id="google-data-sharing">Google 使用者資料的分享、移轉和揭露</h2>
+  <p>為提供你授權的音樂推薦功能，知音會把從 Google 取得的部分音樂資料及由它們產生的內容傳給下列服務。Anthropic 會收到音樂偏好資料，但不會收到你的 Google 帳戶 ID、電子郵件、Google 密碼或 OAuth 憑證。點擊連接 YouTube Music 前，頁面會提示這項處理並連結至本政策。Google 授權不代表同意販售資料或廣告使用。</p>
+  <p>這些服務僅用於下列功能；知音不販售 Google 使用者資料，不向廣告平台、資料經紀商或資訊轉售商提供這些資料，也不用於信用評估或放貸。營運者及其伺服器託管服務負責運行服務和保存資料；如設定了前置 CDN，會在下方列出。營運者只應在你明確同意查看具體資料、排查安全問題或履行法律義務時人工存取相關 Google 資料。除提供你同意的功能、保障安全或遵守適用法律外，不作其他揭露。你主動分享的卡片會揭露給持有連結的人，內容見下文。</p>
   <ul>
-    <li><b>Anthropic（Claude）</b>：你喜歡的歌名和歌手、你常聽或存進自己播放清單但沒按喜歡的歌名和歌手、候選歌、你拒絕的歌和原因（包括在 YouTube 上按過不喜歡的歌名）、候選歌的歌手是不是你在 YouTube 上訂閱的、點歌時輸入的話、需要翻譯的歌詞，以及在中英文之間切換語言時它之前寫的畫像和理由，用來產生電台、挑歌和改寫；</li>
-    <li><b>YouTube</b>：讀取你的喜歡、不喜歡、訂閱和播放清單，你開啟同步後寫回你的喜歡，以及網頁裡的播放器；</li>
+    <li><b>Anthropic（Claude）</b>：你喜歡的歌名、歌手和喜歡的月份、你常聽或存進自己播放清單但沒按喜歡的歌名和歌手、候選歌、你拒絕的歌和原因（包括在 YouTube 上按過不喜歡的歌名）、候選歌的歌手是不是你在 YouTube 上訂閱的、點歌時輸入的話、需要翻譯的歌詞，以及在中英文之間切換語言時它之前寫的畫像和理由，用來產生電台、挑歌和改寫；</li>
+    <li><b>YouTube</b>：讀取你的喜歡、不喜歡、訂閱和播放清單，你開啟同步後寫回你的喜歡，在你選擇時建立私人歌單，以及網頁裡的播放器；</li>
     <li><b>Deezer、Apple iTunes</b>：歌名和歌手，用來找 30 秒試聽；</li>
     <li><b>網易雲音樂、LRCLIB、YouTube Music</b>：歌名、歌手和長度，用來找歌詞；你不登入做唱片時，網易雲音樂還會收到你貼的歌單或主頁 id；</li>
     <!--cdn--><li><b>{cdn}</b>：網站經過它轉發，它能看到你的 IP 位址和造訪的網址，用來加速和擋住攻擊。</li><!--/cdn-->
   </ul>
   <p>你的 Google 憑證只用於你自己的帳戶，除了 Google 不會傳到任何地方。知音使用 YouTube API 服務，適用 <a href="https://www.youtube.com/t/terms">YouTube 服務條款</a>和 <a href="https://policies.google.com/privacy">Google 隱私權政策</a>。</p>
-  <p>知音對從 Google API 取得的資訊的使用和轉移，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服務使用者資料政策</a>，包括其中的「有限使用」要求：這些資料只用來為你本人做推薦，不販售、不用於廣告，也不用來訓練任何模型。從 YouTube 讀到的喜歡、不喜歡、訂閱和播放清單至少每 30 天重新讀取一次；如果 30 天裡一直讀不到（例如你撤銷了授權），從 YouTube 讀來的這些和由它們做出的唱片、電台都會刪除，帳戶保留，重新連接就從頭開始。刪除帳戶時立即全部刪除。</p>
+  <p>知音對從 Google API 取得的資訊的使用和轉移，遵守 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API 服務使用者資料政策</a>，包括其中的「有限使用」要求：這些資料只用來提供本文說明的音樂功能，不販售、不用於廣告，也不用來訓練任何模型。從 YouTube 讀到的喜歡、不喜歡、訂閱和播放清單至少每 30 天重新讀取一次；如果 30 天裡一直讀不到（例如你撤銷了授權），從 YouTube 讀來的這些和由它們做出的唱片、電台、點歌推薦及關聯分享卡片都會刪除，帳戶保留，重新連接就從頭開始。這個規則也適用於用 Google 連接的營運者帳戶；你自己輸入的點歌文字會保留。刪除帳戶時立即全部刪除。</p>
+
+  <h2 id="data-protection">敏感資料保護</h2>
+  <ul><li><b>傳輸保護：</b>Google OAuth、YouTube Data API 和 Anthropic API 透過 HTTPS/TLS 通訊；公開部署應使用 HTTPS，瀏覽器的工作階段與 OAuth cookie 在 HTTPS 部署中設定 Secure、HttpOnly 和 SameSite=Lax。</li><li><b>憑證保護：</b>Google access token 和 refresh token 在資料庫中使用 Fernet 加密，金鑰檔案限運行服務的系統帳戶讀寫；憑證只傳送給 Google，不能透過普通帳戶介面讀取。知音不接收或保存 Google 密碼。</li><li><b>存取控制：</b>伺服器為每個帳戶檢查登入工作階段並隔離音樂庫和回饋；工作階段和邀請權杖在資料庫中僅保存 SHA-256 雜湊。OAuth 使用隨機 state、15 分鐘有效期和 PKCE S256，防止授權請求被冒用。</li><li><b>官方部署：</b>zhiyin.billpwchan.art 運行在 Bill Chan 專用的 AWS Lightsail 伺服器上。對外只開放 HTTPS（443）、會轉址到 HTTPS 的 80 埠，以及管理用的 SSH；SSH 只接受金鑰登入，不接受密碼。應用在容器裡以非 root 帳戶運行，資料庫不對外開放，只有營運者本人有伺服器管理權限。</li><li><b>儲存邊界：</b>資料目錄限運行服務的系統帳戶存取。這不等於整庫加密：音樂庫、帳戶資訊和聽歌記錄並未在應用層逐項加密；磁碟、備份和伺服器管理權限由部署營運者負責。任何系統都無法保證絕對安全。</li></ul>
+  <p id="limited-use">知音不會使用透過 Google Workspace API 或其他 Google API 取得的資料來開發、改進或訓練通用、非個人化 AI 或機器學習模型。傳送音樂資料給 Claude 是為了推論並產生你看到的推薦、畫像和文字，不是訓練模型；營運者也不得授權服務提供商將這些 Google 使用者資料用於通用模型訓練。</p>
 
   <h2>不登入做唱片</h2>
   <p>你貼一個網易雲音樂的歌單或主頁連結，知音會讀取那份公開歌單：歌名、歌手、專輯、封面、發行日期，以及每首歌是什麼時候加進去的、在網易雲的熱度。唱片畫好就交給你的瀏覽器，歌單本身不保存。最近的 600 首歌名和歌手，連同數量、年份和熱度這幾個數，會傳給 Anthropic（Claude）取名字、寫一句銳評；名字和銳評用歌單 id 的雜湊值記 7 天，同一份歌單再來就不用重新寫。為了防止濫用，伺服器在記憶體裡按 IP 位址數一下每十分鐘做了幾張，不寫進磁碟。</p>
@@ -91,15 +114,22 @@
   <h2>刪除</h2>
   <p>在設定裡點「中斷連接並刪除我的資料」，知音會撤銷 Google 授權，刪掉你的喜歡、電台、回饋、播放和匯入的播放記錄。你也可以隨時在 <a href="https://myaccount.google.com/permissions">Google 帳戶的第三方存取權</a>裡撤銷知音的權限；撤銷後知音讀不到新的喜歡，從上次讀取算起 30 天內會刪除從 YouTube 讀來的一切。</p>
 
+  <h2 id="contact">聯絡與變更</h2>
+  <p>你可以在設定裡刪除帳戶；隱私問題或無法登入時的資料刪除請求，請聯絡此執行個體的營運者。官方部署的隱私聯絡電子郵件為 <a href="mailto:billpwchan@gmail.com">billpwchan@gmail.com</a>（Bill Chan），自行部署的執行個體請聯絡邀請你的人。本政策如有更新會在本頁修改日期；如 Google 資料用途或分享方式發生實質變化，會先告知並重新取得你的同意。</p>
+
   <p class="gate-note"><a href="/about">知音是什麼</a> · 技術細節見 <a href="https://github.com/billpwchan/zhiyin/blob/main/docs/privacy.md">docs/privacy.md</a>。</p>
 <!--/lang-->
 <!--lang:en-->
   <h1>How Zhiyin uses your data</h1>
-  <p>Zhiyin is a private recommender. One person runs it on their own server, for people they invite and, when they open seats, people who join on their own. The project's author receives nothing. The site has no ads and no third-party analytics, only the counts described below.</p>
+  <p class="gate-note">Last updated: October 30, 2026</p>
+  <p>This Privacy Policy covers Google sign-in and YouTube music recommendations in Zhiyin (知音). Bill Chan operates zhiyin.billpwchan.art. If you use a separately hosted copy, its operator manages your data. Data is stored on that operator's server; self-hosted copies do not automatically send it to the project author. There are no ads or third-party analytics, only the counts described below.</p>
 
+  <h2 id="google-data-use">How we use Google user data</h2>
+  <p>Your Google account ID identifies and links your account; your email address and name identify it in the interface and support signing in again. The <code>youtube.readonly</code> permission reads liked videos, ratings, subscriptions and playlists you created. YouTube API responses can include non-music videos or channels, which Zhiyin filters using video categories and channel topics. Video IDs, titles, artists, channels, durations and like or playlist dates organize your library, draw Your Ear, build your taste portrait, stations and recommendation explanations, and exclude music you dislike or already keep.</p>
+  <p>The optional <code>{youtube_write_scope}</code> write permission is requested when you enable "Sync likes". It adds or removes your Zhiyin likes on YouTube and creates a private YouTube playlist with songs when you choose to save a station. Enabling sync also queues likes you previously made in Zhiyin; disabling it stops new like synchronization. Saved playlists remain in your YouTube account for you to manage on YouTube. Offline access tokens refresh authorization, synchronize your library and update stations while the page is closed. These permissions are not used to read Gmail, Google Drive or contacts, upload videos, post comments or delete your YouTube videos.</p>
   <h2>What it reads from Google</h2>
   <p>When you sign in with Google, Zhiyin gets your account ID, email address and name. When you connect YouTube Music, it reads the songs you've liked and, along with them (at most once a day), the music you gave a thumbs-down on YouTube, the music channels you subscribe to and the songs in playlists you made, so it doesn't recommend what you dislike or already keep, and knows the artists you follow. All of this is read, never written. If you turn on syncing likes in Settings (Google asks you once more), songs you like in Zhiyin are liked on YouTube Music too, until you turn it off. "Not for me" stays in Zhiyin and is never written to YouTube.</p>
-  <p>This data is used only to recommend songs to you and to keep your likes in sync. It is not sold, not used for ads, and not used for anything else.</p>
+  <p>This data is used only to recommend songs to you, keep your likes in sync and save private playlists you choose. It is not sold, not used for ads, and not used for anything else.</p>
 
   <h2>What is stored</h2>
   <ul>
@@ -107,23 +137,29 @@
     <li>The thumbs-down music, subscribed music channels and own-playlist songs read from YouTube;</li>
     <li>What you do in Zhiyin: plays (where each started, how far it got, whether you chose it or it played on, how long since you last touched the page, and whether the page was in front), skips, likes, "not for me", and what you type when you ask for music; and the songs this shows you play often without having liked them;</li>
     <li>If you import your YouTube Music history: the file is read in your browser, and only the songs played more than once are kept, as video ID, title, artist, number of plays, number of days, the first and latest date, and a count of days weighted toward recent ones. You can delete them on Your Ear at any time;</li>
-    <li>Your Google account ID, email address, name and access token, the token encrypted on the server;</li>
+    <li>Your Google account ID, email address, name, access and refresh tokens, with both token types encrypted on the server;</li>
     <li>How many times Claude was called for you each day, and roughly what it cost;</li>
     <li>For people who signed up with Google while there was no free place: their account ID, email address, name, language and when they signed up, deleted once they are let in or removed.</li>
   </ul>
   <p>Listening to the sample stations without signing in records nothing about you, except a cookie that remembers which link brought you (kept for 30 days), used to count how many people each link brings. Each day Zhiyin keeps only counts: how many people came, joined, got their record and shared a card, never who. A new account carries the link it came from for at most 30 days, and only for these counts.</p>
   <p>All of this sits on the operator's server, and the operator can see it. Each account's data is kept apart: one account can't see another's likes or feedback. The sound features of songs are shared by everyone; preview audio is decoded in memory and never saved.</p>
 
-  <h2>Who it is sent to</h2>
+  <h2 id="google-data-sharing">Sharing, transfer and disclosure of Google user data</h2>
+  <p>To provide the music features you authorize, Zhiyin sends some music data obtained from Google, and content derived from it, to the services listed below. Anthropic receives music preferences, but not your Google account ID, email address, Google password or OAuth tokens. Before you connect YouTube Music, the interface explains this processing and links to this policy. Google authorization does not consent to data sales or advertising uses.</p>
+  <p>These services are used only for the stated features. Zhiyin does not sell Google user data, share it with advertising platforms, data brokers or information resellers, or use it for credit assessment or lending. The operator and their server hosting provider run the service and store data; a configured CDN is identified below. The operator may read specific Google user data only with your affirmative agreement, as necessary for security investigations, or to comply with applicable law. Disclosure is limited to your consented features, security and applicable legal requirements. Cards you deliberately share disclose their contents to anyone with the link, as explained below.</p>
   <ul>
-    <li><b>Anthropic (Claude)</b>: titles and artists of the songs you like and of the songs you play often or keep in your playlists without a like, candidate songs, songs you turned down and why (including titles you gave a thumbs-down on YouTube), whether a candidate's artist is one you subscribe to on YouTube, what you type when you ask, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier, to build your stations, pick songs and rewrite that text;</li>
-    <li><b>YouTube</b>: to read your likes, dislikes, subscriptions and playlists, to write likes back once you turn that on, and for the player on the page;</li>
+    <li><b>Anthropic (Claude)</b>: titles, artists and like months of the songs you like and of the songs you play often or keep in your playlists without a like, candidate songs, songs you turned down and why (including titles you gave a thumbs-down on YouTube), whether a candidate's artist is one you subscribe to on YouTube, what you type when you ask, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier, to build your stations, pick songs and rewrite that text;</li>
+    <li><b>YouTube</b>: to read your likes, dislikes, subscriptions and playlists, to write likes back once you turn that on, to create private playlists when you choose, and for the player on the page;</li>
     <li><b>Deezer, Apple iTunes</b>: titles and artists, to find 30-second previews;</li>
     <li><b>NetEase Cloud Music, LRCLIB, YouTube Music</b>: titles, artists and lengths, to find lyrics; when you make a record without signing in, NetEase Cloud Music also gets the playlist or profile ID you pasted;</li>
     <!--cdn--><li><b>{cdn}</b>: the site is served through it, so it sees your IP address and the pages you open, to speed the site up and block attacks.</li><!--/cdn-->
   </ul>
   <p>Your Google token is used only for your own account and is never sent anywhere but Google. Zhiyin uses YouTube API Services; the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a> and the <a href="https://policies.google.com/privacy">Google Privacy Policy</a> apply.</p>
-  <p>Zhiyin's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements: the data is used only to make recommendations for you, and is never sold, used for ads or used to train any model. Likes, dislikes, subscriptions and playlists read from YouTube are re-read at least every 30 days. If they can't be read for 30 days (say you removed access), everything read from YouTube and the record and stations made from it are deleted; the account stays, and connecting again starts over. Deleting your account deletes everything at once.</p>
+  <p>Zhiyin's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements: the data is used only for the music features described here, and is never sold, used for ads or used to train any model. Likes, dislikes, subscriptions and playlists read from YouTube are re-read at least every 30 days. If they can't be read for 30 days (say you removed access), the data read from YouTube, its taste record, stations, personalized Ask recommendations and associated shared cards are deleted; the account stays, and connecting again starts over. This also applies to the operator's accounts connected through Google. The text of requests you typed yourself is retained. Deleting your account deletes everything at once.</p>
+
+  <h2 id="data-protection">How we protect sensitive data</h2>
+  <ul><li><b>In transit:</b> Google OAuth, YouTube Data API and Anthropic API connections use HTTPS/TLS. Public deployments must use HTTPS; session and OAuth cookies use Secure on HTTPS deployments, HttpOnly and SameSite=Lax.</li><li><b>Credentials:</b> Google access and refresh tokens are encrypted in the database using Fernet. The key file is readable and writable only by the operating-system account running the service. Tokens are sent only to Google and are excluded from ordinary account responses. Zhiyin never receives or stores your Google password.</li><li><b>Access control:</b> The server checks each account's login session and separates libraries and feedback. Session and invite tokens are stored only as SHA-256 hashes. OAuth uses random state, a 15-minute expiry and PKCE S256 to protect the authorization flow.</li><li><b>Official deployment:</b> zhiyin.billpwchan.art runs on a server dedicated to Bill Chan on AWS Lightsail. Only HTTPS (port 443), port 80 (which redirects to HTTPS) and SSH for administration are reachable from the internet; SSH accepts key-based authentication only, never passwords. The app runs in a container as a non-root user, the database is not exposed to the network, and only the operator has administrative access to the server.</li><li><b>Storage boundaries:</b> The data directories are accessible only to the operating-system account running the service. This is not full database encryption: library files, account details and listening records are not individually encrypted by the app. Disk, backup and administrative access protection is the deployment operator's responsibility. No system can guarantee absolute security.</li></ul>
+  <p id="limited-use">Zhiyin does not use data obtained through Google Workspace APIs or any other Google APIs to develop, improve or train generalized, non-personalized AI or machine-learning models. Music data sent to Claude is used for inference to generate the recommendations, portrait and text you see, not for model training; operators must not authorize providers to use this Google user data for generalized model training either.</p>
 
   <h2>A record without signing in</h2>
   <p>When you paste a NetEase Cloud Music playlist or profile link, Zhiyin reads that public playlist: titles, artists, albums, covers, release dates, when each song was added, and how popular it is on NetEase. The record is handed to your browser once it's drawn; the playlist itself is not kept. The titles and artists of the newest 600 songs, with a few numbers (how many, which years, how popular), go to Anthropic (Claude) to name the taste and write a one-line roast; both are kept for 7 days under a hash of the playlist's ID, so the same playlist isn't written up again. To stop abuse, the server counts in memory how many records each IP address made in the last ten minutes; this is never written to disk.</p>
@@ -131,6 +167,9 @@
 
   <h2>Deleting</h2>
   <p>In Settings, choose "Disconnect and delete my data": Zhiyin revokes Google access and deletes your likes, stations, feedback, plays and any imported history. You can also remove Zhiyin's access at any time under <a href="https://myaccount.google.com/permissions">third-party access in your Google Account</a>; Zhiyin then can't read your likes any more, and deletes everything read from YouTube within 30 days of the last read.</p>
+
+  <h2 id="contact">Contact and changes</h2>
+  <p>Delete your account in Settings, or contact this deployment's operator about privacy or deletion if you cannot sign in. For the official deployment, contact Bill Chan at <a href="mailto:billpwchan@gmail.com">billpwchan@gmail.com</a>; for a self-hosted copy, contact the person who invited you. Updates to this policy will change the date on this page. We will notify you and obtain renewed consent before materially changing how Google user data is used or shared.</p>
 
   <p class="gate-note"><a href="/about">What Zhiyin is</a> · Technical details: <a href="https://github.com/billpwchan/zhiyin/blob/main/docs/privacy.md">docs/privacy.md</a>.</p>
 <!--/lang-->
