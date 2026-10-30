@@ -1508,14 +1508,15 @@ function paintNow() {
   placeHost();
 }
 
-// The cover in the room and in the player card. A music video keeps its own shape, as its player shows it.
+// The cover in the room and in the player card. A music video keeps its own shape, as its player shows it; an audio
+// track is square art even when only YouTube's 16:9 frame of it is at hand, so that frame is cut to its square.
 function paintArt(p) {
   const big = cover(p, 1200);
   for (const [id, u] of [['#nArt', big], ['#dArt', cover(p, 480)]]) {
     const el = $(id);
     if (!el) continue;
     if (el.getAttribute('src') !== px(u)) el.src = px(u);
-    el.classList.toggle('mv', !isGoogleArt(u));
+    el.classList.toggle('mv', !isGoogleArt(u) && p.type !== 'ATV');
   }
   const nx = Q?.tracks[Q.i + 1];
   if (nx) new Image().src = px(cover(nx, 1200));   // so the next cover is there the moment the song changes
