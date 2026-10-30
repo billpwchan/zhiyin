@@ -217,7 +217,7 @@ def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans", names=True, re
         return i18n.tr(text, lang, **kw)
     out = []
     first = min(tracks, key=lambda t: (ts[t["rank"]], -t["rank"]))
-    who = first["artists"][0]["name"] if first["artists"] else ""
+    who = i18n.script(first["artists"][0]["name"], lang) if first["artists"] else ""
     if released:
         text = tr("最老的一首是《{title}》，{who}。", title=first["title"], who=who) if names and who else tr("最老的一首是《{title}》。", title=first["title"])
     else:
@@ -233,7 +233,7 @@ def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans", names=True, re
         yrs, n, name, songs = max(long_)
         a, b = int(min(ts[t["rank"]] for t in songs)), int(max(ts[t["rank"]] for t in songs))
         if yrs >= 2:   # a year together says little about who stayed
-            out.append({"key": "longest", "lead": tr("{n} 年", n=b - a), "text": tr("陪你最久的是 {name}：从 {a} 到 {b}，一共 {n} 首。", name=name, a=a, b=b, n=n),
+            out.append({"key": "longest", "lead": tr("{n} 年", n=b - a), "text": tr("陪你最久的是{name}：从 {a} 到 {b}，一共 {n} 首。", name=i18n.script(name, lang), a=a, b=b, n=n),
                         "vids": [t["vid"] for t in songs]})
 
     lang_of = {t["vid"]: (tags.get(t["vid"]) or {}).get("lang") for t in tracks}

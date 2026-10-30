@@ -80,7 +80,8 @@ def test_each_account_keeps_its_own_language_and_reads_its_own_script(monkeypatc
     assert r.status_code == 200 and r.cookies.get(i18n.COOKIE) == "zh-Hant"
     assert accounts.prefs(b)["lang"] == "zh-Hant" and accounts.prefs(a).get("lang") != "zh-Hant"
     st = c.get("/api/state").json()
-    assert st["me"]["lang"] == "zh-Hant" and st["portrait"]["headline"] == "從〈后来〉開始的聽感"
+    # the song it quotes is shown in the reader's script too, like every title on the page
+    assert st["me"]["lang"] == "zh-Hant" and st["portrait"]["headline"] == "從〈後來〉開始的聽感"
     assert (st["edition"]["lanes"][0]["name"], st["edition"]["lanes"][0]["when"]) == ("日光律動", "想動一動的時候")
     assert '<html lang="zh-Hant" data-lang="zh-Hant">' in c.get("/").text
     c.cookies.set(accounts.COOKIE, accounts.new_session(a))
@@ -126,3 +127,63 @@ def test_no_two_functions_share_a_name_in_the_page_script():
     # a second top-level `function x` silently replaces the first everywhere (the settings page went blank that way)
     names = re.findall(r"^(?:async )?function (\w+)\(", (WEB / "app.js").read_text(), re.M)
     assert not [n for n in set(names) if names.count(n) > 1]
+
+
+def test_songs_and_text_reach_each_reader_in_their_script():
+    from zhiyin.i18n import for_reader
+    page = {"lanes": [{"name": "台北歌本", "picks": [
+        {"vid": "a", "title": "愛我別走", "artists": [{"name": "張震嶽"}], "album": {"name": "秘密基地"},
+         "reason": "《After 17》是最朴素的陈绮贞，2005年的歌"},
+        {"vid": "b", "title": "Just Stay (合作演出：JUNNY和Def.)", "artists": [{"name": "ØFFSHORE"}]},
+        {"vid": "c", "title": "丸ノ内サディスティック", "artists": [{"name": "椎名林檎"}]},
+        {"vid": "d", "title": "残響散歌", "artists": [{"name": "Aimer"}]}]}],
+        "asks": [{"q": "下雨的周日，聽點city pop", "picks": []}]}
+    out = for_reader(page, "zh-Hans")
+    a, b, c, d = out["lanes"][0]["picks"]
+    assert (a["title"], a["artists"][0]["name"], a["album"]["name"]) == ("爱我别走", "张震岳", "秘密基地")
+    assert a["reason"] == "《After 17》是最朴素的陈绮贞，2005 年的歌"
+    assert b["title"] == "Just Stay (feat. JUNNY & Def.)"
+    assert (c["title"], d["title"]) == ("丸ノ内サディスティック", "残響散歌")   # Japanese keeps its own kanji
+    assert out["asks"][0]["q"] == "下雨的周日，聽點city pop"   # the listener's own words stay
+    assert for_reader({"vid": "x", "title": "写不来情歌", "artists": ["艾志恒Asen"]}, "zh-Hant") == \
+        {"vid": "x", "title": "寫不來情歌", "artists": ["艾志恆Asen"], "o": {"t": "写不来情歌", "a": "艾志恒Asen", "al": ""}}
+    assert for_reader({"vid": "x", "title": "愛我別走", "reason": "2005年"}, "en") == {"vid": "x", "title": "愛我別走", "reason": "2005年"}
+
+
+def test_names_take_taiwan_forms_and_japanese_keeps_its_own():
+    assert [i18n.script(x, "zh-Hant") for x in ("汪峰", "为你写诗", "这里", "台湾")] == ["汪峰", "為你寫詩", "這裡", "台灣"]
+    # already in the reader's script: as written, not respelled (了解 is not made 瞭解, nor 朴 樸)
+    assert [i18n.script(x, "zh-Hant") for x in ("終於了解自由", "朴載範", "臺灣")] == ["終於了解自由", "朴載範", "臺灣"]
+    assert [i18n.script(x, "zh-Hans") for x in ("臺灣", "朴載範", "怎麼了")] == ["台湾", "朴载范", "怎么了"]
+    # Shinjitai neither Chinese script writes, kana (but not the ・ Chinese also uses), a kanji only Japanese writes
+    assert all(i18n.japanese(x) for x in ("変わらないもの", "黒い羊", "長渕剛", "残響散歌"))
+    assert not any(i18n.japanese(x) for x in ("周杰倫", "林俊杰", "麦克・杰克逊", "秘密基地", "給予", "研究", "為你", "新郎"))
+    # anything Japanese about a song keeps all of it as written; kanji alone can't tell (米津玄師 reads 米津玄师)
+    out = i18n.for_reader({"vid": "x", "title": "感電", "artists": [{"name": "米津玄師"}], "album": {"name": "STRAY SHEEP"}}, "zh-Hans")
+    assert (out["title"], out["artists"][0]["name"]) == ("感电", "米津玄师")
+    out = i18n.for_reader({"vid": "x", "title": "感電", "artists": [{"name": "米津玄師"}], "album": {"name": "感電 / ストレイ"}}, "zh-Hans")
+    assert (out["title"], out["artists"][0]["name"]) == ("感電", "米津玄師") and "o" not in out
+
+
+def test_the_records_songs_and_the_lyric_lookup_keep_the_names_as_written():
+    rec = {"label": "台北2005", "songs": [["v1", "愛我別走", ["張震嶽"], "秘密基地", 200, 2005.1, "k", 30, None, 0],
+                                         ["v2", "Lemon", ["米津玄師"], "レモン", 255, 2019.2, "k", 40, None, 0]]}
+    out = i18n.for_reader(rec, "zh-Hans")
+    assert out["label"] == "台北 2005"
+    assert out["songs"][0][1:4] == ["爱我别走", ["张震岳"], "秘密基地"]
+    assert out["songs"][0][10] == {"t": "愛我別走", "a": "張震嶽", "al": "秘密基地"}   # what the lyric sites are asked
+    assert len(out["songs"][1]) == 10
+    page = {"edition": {"seeds": [{"vid": "a", "title": "後來", "artists": [{"name": "劉若英"}]}], "near": "後來 (合作演出：A和B)"}}
+    out = i18n.for_reader(page, "zh-Hans")["edition"]
+    assert (out["seeds"][0]["title"], out["seeds"][0]["artists"][0]["name"]) == ("后来", "刘若英")
+    assert out["near"] == "后来 (feat. A & B)"
+
+
+def test_timed_lyric_words_convert_as_one_phrase():
+    from zhiyin import lyrics
+    assert lyrics._words([[0, 1, "头"], [1, 2, "发"], [2, 3, "现在"]], "zh-Hant") == [[0, 1, "頭"], [1, 2, "髮"], [2, 3, "現在"]]
+
+
+def test_a_name_is_the_same_key_in_either_script():
+    from zhiyin.text import fold, song_key
+    assert fold("劉若英") == fold("刘若英") and song_key("後來 (Live)") == song_key("后来")

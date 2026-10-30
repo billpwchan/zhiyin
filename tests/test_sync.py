@@ -275,7 +275,7 @@ def test_a_like_can_stop_speaking_for_your_taste_and_come_back(monkeypatch):
     v = c.post("/api/notme", json={"vid": "notme000001", "on": True}, headers=h).json()["not_me"]
     assert v["songs"] == [{"vid": "notme000001", "title": "Baby Shark", "artist": "Pinkfong"}]
     v = c.post("/api/notme", json={"artist": "Pinkfong", "on": True}, headers=h).json()["not_me"]
-    assert v["artists"] == [{"key": fold("Pinkfong"), "name": "Pinkfong"}]
+    assert v["artists"] == [{"key": fold("Pinkfong"), "artist": "Pinkfong"}]
     assert c.get("/api/state", headers=h).json()["not_me"] == v
     c.post("/api/notme", json={"key": fold("Pinkfong"), "on": False}, headers=h)
     c.post("/api/notme", json={"vid": "notme000001", "on": False}, headers=h)

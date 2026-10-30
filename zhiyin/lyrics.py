@@ -457,6 +457,21 @@ def translate_later(vid: str, to: str = "zh") -> bool:
     return True
 
 
+def _words(w: list, lang: str) -> list:
+    """A line's timed words in the reader's script, converted as one phrase (头发 is 頭髮, 发现 is 發現) and cut back
+    into the same pieces; piece by piece only if the phrase changed length."""
+    from . import i18n
+    whole = "".join(x[2] for x in w)
+    out = i18n.script(whole, lang)
+    if len(out) != len(whole):
+        return [[*x[:2], i18n.script(x[2], lang), *x[3:]] for x in w]
+    at, res = 0, []
+    for x in w:
+        res.append([*x[:2], out[at:at + len(x[2])], *x[3:]])
+        at += len(x[2])
+    return res
+
+
 def for_reader(d: dict, lang: str) -> dict:
     """The cached lyric as a reader of `lang` sees it: their translation in `tr`, credits in their script."""
     from . import i18n
@@ -468,6 +483,9 @@ def for_reader(d: dict, lang: str) -> dict:
                  for l in d["lines"]]
         return {**d, "lines": lines, "translated": any(l.get("tr") for l in lines), "tr_by": d.get("tr_en_by", "AI")}
     lines = [{k: v for k, v in l.items() if k != "tr_en" and (k != "tr" or _fits(v, l["x"]))} for l in d["lines"]]
+    # Chinese lyrics in the script the page shows the title in (i18n.for_reader); a Japanese song keeps its own
+    if not any(i18n.japanese(l["x"]) for l in lines):
+        lines = [{**l, "x": i18n.script(l["x"], lang), **({"w": _words(l["w"], lang)} if l.get("w") else {})} for l in lines]
     if lang == "zh-Hant":
         lines = [{**l, "tr": i18n.convert(l["tr"], "zh-Hans", "zh-Hant")} if l.get("tr") else l for l in lines]
     return {**d, "lines": lines}

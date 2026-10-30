@@ -1,5 +1,8 @@
+import functools
 import re
 import unicodedata
+
+import opencc
 
 # Covers, live cuts, remixes and lyric uploads of a song the user already likes are the same song to them.
 _BRACKETS = re.compile(r"[\(\[（【「『<《].*?[\)\]）】」』>》]")
@@ -8,8 +11,16 @@ _FEAT = re.compile(r"\b(feat\.?|ft\.?|with|prod\.?)\b.*$", re.I)
 _VERSION = re.compile(r"\b(live|remix|cover|acoustic|ver\.?|version|instrumental|inst\.?|demo|edit|mix|remaster(ed)?|sped up|slowed)\b", re.I)
 
 
+_T2S = opencc.OpenCC("t2s")
+_HAN = re.compile(r"[㐀-鿿]")
+
+
+@functools.lru_cache(maxsize=1 << 16)
 def fold(s: str) -> str:
+    """A name or title as a key: case, width, spacing, punctuation and Chinese script don't matter (後來 is 后来)."""
     s = unicodedata.normalize("NFKC", s or "").lower()
+    if _HAN.search(s):
+        s = _T2S.convert(s)
     return re.sub(r"[\s\W_]+", "", s)
 
 

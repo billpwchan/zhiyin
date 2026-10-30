@@ -20,7 +20,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const errors = {
   unknown: G.join === 'invite' ? t('这个 Google 账号还没有加入知音。第一次来，请先打开收到的邀请链接。') : t('这个 Google 账号还没有加入知音。'),
   expired: t('这个邀请链接已经失效了。找邀请你的人要一个新的。'),
-  cancelled: t('没有登录。随时可以再试。'),
+  cancelled: t('没有登录，可以再试一次。'),
   full: t('名额暂时满了，已经帮你登记。空出位置后，用同一个 Google 账号再来就能直接进。'),
   noscope: t('知音要读取你在 YouTube 上点过的喜欢，才能为你挑歌。再试一次时，在 Google 的页面上勾选 YouTube 那一项。'),
 };
@@ -55,7 +55,7 @@ if (G.mode === 'switch') {
   const main = open && retry
     ? `<a class="btn" href="/auth/google/start?mode=join">${G_LOGO}${t('用 Google 继续')}</a>`
     : `<a class="btn" href="/auth/google/start?mode=login">${G_LOGO}${t('用 Google 登录')}</a>`;
-  const pitch = t('它从你在 YouTube Music 点过的喜欢出发，每周挑几组你还没听过、但大概会喜欢的歌，每一首都写着为什么挑它。')
+  const pitch = t('知音从你在 YouTube Music 的喜欢出发，每周为你挑几组没听过、但大概会喜欢的歌。')
     + (G.join === 'invite' ? t('需要邀请才能进来。') : '');
   const note = open && retry ? ''
     : open ? `${t('第一次来？')}<a href="/auth/google/start?mode=join">${t('用 Google 加入')}</a>`
@@ -64,7 +64,7 @@ if (G.mode === 'switch') {
   el.innerHTML = `${MARK}
     <h1>${t('一个私人的推荐电台')}</h1>
     <p>${pitch}</p>
-    ${G.google && open ? `<p class="gate-note">${t('连接后，知音会把从 Google 读取的歌名、歌手、喜欢时间及其他音乐偏好发送给 Anthropic（Claude），用于生成你的电台和口味画像；不发送 Google 邮箱或访问凭证。继续连接即同意这些处理，详情见隐私政策。')}</p>` : ''}
+    ${G.google && open ? `<p class="gate-note">${t('继续即表示同意：知音会把从 Google 读取的歌名、歌手、喜欢时间等音乐偏好发给 Anthropic（Claude），用来为你挑歌。')}</p>` : ''}
     ${G.error ? `<p class="gate-err">${esc(errors[G.error] || G.error)}</p>` : ''}
     ${open && retry && !G.verified ? `<p class="gate-note">${t('Google 会先提示「尚未验证此应用」，因为知音还在 Google 的审核中：点「高级」，再点「转至…（不安全）」；下一页记得勾上 YouTube。')}</p>` : ''}
     ${G.google ? `<div class="gate-acts">${main}${sample}</div>${note ? `<p class="gate-note">${note}</p>` : ''}`

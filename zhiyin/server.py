@@ -1,6 +1,7 @@
 import contextvars
 import datetime as dt
 import hmac
+import json
 import os
 import re
 import secrets
@@ -545,7 +546,7 @@ def _first_setup(log, got: dict | None = None):
             profile.absorb_new(log=log)   # a retry: the stations are there, only the edition failed
         else:
             profile.build(log=log)
-        log(i18n.tr("挑第一批电台"), step=3)
+        log(i18n.tr("挑第一期电台"), step=3)
         edition.build(log=log)
         accounts.set_status(uid, "ready")
         accounts.set_prefs(uid, setup_fails=0, setup_issue=None)
@@ -647,14 +648,6 @@ def _join_state() -> str:
     return "open" if _seats_left() else "full"
 
 
-def _read_view() -> dict | None:
-    """What the last reads took from YouTube besides the likes, so the listener can see what the permission is used for."""
-    sig = signals.youtube()
-    if not sig.get("read"):
-        return None
-    return {"disliked": len(sig.get("disliked", [])), "follows": len(sig.get("follows", [])), "saved": len(sig.get("saved", []))}
-
-
 def _me() -> dict:
     if store.is_sample():
         return {"uid": store.uid(), "sample": True, "name": "", "owner": False, "mine": False, "status": "ready",
@@ -671,7 +664,7 @@ def _me() -> dict:
             "setup_issue": u["prefs"].get("setup_issue"),
             "sync_likes": u["prefs"].get("sync_likes", True) and (not ok or google.writes_back(u["id"])),
             "writes_back": ok and google.writes_back(u["id"]), "sync": _sync_view(u["id"]),
-            "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"), "read": _read_view() if ok else None,
+            "synced": u["prefs"].get("synced"), "last_sync": u["prefs"].get("last_sync"),
             "netease": ne and {**ne, "app": library.app_of(ne["link"])},
             "worker": audio.worker_online() if audio.REMOTE else None,
             "claude": llm.view(u["id"]) if AUTH else None}
@@ -680,9 +673,9 @@ def _me() -> dict:
 # ---------- sign-in ----------
 # What a link to the site shows when it is pasted into a chat or a post
 OG_TITLE = "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片"
-OG_TEXT = "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每周几组你没听过的歌，每首都写着为什么挑它。"
+OG_TEXT = "用 Google 登录，把你的喜欢画成一张唱片，给你的口味起个名字；之后每周为你挑几组没听过的歌。"
 CARD_TITLE = "让 Claude 锐评你的网易云、QQ 音乐歌单"
-CARD_TEXT = "贴一个网易云或 QQ 音乐的歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句。"
+CARD_TEXT = "贴一个网易云或 QQ 音乐的歌单链接，出一张你的唱片：Claude 给你的口味起个名字，再锐评一句。"
 
 
 def _og(lang: str, card: bool = False) -> str:
@@ -816,7 +809,7 @@ def card_make(b: CardReq, request: Request):
     store.count("card_made", ref)
     if rec["label"]:
         store.count("card_named", ref)
-    return rec
+    return _for_reader(rec, lang)
 
 
 def _own_card() -> dict:
@@ -844,7 +837,7 @@ async def card_share(request: Request, token: str = ""):
     else:
         d = cards.unsign(token)
         if not d or cards.used(d["nonce"]):
-            raise HTTPException(403, i18n.tr("这张卡过期了，重新做一张再分享", i18n.from_request(request)))
+            raise HTTPException(403, i18n.tr("这张唱片过期了，重新做一张再分享", i18n.from_request(request)))
         ip = request.client.host if request.client else ""
         now = time.time()
         seen = _anon_shares[ip] = [t for t in _anon_shares.get(ip, []) if now - t < 86400]
@@ -890,8 +883,8 @@ def card_page(cid: str, request: Request):
     base = google.public_url()
     if c:
         cl = c["lang"] or lang
-        title = c["label"] or i18n.tr("我的知音唱片", cl)
-        text = (f'{i18n.tr("「{r}」", cl, r=c["roast"])}{i18n.tr("让 Claude 也锐评一下你的歌单。", cl)}' if c.get("roast")
+        title = i18n.typeset(c["label"], cl) or i18n.tr("我的知音唱片", cl)   # as the card itself shows it
+        text = (f'{i18n.tr("「{r}」", cl, r=i18n.typeset(c["roast"], cl))}{i18n.tr("让 Claude 也锐评一下你的歌单。", cl)}' if c.get("roast")
                 else i18n.tr("{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。", cl, n=c["n"], y=c["since"]) if c["since"]
                 else i18n.tr("{n} 首喜欢，每一圈是一年。做一张你自己的。", cl, n=c["n"]))
         og = (f'<meta name="description" content="{escape(text)}">\n<meta property="og:type" content="website">\n'
@@ -1218,7 +1211,6 @@ def state():
                     "synced": lib.get("synced"), "source": tracks[0]["source"] if tracks else None},
         "me": _me(), "jobs": jobs(), "owner_name": "" if store.is_sample() else (accounts.get(store.OWNER) or {}).get("name") or "",
         "stale_lang": i18n.stale(),
-        "went": {} if store.is_sample() else quality.by_lane(),
     }
     rl = i18n.of()
     if rl != "en":   # Claude's text was written in one Chinese script; show it in the reader's
@@ -1232,11 +1224,22 @@ def state():
                 if k in l:
                     l[k] = i18n.convert(l[k], pl, rl)
         out["asks"] = [i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in out["asks"]]
+    for k in ("portrait", "lanes", "focus", "set_aside", "edition", "asks", "feedback", "not_me"):
+        out[k] = _for_reader(out[k], rl)
+    for row in timeline:
+        title, names, _, _ = i18n.song(row[3], [row[4]], None, rl)
+        row[3:] = [title, names[0]]
+    out["timeline"] = timeline
     return out
 
 
+def _for_reader(obj, lang: str | None = None):
+    """A copy of what goes back to the page, its songs and text as the reader sees them (i18n.for_reader)."""
+    return i18n.for_reader(json.loads(json.dumps(obj, ensure_ascii=False)), lang or i18n.of()) if obj is not None else None
+
+
 def _not_me_view(tracks: list[dict]) -> dict:
-    songs, artists = settings.not_me()
+    songs = settings.not_me()[0]
     named = {}
     for t in tracks:
         if t["artists"]:
@@ -1248,8 +1251,8 @@ def _not_me_view(tracks: list[dict]) -> dict:
     have = {x["vid"] for x in listed}
     listed += [{"vid": v, "title": meta[v]["title"], "artist": (meta[v].get("artists") or [{"name": ""}])[0]["name"],
                 "played": True} for v in songs if v in meta and v not in have]
-    return {"songs": listed,
-            "artists": [{"key": a, "name": named.get(a, a)} for a in artists]}
+    return {"songs": listed,   # an artist's key is as stored, so taking it back finds it
+            "artists": [{"key": a, "artist": named.get(fold(a), a)} for a in settings.load()["not_me"].get("artists", [])]}
 
 
 class NotMe(BaseModel):
@@ -1263,14 +1266,14 @@ class NotMe(BaseModel):
 def not_me(b: NotMe):
     """A like that isn't the listener's taste: it stays liked, but stops seeding stations and speaking for them."""
     settings.set_not_me(vid=b.vid, artist=fold(b.artist) if b.artist else b.key, on=b.on)
-    return {"ok": True, "not_me": _not_me_view([t for t in library.load() if not t["long"]])}
+    return {"ok": True, "not_me": _for_reader(_not_me_view([t for t in library.load() if not t["long"]]))}
 
 
 @app.get("/api/mine")
 def mine():
     """The listener's own likes, with how much each is wanted and when it is next due, for the stations to play
     between the new songs (rotation.py)."""
-    return rotation.view()
+    return _for_reader(rotation.view())
 
 
 @app.get("/api/find")
@@ -1285,7 +1288,7 @@ def find(q: Annotated[str, Query(max_length=80)] = ""):
                     "type": t.get("type"), "thumb": (ytm.cached("track", t["vid"]) or {}).get("thumb"),
                     "at": (t.get("liked_est") or "")[:7] or None, "real": t.get("source") in ("google", "163"),
                     "lanes": assign.get(t["vid"], []), "long": t.get("long", False)})
-    return {"songs": out[:8]}
+    return _for_reader({"songs": out[:8]})
 
 
 class Hush(BaseModel):
@@ -1310,7 +1313,7 @@ def ear_view():
                     for r in signals.loves() if not settings.is_not_me(r, nm)][:60]
     h = signals.history()
     out["history"] = {"at": h["at"], "span": h.get("span"), "entries": h.get("entries"), "songs": len(h.get("songs", {}))} if h else None
-    return out
+    return _for_reader(out)
 
 
 @app.post("/api/ear/label")
@@ -1371,7 +1374,8 @@ class AskDel(BaseModel):
 def ask_delete(b: AskDel):
     keep = [a for a in store.read_json(store.ASKS) or [] if b.created is not None and a.get("created") != b.created]
     store.write_json(store.ASKS, keep)
-    return {"asks": keep}
+    rl = i18n.of()
+    return {"asks": _for_reader([i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in keep] if rl != "en" else keep, rl)}
 
 
 class Feedback(BaseModel):
@@ -1482,13 +1486,12 @@ def history_delete():
 def quality_view(days: int = Query(14, ge=1, le=365)):
     prof = store.read_json(store.PROFILE) or {}
     pl, rl = prof.get("lang", "zh-Hans"), i18n.of()
-    return {**quality.report(days), "names": {l["key"]: i18n.convert(l["name"], pl, rl) for l in prof.get("lanes", [])}}
+    return {**quality.report(days), "names": {l["key"]: i18n.typeset(i18n.convert(l["name"], pl, rl), rl) for l in prof.get("lanes", [])}}
 
 
 class LaneSetting(BaseModel):
     key: str
     enabled: bool | None = None
-    discovery: float | None = None
     note: str | None = Field(None, max_length=300)   # their own words for the station, read by its screen and editor
 
 
@@ -1498,8 +1501,6 @@ def lane_setting(s: LaneSetting):
     o = cur["lanes"].setdefault(s.key, {})
     if s.enabled is not None:
         o["enabled"] = s.enabled
-    if s.discovery is not None:
-        o["discovery"] = max(0.0, min(1.0, s.discovery))
     if s.note is not None:
         o["note"] = " ".join(s.note.split())
     settings.save(cur)
@@ -1587,8 +1588,8 @@ def warmup():
                 fam = known.artist_familiarity(t["artists"])
                 out.append(edition._public({**t, "familiar": fam, "knows": None if fam else known.artist_known(t["artists"]),
                                             "fit": 0, "sources": ["radio"], "via": []}))
-    return {"name": i18n.tr("先听着"), "sub": i18n.tr("从你最近的喜欢出发"), "tracks": out[:30],
-            "seeds": [display_title(t["title"], t["artists"]) for t in tracks]}
+    return _for_reader({"name": i18n.tr("先听着"), "sub": i18n.tr("从你最近的喜欢出发"), "tracks": out[:30],
+                        "seeds": [display_title(t["title"], t["artists"]) for t in tracks]})
 
 
 class Toggle(BaseModel):
@@ -1881,7 +1882,7 @@ def more(vid: Annotated[str, Query(pattern=VID)], exclude: str = ""):
                                     "reason": i18n.tr("沿着〈{s}〉的电台继续", s=via) if via else ""}))
         if len(out) >= 15:
             break
-    return {"tracks": out}
+    return _for_reader({"tracks": out})
 
 
 @app.get("/api/lyrics")

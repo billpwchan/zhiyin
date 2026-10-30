@@ -139,7 +139,7 @@ at most two songs per artist. Each station shows the same verdicts under its nam
 so you can see your reactions being used. It returns up to 12 songs with a confidence
 score, one line each, and which of the station's songs each pick is closest to.
 
-Two corrections reach the editor in your own words. "Tell this station…" in a station's menu keeps a sentence such
+Two corrections reach the editor in your own words. "Tell this station…" under Adjust in the queue keeps a sentence such
 as "fewer trap drums, more from the nineties", which the screen and the editor follow from then on; "save and repick"
 rebuilds that one station right away. After "not for me", "just not in this station" tells the editor the song was
 fine but in the wrong place, which is a different lesson from a song you don't want.

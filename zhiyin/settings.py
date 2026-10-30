@@ -18,15 +18,15 @@ def save(s: dict) -> None:
 def lane_view(lane: dict) -> dict:
     """The profile's lane with the listener's own overrides applied."""
     o = load()["lanes"].get(lane["key"], {})
-    return {**lane, "enabled": o.get("enabled", True), "discovery": o.get("discovery", lane.get("discovery", 0.4)),
-            "note": o.get("note", "")}
+    # a "discovery" stored by the old per-station slider is ignored: nothing on the page shows or changes it now
+    return {**lane, "enabled": o.get("enabled", True), "discovery": lane.get("discovery", 0.4), "note": o.get("note", "")}
 
 
 def not_me() -> tuple[set[str], set[str]]:
     """Likes the listener said aren't their taste (someone else's songs, a phase, a joke): song ids, and artists by
     folded name. They stay liked; they just stop speaking for the listener."""
     n = load()["not_me"]
-    return set(n.get("songs", [])), set(n.get("artists", []))
+    return set(n.get("songs", [])), {fold(a) for a in n.get("artists", [])}   # keys stored before fold met Chinese script
 
 
 def is_not_me(t: dict, nm: tuple[set[str], set[str]]) -> bool:
@@ -43,6 +43,6 @@ def set_not_me(vid: str | None = None, artist: str | None = None, on: bool = Tru
     if vid:
         songs = [x for x in songs if x != vid] + ([vid] if on else [])
     if artist:
-        artists = [x for x in artists if x != artist] + ([artist] if on else [])
+        artists = [x for x in artists if fold(x) != fold(artist)] + ([fold(artist)] if on else [])
     s["not_me"] = {**n, "songs": songs, "artists": artists}
     save(s)

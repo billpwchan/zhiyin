@@ -61,3 +61,16 @@ def test_a_like_that_is_not_their_taste_neither_seeds_nor_brings_its_artist():
         seeds = candidates.lane_seeds(lane, tracks, profile, random.Random(1))
         assert seeds and all(t["artists"][0]["name"] == "Real Artist" and t["vid"] != "mine0000001" for t in seeds)
         assert candidates.Known(tracks, {}).reject(track("new0000001", "New Song", "Kids Band")) == "blocked artist"
+
+
+def test_an_artist_set_aside_in_one_script_is_the_same_artist_in_the_other():
+    from zhiyin import settings, store
+    with store.as_user("notme2"):
+        s = settings.load()
+        s["not_me"]["artists"] = ["張震嶽"]   # stored before fold met Chinese script
+        settings.save(s)
+        assert settings.is_not_me(track("x0000000001", "愛我別走", "张震岳"), settings.not_me())
+        settings.set_not_me(artist="张震岳", on=True)
+        assert settings.load()["not_me"]["artists"] == ["张震岳"]   # one entry, not two
+        settings.set_not_me(artist="張震嶽", on=False)
+        assert settings.load()["not_me"]["artists"] == []

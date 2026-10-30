@@ -2,6 +2,7 @@
 already written in one Chinese script into the other. Messages are written in Simplified Chinese where they are used
 and looked up here, the same way web/i18n.js does it for the page."""
 import contextvars
+import functools
 import json
 import os
 import re
@@ -149,6 +150,137 @@ def family(lang: str | None) -> str:
     return "en" if lang == "en" else "zh"
 
 
+# ---------- what a response says, as one reader sees it ----------
+# A name changes script only when it is written in the other one (Taiwan's character forms for a Traditional reader):
+# 終於了解自由 and 朴載範 stay as written for a Traditional reader, where s2tw would make 了解 瞭解 and 朴 樸.
+_NAME_T2S = opencc.OpenCC("t2s")
+_NAME_S2T = opencc.OpenCC("s2tw")
+_JP2T = opencc.OpenCC("jp2t")
+_HAN = re.compile(r"[㐀-鿿]")
+_KANA = re.compile(r"[぀-ゟ゠-ヺー-ヿㇰ-ㇿ]")   # not ・, which Chinese also writes inside foreign names
+_GAP = re.compile(r"(?<=[㐀-鿿])(?=[A-Za-z0-9])|(?<=[A-Za-z0-9])(?=[㐀-鿿])")
+
+
+def _in(c: str, charset: str) -> bool:
+    try:
+        c.encode(charset)
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+@functools.lru_cache(maxsize=1 << 16)
+def _kind(c: str) -> str:
+    """"s" for a character only Simplified writes (in GB2312, not Big5), "t" only Traditional, "j" a Shinjitai neither
+    writes (変 戦 黒 気: an older form exists and neither set has it; the older form alone would also catch 秘 祕, 予 豫,
+    為 爲), "" either."""
+    gb, b5 = _in(c, "gb2312"), _in(c, "big5")
+    if gb != b5:
+        return "s" if gb else "t"
+    return "j" if c == "渕" or (not gb and _JP2T.convert(c) != c) else ""
+
+
+def _kinds(text: str) -> set[str]:
+    return {_kind(c) for c in _HAN.findall(text)}
+
+
+@functools.lru_cache(maxsize=1 << 15)
+def japanese(text: str) -> bool:
+    """Kana; or a kanji only Japanese writes; or characters of both Chinese scripts at once (残響散歌: a Simplified 残
+    beside a Traditional 響)."""
+    k = _kinds(text)
+    return bool(_KANA.search(text)) or "j" in k or {"s", "t"} <= k
+
+
+@functools.lru_cache(maxsize=1 << 15)
+def _scripted(text: str, lang: str) -> str:
+    if japanese(text):
+        return text
+    if lang == "zh-Hans":
+        return _NAME_T2S.convert(text) if "t" in _kinds(text) else text
+    return _NAME_S2T.convert(text).replace("臺", "台") if "s" in _kinds(text) else text
+
+
+def script(text, lang: str):
+    """A name or a lyric line in the reader's Chinese script; Japanese as written."""
+    return text if lang == "en" or not isinstance(text, str) else _scripted(text, lang)
+
+
+def typeset(text, lang: str):
+    """Text written for a Chinese reader: the songs it quotes in their script, and a space where Chinese meets Latin
+    letters or digits, as the interface writes it (Claude often leaves none: 2014年, Gareth.T常驻)."""
+    if lang == "en" or not isinstance(text, str) or not text:
+        return text
+    return "".join(p[0] + script(p[1:-1], lang) + p[-1] if _TITLE.fullmatch(p) else _GAP.sub(" ", p)
+                   for p in _TITLE.split(text))
+
+
+def song(title, artists: list, album, lang: str):
+    """One song's title, artist names and album name as this reader sees them, and as written when that differs (the
+    lyric sites are asked with the names as written). A song with anything Japanese about it stays as written."""
+    from .ytm import plain_title
+    shown = plain_title(title) if isinstance(title, str) else title
+    texts = [x for x in (title, album, *artists) if isinstance(x, str)]
+    if lang == "en" or any(japanese(x) for x in texts):
+        return shown, artists, album, None
+    out = (script(shown, lang), [script(a, lang) for a in artists], script(album, lang))
+    if (out[0], out[1], out[2]) == (shown, artists, album):
+        return *out, None
+    return *out, {"t": title or "", "a": "|".join(a for a in artists if isinstance(a, str)), "al": album or ""}
+
+
+def _line(x, lang: str):
+    from .ytm import plain_title
+    return script(plain_title(x), lang) if isinstance(x, str) and lang != "en" and not japanese(x) else for_reader(x, lang)
+
+
+def for_reader(obj, lang: str):
+    """Songs and text in a response as this reader sees them, changed in place: titles, artists and albums with the
+    feat. written out and in their Chinese script (`o` keeps them as written); written text typeset for them. The
+    listener's own words stay as they typed them."""
+    if isinstance(obj, list):
+        for i, v in enumerate(obj):
+            obj[i] = for_reader(v, lang)
+        return obj
+    if not isinstance(obj, dict):
+        return obj
+    if isinstance(obj.get("title"), str) and ("vid" in obj or "artists" in obj or "artist" in obj):
+        arts = obj.get("artists") if isinstance(obj.get("artists"), list) else []
+        names = [a.get("name") if isinstance(a, dict) else a for a in arts] or ([obj["artist"]] if isinstance(obj.get("artist"), str) else [])
+        al = obj.get("album")
+        title, names2, al_name, o = song(obj["title"], names, al.get("name") if isinstance(al, dict) else al, lang)
+        obj["title"] = title
+        if arts:
+            obj["artists"] = [{**a, "name": n} if isinstance(a, dict) else n for a, n in zip(arts, names2)]
+        elif isinstance(obj.get("artist"), str):
+            obj["artist"] = names2[0]
+        if isinstance(al, dict):
+            obj["album"] = {**al, "name": al_name}
+        elif isinstance(al, str):
+            obj["album"] = al_name
+        if o:
+            obj["o"] = o
+    elif isinstance(obj.get("artist"), str):
+        obj["artist"] = script(obj["artist"], lang)
+    for k, v in obj.items():
+        if k in ("title", "artists", "artist", "album", "o", "q", "queries", "english", "core_artists", "explore_artists", "avoid"):
+            continue
+        if k == "songs" and isinstance(v, list) and v and all(isinstance(x, list) and len(x) >= 4 for x in v):
+            for x in v:   # the record's songs: [vid, title, artist names, album, ...] (ear._song), `o` appended
+                x[1], x[2], x[3], o = song(x[1], x[2], x[3], lang)
+                if o:
+                    x.append(o)
+        elif k in ("near", "seeds"):   # a song as one line ("Title (feat. X)"), or the songs themselves
+            obj[k] = [_line(x, lang) for x in v] if isinstance(v, list) else _line(v, lang)
+        elif k in _TEXT_KEYS and isinstance(v, str):
+            obj[k] = typeset(v, lang)
+        elif k in _TEXT_KEYS and isinstance(v, list) and all(isinstance(x, str) for x in v):
+            obj[k] = [typeset(x, lang) for x in v]
+        else:
+            obj[k] = for_reader(v, lang)
+    return obj
+
+
 def stale() -> bool:
     """Written by Claude for a reader of the other language (Chinese vs English)."""
     prof = store.read_json(store.PROFILE) or {}
@@ -248,7 +380,7 @@ EN = {
     "这个账号已经在用别的喜欢了": "This account already gets its likes from somewhere else",
     "现在只能通过朋友的邀请加入": "Right now you can only join through a friend's invite",
     "了解你的口味": "Learning your taste",
-    "挑第一批电台": "Picking the first stations",
+    "挑第一期电台": "Picking the first stations",
     "需要重新登录": "Please sign in again",
     "今天 {hm}": "today {hm}",
     "明天 {hm}": "tomorrow {hm}",
@@ -273,6 +405,10 @@ EN = {
     "服务器上还没有配置 Claude": "Claude isn't set up on the server yet",
     "主人还没有为其他听众配置 Claude API key": "The owner hasn't set up a Claude API key for other listeners yet",
     "Mac 不在线（睡着或关机了）": "The Mac is offline (asleep or shut down)",
+    "今天大家共用的 Claude 额度到了上限，明天再挑": "Today's shared Claude allowance is used up. New picks tomorrow",
+    "你今天的 Claude 额度用完了，明天再来": "Your Claude allowance for today is used up. Come back tomorrow",
+    "这个月大家共用的 Claude 额度用完了，过几天会恢复": "This month's shared Claude allowance is used up. It comes back in a few days",
+    "先在设置里打开「同步喜欢」，知音才能往 YouTube 写歌单": "Turn on “Sync likes” in Settings first, so Zhiyin can write playlists to YouTube",
     "今天的 Claude 额度（${cap}）用完了，明天再来": "Today's Claude allowance (${cap}) is used up. Come back tomorrow",
     "Mac 中途离线了": "The Mac went offline midway",
     "Mac 上的 Claude 没有按时答复": "Claude on the Mac didn't answer in time",
@@ -285,9 +421,9 @@ EN = {
     "排队中：前面还有 {n} 位，大约 {m} 分钟后开始": ("Waiting: 1 listener ahead of you, starting in about {m} min",
                                            "Waiting: {n} listeners ahead of you, starting in about {m} min"),
     "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片": "Zhiyin: every song you've liked on YouTube Music, drawn as a record",
-    "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每周几组你没听过的歌，每首都写着为什么挑它。":
-        "Sign in with Google and within a minute you get your record and a name for your taste. Then new songs every week "
-        "you haven't heard, each with the reason it was picked.",
+    "用 Google 登录，把你的喜欢画成一张唱片，给你的口味起个名字；之后每周为你挑几组没听过的歌。":
+        "Sign in with Google to draw your likes as a record and get a name for your taste, then new songs every week "
+        "you haven't heard.",
     "其他": "Other",
     "{n} 年": ("{n} year", "{n} years"),
     "{n} 种语言": ("{n} language", "{n} languages"),
@@ -298,7 +434,7 @@ EN = {
     "最老的一首是《{title}》。": "The oldest: “{title}”.",
     "你喜欢的歌，有一半发行在 {y} 年或更早。": "Half the songs you like came out in {y} or earlier.",
     "今天换了好几次了，明天再换": "That's a few new names today. Try again tomorrow",
-    "陪你最久的是 {name}：从 {a} 到 {b}，一共 {n} 首。": "The one who's been with you longest is {name}: from {a} to {b}, {n} songs in all.",
+    "陪你最久的是{name}：从 {a} 到 {b}，一共 {n} 首。": "The one who's been with you longest is {name}: from {a} to {b}, {n} songs in all.",
     "最近一年的新喜欢里，「{lane}」占了 {p1}%，之前只有 {p0}%。": "{lane} makes up {p1}% of the past year's new likes, up from {p0}%.",
     "「{lane}」是最晚出现的一种口味，那年才有第一首，现在已经 {n} 首。": "{lane} is your newest taste: its first song came that year, and now there are {n}.",
     "隔了一阵又点了一次喜欢，像《{title}》，前后隔了 {gap} 年。": "Songs you came back to and liked again, like “{title}”, {gap} years apart.",
@@ -322,22 +458,22 @@ EN = {
     "现在起不了名字，唱片先画好了": "It can't be named right now, so here's the record on its own",
     "名字还没起好，等一下再分享": "Your name isn't ready yet. Share it in a moment",
     "今天分享得够多了，明天再来": "That's enough links for today. More tomorrow",
-    "这张卡过期了，重新做一张再分享": "This card has expired. Draw it again to share it",
+    "这张唱片过期了，重新做一张再分享": "This record has expired. Draw it again to share it",
     "我的知音唱片": "My Zhiyin record",
     "{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。": "{n} liked songs since {y}, one ring a year. Make your own.",
     "{n} 首喜欢，每一圈是一年。做一张你自己的。": "{n} liked songs, one ring a year. Make your own.",
     "「{r}」": "“{r}” ",
     "让 Claude 也锐评一下你的歌单。": "Let Claude roast your likes too.",
     "让 Claude 锐评你的网易云、QQ 音乐歌单": "Let Claude roast your NetEase or QQ Music likes",
-    "贴一个网易云或 QQ 音乐的歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句。":
-        "Paste a NetEase or QQ Music link and get a record in ten seconds: Claude names your taste and roasts it in one line.",
+    "贴一个网易云或 QQ 音乐的歌单链接，出一张你的唱片：Claude 给你的口味起个名字，再锐评一句。":
+        "Paste a NetEase or QQ Music link and get your record: Claude names your taste and roasts it in one line.",
     "大众度：你喜欢的歌在网易云的平均热度是 {p}，热歌榜是 100。": "How mainstream: the songs you like average {p} on NetEase's popularity scale, where the hot chart is 100.",
 }
 # Taiwan and Hong Kong wording the converter doesn't know.
 HANT = {
     "知音：把你在 YouTube Music 点过的喜欢，画成一张唱片": "知音：把你在 YouTube Music 按過的喜歡，畫成一張唱片",
-    "用 Google 登录，一分钟内画出你的唱片，给你的口味起个名字。之后每周几组你没听过的歌，每首都写着为什么挑它。":
-        "用 Google 登入，一分鐘內畫出你的唱片，幫你的口味取個名字。之後每週幾組你沒聽過的歌，每首都寫著為什麼挑它。",
+    "用 Google 登录，把你的喜欢画成一张唱片，给你的口味起个名字；之后每周为你挑几组没听过的歌。":
+        "用 Google 登入，把你的喜歡畫成一張唱片，幫你的口味取個名字；之後每週為你挑幾組沒聽過的歌。",
     "先在服务器上配置 Claude API key：你的 Claude 订阅只能你自己用": "先在伺服器上設定 Claude API key：你的 Claude 訂閱只能你自己用",
     "YouTube Music 的连接失效了，在设置里重新连接": "YouTube Music 的連接失效了，在設定裡重新連接",
     "先在设置里连接 YouTube Music": "先在設定裡連接 YouTube Music",
@@ -351,7 +487,7 @@ HANT = {
     "这是一首歌的链接。要的是整份喜欢：在 QQ 音乐点头像进主页，右上角「···」点分享，复制链接贴过来": "這是一首歌的連結。要的是整份喜歡：在 QQ 音樂點頭像進主頁，右上角「···」點分享，複製連結貼過來",
     "这份「我喜欢的音乐」只有本人看得到。在网易云的隐私设置里改成所有人可见，或者贴一份公开歌单的链接": "這份「我喜歡的音樂」只有本人看得到。在網易雲的隱私設定裡改成所有人可見，或者貼一份公開歌單的連結",
     "你的「喜欢」只有自己看得到。在 QQ 音乐点头像进主页，右上角「···」→「访问设置」，打开「喜欢」再贴一次；或者贴一份公开歌单的链接": "你的「喜歡」只有自己看得到。在 QQ 音樂點頭像進主頁，右上角「···」→「訪問設置」，打開「喜歡」再貼一次；或者貼一份公開歌單的連結",
-    "贴一个网易云或 QQ 音乐的歌单链接，十秒出一张唱片：Claude 给你的口味起个名字，再锐评一句。": "貼一個網易雲或 QQ 音樂的歌單連結，十秒出一張唱片：Claude 幫你的口味取個名字，再銳評一句。",
+    "贴一个网易云或 QQ 音乐的歌单链接，出一张你的唱片：Claude 给你的口味起个名字，再锐评一句。": "貼一個網易雲或 QQ 音樂的歌單連結，出一張你的唱片：Claude 幫你的口味取個名字，再銳評一句。",
     "今天起名字的额度用完了，明天再来起名": "今天取名字的額度用完了，明天再來取名",
     "起名字的时候出了点问题，再试一次": "取名字的時候出了點問題，再試一次",
     "名字还没起好，等一下再分享": "名字還沒取好，等一下再分享",

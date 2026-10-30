@@ -70,12 +70,14 @@ def _cached(kind: str, key: str, ttl: float, fn):
     return data
 
 
-_FEAT_ZH = re.compile(r"[(（]合作演出[：:]\s*([^)）]*)[)）]")
+_FEAT_ZH = re.compile(r"[(（]合作演出[：:]\s*((?:[^()（）]|[(（][^()（）]*[)）])*)[)）]")
 
 
 def plain_title(title: str) -> str:
-    """zh_TW YouTube Music writes "(feat. X、Y)" as "(合作演出：X、Y)"."""
-    return _FEAT_ZH.sub(lambda m: f"(feat. {m.group(1).replace('、', ', ')})", title or "")
+    """zh_TW YouTube Music writes "(feat. X、Y)" as "(合作演出：X、Y)", "(合作演出：X和Y)" or "(合作演出：아이유(IU))"."""
+    def feat(m):   # 和 only beside Latin letters: between Chinese names it may be part of one (和田光司)
+        return "(feat. " + re.sub(r"(?<=[A-Za-z0-9.)])\s*和\s*(?=[A-Za-z0-9(])", " & ", m.group(1).replace("、", ", ")) + ")"
+    return _FEAT_ZH.sub(feat, title or "")
 
 
 def _track(t: dict) -> dict | None:
