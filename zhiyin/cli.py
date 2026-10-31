@@ -39,6 +39,9 @@ def main():
     p.add_argument("--rm", metavar="ID", help="take one down")
     p = sub.add_parser("about", help="tell the editor who you are (languages, where you grew up); shown in its prompts")
     p.add_argument("text", nargs="?")
+    p = sub.add_parser("archive", help="keep the lists on your QQ Music profile as your earlier taste (read by the next "
+                                       "`zhiyin profile`; never recommended as new; set ZHIYIN_USER for another listener)")
+    p.add_argument("link", help="the share text or link of your QQ Music profile (音乐主页)")
     sub.add_parser("worker", help="on the Mac: hear the songs the server asks for, and run the owner's Claude calls if the server has no login")
     p = sub.add_parser("quality", help="how the recommended songs fared on their first listen (set ZHIYIN_USER for another listener)")
     p.add_argument("--days", type=int, default=14)
@@ -155,6 +158,10 @@ def main():
         if a.text is not None:
             accounts.set_prefs(store.OWNER, about=a.text.strip() or None)
         print(accounts.prefs(store.OWNER).get("about") or "(not set: the editor infers it from your likes)")
+    elif a.cmd == "archive":
+        from . import qqmusic, signals
+        got = signals.save_archive(qqmusic.folders(a.link))
+        print(f"{len(got['lists'])} lists, {len(got['songs'])} songs kept for {store.uid()}")
     elif a.cmd == "worker":
         from . import worker
         worker.loop()

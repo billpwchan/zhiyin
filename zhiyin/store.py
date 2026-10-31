@@ -29,7 +29,7 @@ _uid: contextvars.ContextVar[str | None] = contextvars.ContextVar("zhiyin_uid", 
 _PER_USER = {"LIBRARY": "library.json", "TAGS": "tags.json", "PROFILE": "profile.json", "PROFILES": "profiles",
              "EDITION": "edition.json", "ASKS": "asks.json", "SETTINGS": "settings.json", "AUTH": "browser.json",
              "GLIMPSE": "glimpse.json", "IDENT": "ident.json", "SIGNALS": "youtube_signals.json",
-             "HISTORY": "history.json", "IMPLICIT": "implicit.json"}
+             "HISTORY": "history.json", "IMPLICIT": "implicit.json", "ARCHIVE": "archive.json"}
 
 
 def uid() -> str:

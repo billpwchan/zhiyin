@@ -1311,6 +1311,8 @@ def ear_view():
                     for r in signals.loves() if not settings.is_not_me(r, nm)][:60]
     h = signals.history()
     out["history"] = {"at": h["at"], "span": h.get("span"), "entries": h.get("entries"), "songs": len(h.get("songs", {}))} if h else None
+    a = signals.archive()
+    out["archive"] = {"app": a["key"].split(":")[0], "lists": len(a["lists"]), "songs": len(a["songs"])} if a.get("songs") else None
     return _for_reader(out)
 
 

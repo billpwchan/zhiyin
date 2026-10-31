@@ -74,3 +74,16 @@ def test_an_artist_set_aside_in_one_script_is_the_same_artist_in_the_other():
         assert settings.load()["not_me"]["artists"] == ["张震岳"]   # one entry, not two
         settings.set_not_me(artist="張震嶽", on=False)
         assert settings.load()["not_me"]["artists"] == []
+
+
+def test_songs_kept_in_another_app_years_ago_are_heard_and_their_artists_known():
+    from zhiyin import signals, store
+    with store.as_user("archive1"):
+        signals.save_archive({"key": "qq:u:x", "lists": [{"title": "2016前我喜欢", "n": 2}], "songs": [
+            {"title": "Rain", "artists": ["太妍"], "aka": ["TAEYEON"], "album": "", "released": "2016-02-03", "lists": [0]},
+            {"title": "횡단보도 (人行横道)", "artists": ["赵权"], "aka": ["조권"], "album": "", "released": None, "lists": [0]}]})
+        k = candidates.Known([], {})
+        assert k.reject(track("new0000001", "Rain", "TAEYEON")) == "same song"
+        assert k.reject(track("new0000002", "횡단보도", "조권")) == "same song"
+        assert k.reject(track("new0000003", "Rain", "Someone Else")) is None
+        assert k.artist_known([{"name": "TAEYEON", "id": None}]) == "earlier" and not k.is_new([{"name": "太妍", "id": None}])

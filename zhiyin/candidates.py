@@ -4,7 +4,7 @@ import random
 import re
 from collections import Counter, defaultdict
 
-from . import settings, signals, store, ytm
+from . import qqmusic, settings, signals, store, ytm
 from .text import display_title, fold, is_version, song_key
 
 _CREDIT_SPLIT = re.compile(r"\s+(?:x|×|and|feat\.?|ft\.?)\s+|\s*[&,、/]\s*", re.I)
@@ -91,6 +91,11 @@ class Known:
         for r in self.loves:
             self.songs[song_key(r["title"])] |= {fold(a["name"]) for a in r["artists"]}
             self.played_artists |= {a.get("id") or fold(a["name"]) for a in r["artists"]} | {fold(a["name"]) for a in r["artists"]}
+        self.earlier_artists = set()
+        for s in signals.archive().get("songs", []):   # saved in another app years ago: heard, by artists they know
+            names = {fold(a) for a in s["artists"] + s.get("aka", [])} | {fold(x) for a in s["artists"] for x in qqmusic.name_parts(a)}
+            self.songs[song_key(s["title"])] |= names
+            self.earlier_artists |= names
 
     def artist_familiarity(self, artists: list[dict]) -> int:
         """How many of the listener's likes are by these artists."""
@@ -98,12 +103,15 @@ class Known:
                     for a in artists), default=0)
 
     def artist_known(self, artists: list[dict]) -> str | None:
-        """Why an artist with no liked song isn't new to them: "follow" (they follow the channel on YouTube) or
-        "plays" (they play the artist's songs often without liking them)."""
+        """Why an artist with no liked song isn't new to them: "follow" (they follow the channel on YouTube), "plays"
+        (they play the artist's songs often without liking them) or "earlier" (songs of theirs in lists kept elsewhere
+        years ago)."""
         if any((a.get("id") and a["id"] in self.follow_ids) or fold(a["name"]) in self.follow_names for a in artists):
             return "follow"
         if any((a.get("id") and a["id"] in self.played_artists) or fold(a["name"]) in self.played_artists for a in artists):
             return "plays"
+        if any(fold(a["name"]) in self.earlier_artists for a in artists):
+            return "earlier"
         return None
 
     def is_new(self, artists: list[dict]) -> bool:

@@ -3,7 +3,8 @@
 From YouTube, with the same read-only access as the likes (kept and deleted like them): the songs they gave a
 thumbs-down, the music channels they follow, the songs in playlists they made. From Zhiyin's play log: how each
 listen started (did they choose the song?) and how far it got. From a Google Takeout file they upload: on how many
-days each YouTube Music song was played.
+days each YouTube Music song was played. From lists they kept in another app years ago (`archive`): what they liked
+before their likes here begin.
 
 Out of these come the songs they love without having liked them (`loves`: seeds and positive examples, listed on
 「你的耳朵」 so they can confirm or drop each), the sounds they refuse (`refused`), and the artists they know
@@ -239,6 +240,20 @@ def history_scores() -> dict[str, dict]:
     age = (time.time() - h.get("at", time.time())) / 86400
     fade = 0.5 ** (age / HISTORY_HALF_LIFE_DAYS)
     return {v: {"w": W_HISTORY_DAY * s["rw"] * fade, "days": s["days"], "plays": s["n"]} for v, s in h.get("songs", {}).items()}
+
+
+# ---------- lists kept in another app (QQ Music) ----------
+
+def archive() -> dict:
+    """Songs the listener saved in another app long ago, kept as their past taste: never recommended as new, read by
+    the profile as where their taste came from, and not part of the likes the stations play (qqmusic.folders)."""
+    return store.read_json(store.ARCHIVE) or {}
+
+
+def save_archive(got: dict) -> dict:
+    out = {"at": time.time(), **got}
+    store.write_json(store.ARCHIVE, out)
+    return out
 
 
 # ---------- what it all says ----------

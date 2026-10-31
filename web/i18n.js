@@ -531,6 +531,8 @@ const STRINGS = {
     "口味描述和推荐理由还是另一种语言写的": "Your taste and the reasons are still in the other language",
     "没有连接，可以再试一次": "Not connected. You can try again",
     "没有登录，可以再试一次。": "Not signed in. You can try again.",
+    "早年的歌单": "Earlier lists",
+    "{app}上的 {l} 个歌单，共 {n} 首。口味描述会参考它们；这些歌不会当新歌推给你，也不放进电台。": "{l} lists on {app}, {n} songs. Your taste description draws on them; they are never recommended as new and stay out of the stations.",
   },
   'zh-Hant': {
 
@@ -1046,6 +1048,8 @@ const STRINGS = {
     "口味描述和推荐理由还是另一种语言写的": "口味描述和推薦理由還是另一種語言寫的",
     "没有连接，可以再试一次": "沒有連接，可以再試一次",
     "没有登录，可以再试一次。": "沒有登入，可以再試一次。",
+    "早年的歌单": "早年的歌單",
+    "{app}上的 {l} 个歌单，共 {n} 首。口味描述会参考它们；这些歌不会当新歌推给你，也不放进电台。": "{app}上的 {l} 個歌單，共 {n} 首。口味描述會參考它們；這些歌不會當新歌推給你，也不放進電台。",
   },
 };
 

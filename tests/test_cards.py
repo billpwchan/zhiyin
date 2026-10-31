@@ -334,3 +334,24 @@ def test_qq_covers_pass_through_only_as_covers_and_on_each_visitors_own_allowanc
     assert [server._sample_may_fetch("/api/img", {"u": u}, "1.1.1.1") for _ in range(4)] == [True, True, True, False]
     assert server._sample_may_fetch("/api/img", {"u": u}, "2.2.2.2")   # another visitor's record isn't held up
     assert server._sample_fetched["img"] == shared                       # nor anyone's YouTube covers
+
+
+def test_a_profiles_own_lists_are_read_until_the_numbers_run_out(monkeypatch):
+    lists = {201: ("我喜欢", ["a"]), 1: ("2016前我喜欢", ["a", "b"]), 2: ("新建歌单", []), 3: ("always", ["c"]),
+             202: ("的今日私享", ["z"])}
+    asked = []
+
+    def diss(c, which, begin):
+        asked.append(which["dirid"])
+        title, mids = lists.get(which["dirid"], ("", []))
+        return {"dirinfo": {"id": 1, "title": title} if title else {}, "total_song_num": len(mids), "hasmore": 0,
+                "songlist": [{"mid": m, "title": m.upper(), "singer": [{"name": "S", "mid": "sm0001"}], "time_public": "2015-01-02"}
+                             for m in mids]}
+    monkeypatch.setattr(qqmusic, "parse", lambda text, c=None: ("user", "euin**"))
+    monkeypatch.setattr(qqmusic, "_diss", diss)
+    monkeypatch.setattr(qqmusic, "aliases", lambda mid: ["에스"])
+    got = qqmusic.folders("https://c6.y.qq.com/base/fcgi-bin/u?__=x")
+    assert [x["title"] for x in got["lists"]] == ["我喜欢", "2016前我喜欢", "always"]   # empty lists left out
+    assert {s["title"]: s["lists"] for s in got["songs"]} == {"A": [0, 1], "B": [1], "C": [2]}
+    assert got["songs"][0]["aka"] == ["에스"] and got["songs"][0]["released"] == "2015-01-02"
+    assert 202 not in asked and max(asked[1:]) == 3 + qqmusic.FOLDER_GAP   # QQ Music's own lists are never read

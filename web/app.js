@@ -2834,7 +2834,7 @@ function listenedHTML() {
   return `<section class="sec" id="listened">${head}
     ${loves.length ? `<div class="lv-list">${shown.map((r, i) => loveRow(r, i)).join('')}</div>
       ${loves.length > LOVES_SHOWN ? `<button class="tb lv-more" data-k="lovesmore">${lovesAll ? t('收起') : t('再看 {n} 首', { n: loves.length - LOVES_SHOWN })}</button>` : ''}` : ''}
-    ${historyHTML(EAR?.history)}</section>`;
+    ${historyHTML(EAR?.history)}${archiveHTML(EAR?.archive)}</section>`;
 }
 
 function loveRow(r, i) {
@@ -2862,6 +2862,11 @@ function historyHTML(h) {
   }
   return `<div class="hist"><div><b>${t('导入 YouTube Music 播放记录')}</b><p>${t('在 Google Takeout 只选「YouTube 和 YouTube Music」的历史记录，导出后把 zip 放进来。文件在你的浏览器里读，只有放过两次以上的歌会发给知音。')}</p></div>
     <div class="hist-acts">${pick}<a class="tb" href="https://takeout.google.com/settings/takeout/custom/youtube" target="_blank" rel="noopener">${t('打开 Google Takeout')}</a></div></div>`;
+}
+
+function archiveHTML(a) {
+  if (SAMPLE() || !a) return '';
+  return `<div class="hist"><div><b>${t('早年的歌单')}</b><p>${t('{app}上的 {l} 个歌单，共 {n} 首。口味描述会参考它们；这些歌不会当新歌推给你，也不放进电台。', { app: appName(a.app), l: a.lists, n: a.songs.toLocaleString(LANG) })}</p></div></div>`;
 }
 
 function playLove(i) {

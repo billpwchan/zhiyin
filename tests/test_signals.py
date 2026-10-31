@@ -197,3 +197,24 @@ def test_play_and_history_endpoints_take_only_what_they_describe():
         assert r.status_code == 200 and r.json()["songs"] == 1
         assert set(signals.history()["songs"]) == {"abcdefghijk"}
         assert c.post("/api/history/delete").status_code == 200 and not signals.history()
+
+
+def test_the_profile_reads_what_they_play_and_what_they_kept_elsewhere_years_ago(monkeypatch):
+    from zhiyin import llm, profile
+    sent = []
+    monkeypatch.setattr(llm, "call", lambda prompt, system, schema, **kw: sent.append((prompt, system)) or {"lanes": []})
+    with store.as_user("prof1"):
+        store.write_json(store.LIBRARY, {"tracks": [{"rank": 0, "vid": "liked000001", "title": "玻璃", "artists": [{"name": "Gareth.T"}],
+                                                     "long": False, "type": "ATV", "dur": 200, "liked_est": "2026-09-01"}]})
+        store.write_json(store.TAGS, {"liked000001": {"kind": "song", "lang": "yue", "scene": "night", "sound": "r&b", "mood": "calm", "energy": 2}})
+        signals.save_history([["liked000001", 30, 12, "2026-01-01", "2026-10-01", 9.0, "玻璃", "Gareth.T"],
+                              ["other000001", 9, 6, "2026-01-01", "2026-10-01", 5.0, "夜闌人靜", "moon tang"]],
+                             ["2025-11-28", "2026-10-30"], 39)
+        signals.save_archive({"key": "qq:u:x", "lists": [{"title": "2016前我喜欢", "n": 1}],
+                              "songs": [{"title": "说好的幸福呢", "artists": ["周杰伦"], "aka": [], "album": "", "released": "2008-10-15", "lists": [0]}]})
+        profile.synthesize("opus")
+    prompt, system = sent[0]
+    assert "PLAYED ON YOUTUBE MUSIC (2025-11 to 2026-10" in prompt and "\n0|12|30|2026-10|玻璃|Gareth.T" in prompt
+    assert "\n-|6|9|2026-10|夜阑人静|moon tang" in prompt   # played often, never liked; names in the reader's script
+    assert "EARLIER LIKES, kept in QQ Music" in prompt and "0=2016前我喜欢" in prompt and "说好的幸福呢|周杰伦|2008|0" in prompt
+    assert "never seed from them" in system

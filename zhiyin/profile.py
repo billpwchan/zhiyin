@@ -133,12 +133,19 @@ LANE_SCHEMA = {
 
 LANE_SYSTEM = """You are a world-class music editor, writing the taste model behind one person's private recommender.
 @LISTENER@
-You get every liked song with tags, newest first, plus a summary of the long focus mixes they save.
+You get every liked song with tags, newest first, plus a summary of the long focus mixes they save; when known, also
+what they play most and what they liked in another app before.
 
 Think like a listener and an editor, not a statistician:
 - Find the real listening modes ("lanes"): what they reach for and when. A lane is defined by sound and use,
   not by language alone. Cross-language lanes are welcome where the sound is shared (e.g. groove/R&B sung in
   several languages). Language-specific lanes are right where the language is the point.
+- PLAYED, when given, is how often they actually play each song: weigh it with recency when ordering lanes and
+  choosing seeds. A song played on many days without a like still speaks for their taste; only liked ranks can be seeds.
+- EARLIER LIKES, when given, are songs they saved in another app years before their likes here (the list names say
+  when). They are where their taste comes from: let the portrait tell that part of the story and let threads run
+  through it, but keep eras on the ranked likes, never seed from them, and give them a lane only where recent likes or
+  plays carry it on.
 - 6 to 8 lanes for songs, ordered by how central they are NOW (weight recent likes and repeat-liked songs far more
   than their oldest likes). Do not make a lane for long focus mixes; they are handled separately.
 - Old likes that no longer reflect the person (meme songs, practice or cover clips, one-off party
@@ -176,6 +183,40 @@ def _summary_lines(tracks, tags):
     return lines
 
 
+PLAYED_LINES = 150
+ARCHIVE_LINES = 2000
+
+
+def _played(songs: list[dict]) -> str:
+    """The songs they play most, from an imported YouTube Music history (Takeout), liked ones by rank."""
+    from . import signals
+    h = signals.history()
+    if not h.get("songs"):
+        return ""
+    lang = i18n.of()
+    rank = {t[k]: t["rank"] for t in songs for k in ("vid", "mv", "ll") if t.get(k)}
+    top = sorted(h["songs"].items(), key=lambda kv: (-kv[1]["days"], -kv[1]["n"]))[:PLAYED_LINES]
+    span = " to ".join(str(x)[:7] for x in h.get("span") or [])
+    return (f"\n\nPLAYED ON YOUTUBE MUSIC ({span}, from their Google Takeout; rank if liked else -|days played|plays|"
+            "last played|title|artists):\n"
+            + "\n".join(f"{rank.get(v, '-')}|{s['days']}|{s['n']}|{(s.get('last') or '')[:7]}|"
+                        f"{i18n.script(s['title'], lang)}|{i18n.script(s['artist'], lang)}" for v, s in top))
+
+
+def _earlier() -> str:
+    from . import signals
+    a = signals.archive()
+    if not a.get("songs"):
+        return ""
+    lang = i18n.of()
+    app = {"qq": "QQ Music", "163": "NetEase Cloud Music"}.get(a.get("key", "").split(":")[0], "another app")
+    legend = " / ".join(f"{i}={l['title']}" for i, l in enumerate(a["lists"]))
+    return (f"\n\nEARLIER LIKES, kept in {app} before their likes here begin (title|artists|released|lists; lists: "
+            f"{legend}):\n"
+            + "\n".join(f"{i18n.script(s['title'], lang)}|{', '.join(i18n.script(x, lang) for x in s['artists'])}|"
+                        f"{(s.get('released') or '?')[:4]}|{','.join(map(str, s['lists']))}" for s in a["songs"][:ARCHIVE_LINES]))
+
+
 def synthesize(model: str = "opus") -> dict:
     from . import settings
     nm = settings.not_me()
@@ -194,6 +235,7 @@ def synthesize(model: str = "opus") -> dict:
         + "\n\nREPEAT-LIKED (rank of newest x times liked): " + ", ".join(rep)
         + f"\n\nLONG FOCUS MIXES SAVED: {len(mixes)} (titles): "
         + " / ".join(m["title"][:60] for m in mixes[:60])
+        + _played(songs) + _earlier()
     )
     res = llm.call(prompt, _sys(LANE_SYSTEM), LANE_SCHEMA, model=model, timeout=1200)
     res["built"] = time.time()
