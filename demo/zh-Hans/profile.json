@@ -1,26 +1,26 @@
 {
  "portrait": {
-  "headline": "每隔两年换一种语言，只有日语回来过",
+  "headline": "你每隔一两年换一种语言听歌，唯一回过头的是日本。",
   "observations": [
    {
-    "claim": "每换一种语言，你都先去找那里唱假声的男歌手",
-    "evidence": "2017年是D'Angelo，2019年是Zion.T，2025年底到2026年是Fujii Kaze，中间那几年的中文歌里还有陶喆和方大同各4首。"
+    "claim": "你一次只待在一种语言里，待够了就整个搬走。",
+    "evidence": "2018 年你喜欢的歌全是英文，2020 年全是韩语。换到下一年，前一年的语言就几乎找不到了。"
    },
    {
-    "claim": "一个歌手你最多收4首，然后就换人",
-    "evidence": "有8位歌手正好各4首，Frank Ocean、IU、Eason Chan都在里面，没有一位超过4首。"
+    "claim": "一个歌手你听透几首就走，不收全集。",
+    "evidence": "Frank Ocean、IU、Eason Chan 都是集中留下 4 首，之后再没出现过。"
    },
    {
-    "claim": "你先听老的，过好几年才去听后来学它的人",
-    "evidence": "2015年收的是Anri那批80年代城市流行，十年后的2025年才收KIRINJI和Suchmos。"
+    "claim": "日本你去了两次，第二次才开始听新歌。",
+    "evidence": "2015 年你收的是 Anri、Tatsuro Yamashita 这些八十年代城市流行。十年后回来，收的是 Gen Hoshino 这些还在出歌的人。"
    },
    {
-    "claim": "你收韩语歌赶的是新歌，收日语歌大多在翻旧歌",
-    "evidence": "韩语歌从发行到你收下，中间一般隔2.7年，日语歌一般隔25.4年。"
+    "claim": "你最近开始喜欢热闹一点的歌了。",
+    "evidence": "你收的歌里节奏快的本来就少，一共 9 首，其中 5 首是近一年的 Fujii Kaze、Gen Hoshino 和 Vaundy。"
    },
    {
-    "claim": "最近这一年是你听得最热闹的一年",
-    "evidence": "160首里能量到4的只有9首，其中5首是2025年10月以后收的，比如《まつり》《何なんw》《踊り子》。能量5的一首也没有。"
+    "claim": "中文歌是你绕了一大圈才去的地方。",
+    "evidence": "日语、葡萄牙语、英语、韩语都听过一轮之后，第一首粤语歌到 2021 年才出现，是 Gareth.T 和 Eason Chan。"
    }
   ],
   "eras": [
@@ -28,43 +28,43 @@
     "from_rank": 0,
     "to_rank": 14,
     "years": "2025–2026",
-    "label": "日语回来了",
-    "text": "隔了快十年，日语又成了主角，先是KIRINJI那种夜晚城市流行，后来换成Fujii Kaze带福音合唱的放克钢琴。"
+    "label": "回到日本",
+    "text": "你又回到日语歌，这次听的是现在的人，Gen Hoshino 和 Fujii Kaze 还带你跟着节奏动了起来。"
    },
    {
     "from_rank": 15,
     "to_rank": 50,
     "years": "2023–2025",
-    "label": "爵士和钢琴",
-    "text": "先是坂本龙一和独立民谣，接着一路往回听到50年代的Chet Baker，再回到现在的Laufey和梦幻流行。"
+    "label": "钢琴和老爵士",
+    "text": "你没再固定在哪个国家，开始听没有人声的钢琴和五十年代的爵士，Chet Baker 和 Laufey 前后挨着。"
    },
    {
     "from_rank": 52,
     "to_rank": 82,
     "years": "2021–2022",
-    "label": "中文两年",
-    "text": "2021年是Eason Chan的粤语情歌和陶喆，2022年转去台湾独立，陈绮贞和落日飞车，之后中文就没再出现。"
+    "label": "中文时期",
+    "text": "粤语情歌先来，台湾独立乐团接上，Eason Chan 和 陳綺貞 各占了一阵。"
    },
    {
     "from_rank": 83,
     "to_rank": 107,
     "years": "2019–2020",
-    "label": "韩语两年",
-    "text": "先是Crush、DEAN的韩国R&B，2020年转到IU和HYUKOH，这一年的歌全是韩语，2020年底之后一首也没有了。"
+    "label": "首尔那两年",
+    "text": "你几乎只听韩国人唱歌，先是 Zion.T 他们的 R&B，后来换成 IU 和独立乐团。"
    },
    {
     "from_rank": 109,
     "to_rank": 135,
     "years": "2017–2019",
-    "label": "英语neo-soul",
-    "text": "从D'Angelo、Erykah Badu那批90年代neo-soul听起，到2018年整年是英语，Frank Ocean收了4首。"
+    "label": "新灵魂乐",
+    "text": "你转进英文 R&B，D'Angelo 和 Frank Ocean 一个接一个听过去。"
    },
    {
     "from_rank": 136,
     "to_rank": 162,
     "years": "2015–2017",
     "label": "城市流行和波萨",
-    "text": "最早是山下达郎、Anri的80年代日本城市流行，2016年起换成João Gilberto的低声波萨诺瓦。"
+    "text": "最早是八十年代的日本城市流行，然后顺着轻柔的吉他一路听到巴西，Anri 之后是 Joao Gilberto。"
    }
   ]
  },

@@ -1,70 +1,70 @@
 {
  "portrait": {
-  "headline": "Eleven years, six languages, and nobody has ever got more than four of your likes.",
+  "headline": "You keep moving into another country's music, and somehow you ended up back in Tokyo.",
   "observations": [
    {
-    "claim": "You came back to Japanese after nine years, this time to the revival.",
-    "evidence": "In 2015 every like was Japanese city pop, with Anri and Tatsuro Yamashita. Apart from film scores, Japanese then vanished until 2025, when it made up 80% of your likes, with KIRINJI “Drifter” and Suchmos “STAY TUNE”."
+    "claim": "You move into one language at a time and stay a couple of years.",
+    "evidence": "Everything you liked in 2020 was Korean. Everything in 2018 was English. Then in 2022 it was Taiwanese bands and Cheer Chen, with almost nothing else."
    },
    {
-    "claim": "You dig through Japan's back catalogue but took Korea as it came out.",
-    "evidence": "When you liked them, your Japanese songs were a median 25.4 years old. Your Korean ones were 2.7 years old."
+    "claim": "You go to the old masters first, then find who's doing it now.",
+    "evidence": "Chet Baker and Bill Evans came first, and Laufey followed a few months later. Before that, D'Angelo and Erykah Badu came a year ahead of Daniel Caesar."
    },
    {
-    "claim": "R&B is how you get into each new language.",
-    "evidence": "D'Angelo in 2017, then Crush and Zion.T in 2019, then David Tao and Khalil Fong in 2021. Each time the language changed, the falsetto and the slow groove stayed."
+    "claim": "Four songs from anyone is your limit, and then you're gone.",
+    "evidence": "Eight artists got exactly four songs each, including Frank Ocean, IU and Fujii Kaze. Nobody ever got a fifth."
    },
    {
-    "claim": "You liked the Ipanema song twice, sung by two different women.",
-    "evidence": "Astrud Gilberto's “The Girl From Ipanema” in June 2016, then Lisa Ono's “Garota De Ipanema” in May 2017. After her you didn't like another Japanese singer until 2025."
+    "claim": "You came back to Japanese music, but this time to people releasing records now.",
+    "evidence": "Your first likes were Anri and Tatsuro Yamashita, songs that were already decades old. Ten years later you're liking Gen Hoshino and Fujii Kaze."
    },
    {
-    "claim": "Your quiet library has got loud only in the last year.",
-    "evidence": "Only 9 of 160 songs are upbeat, and none are at full energy. Five of those nine came after October 2025, including Vaundy “踊り子 - odoriko” and Fujii Kaze “まつり - Matsuri”."
+    "claim": "In every language you end up with a man singing falsetto.",
+    "evidence": "It's Frank Ocean in English, Zion.T in Korean and Khalil Fong in Mandarin. Each one showed up in a different year."
    }
   ],
   "eras": [
    {
     "from_rank": 0,
-    "to_rank": 17,
+    "to_rank": 14,
     "years": "2025–2026",
-    "label": "Back in Japanese",
-    "text": "Men I Trust's dream pop gave way to Lamp and KIRINJI, and then you liked four songs each by Gen Hoshino and Fujii Kaze."
+    "label": "Back in Japan",
+    "text": "First you picked up the city pop revival bands, then Gen Hoshino and Fujii Kaze got you liking songs with a bit of bounce."
    },
    {
-    "from_rank": 18,
+    "from_rank": 15,
+    "to_rank": 36,
+    "years": "2023–2025",
+    "label": "Old jazz, then new",
+    "text": "You started with Chet Baker's hushed standards and moved on to Laufey and some soft English dream pop."
+   },
+   {
+    "from_rank": 37,
     "to_rank": 50,
-    "years": "2023–2024",
-    "label": "Piano and standards",
-    "text": "Indie folk and Sakamoto's solo piano led you to 1950s Chet Baker and Bill Evans, and then to four songs by Laufey."
+    "years": "2023",
+    "label": "Quiet piano",
+    "text": "Solo piano and indie folk took over, with Ryuichi Sakamoto and Nujabes keeping the volume low."
    },
    {
     "from_rank": 52,
     "to_rank": 82,
     "years": "2021–2022",
-    "label": "Mandarin and Cantonese",
-    "text": "You liked four Eason Chan ballads, then turned to Taiwanese indie, with Cheer Chen and four songs by Sunset Rollercoaster."
+    "label": "Chinese-language years",
+    "text": "You liked Cantonese ballads from Eason Chan, then Mandarin R&B, then the Taiwanese indie scene."
    },
    {
     "from_rank": 83,
     "to_rank": 107,
     "years": "2019–2020",
-    "label": "Seoul, as it happened",
-    "text": "First the Korean R&B of Crush and DEAN, then IU and HYUKOH, almost all of it liked within a couple of years of release."
+    "label": "Seoul",
+    "text": "Nearly everything was Korean and current, from DEAN's late-night R&B to IU and the indie bands."
    },
    {
     "from_rank": 109,
-    "to_rank": 135,
-    "years": "2017–2019",
-    "label": "Neo-soul in English",
-    "text": "D'Angelo and Erykah Badu came first, then four songs by Frank Ocean, and in 2018 every like was in English."
-   },
-   {
-    "from_rank": 136,
     "to_rank": 162,
-    "years": "2015–2017",
-    "label": "City pop and bossa",
-    "text": "Anri and Tatsuro Yamashita filled 2015, then Jobim and João Gilberto took over 2016."
+    "years": "2015–2019",
+    "label": "Records from before your time",
+    "text": "You liked 80s Tokyo city pop, then Brazilian bossa nova, then 90s neo-soul like D'Angelo, almost all of it decades old."
    }
   ]
  },
