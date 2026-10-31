@@ -342,8 +342,10 @@ def test_the_portrait_is_its_own_call_and_lands_beside_the_stations(monkeypatch)
                     "eras": [{"from_rank": 0, "to_rank": 0, "years": "2026", "label": "L", "text": "T"}]}
         if "sound" in props:
             assert "- jazz chords Evidence: e Their songs that show it: \"玻璃\", Gareth.T" in prompt
+            assert "0. 2026: L. T" in prompt
             return {"sound": [{"claim": "s", "detail": "《玻璃》"}], "observations": [{"claim": "c", "evidence": "e"}],
-                    "eras": [{"label": "l", "text": "t"}], "drafts": [], "headline": " h ", "names": [], "name": "和弦派。"}
+                    "eras": [{"i": 0, "label": "2026 l", "text": "t"}], "drafts": [], "headline": " h ", "names": [],
+                    "name": "和弦派。"}
         if "lanes" in props:
             return {"lanes": [{"key": "a", "name": "A", "english": "A", "blurb": "b", "when": "w", "sound": "s", "langs": ["yue"],
                                "energy": [1, 3], "seeds": [0], "core_artists": [], "explore_artists": [], "avoid": [],
@@ -392,3 +394,17 @@ def test_how_likes_sound_is_read_against_every_other_song_and_needs_enough_of_bo
         con.execute("delete from audio where vid like 'snd%'")
         con.execute(f"delete from textemb where text in ({','.join('?' * len(audio.SOUND_TEXTS))})", audio.SOUND_TEXTS)
         con.commit()
+
+
+def test_periods_written_out_of_order_land_on_their_own_years(monkeypatch):
+    from zhiyin import llm, profile
+    rd = {"core": "c", "loves": [], "loses": [], "listener": [], "tension": {"reading": "t", "evidence": "e"},
+          "constant": "k", "changes": "c",
+          "eras": [{"from_rank": 0, "to_rank": 9, "years": "2026", "label": "New", "text": "N"},
+                   {"from_rank": 10, "to_rank": 19, "years": "2019–2021", "label": "Old", "text": "O"}]}
+    monkeypatch.setattr(llm, "call", lambda *a, **k: {
+        "sound": [], "observations": [], "drafts": [], "headline": "h", "names": [], "name": "n",
+        "eras": [{"i": 1, "label": "2019–2021 · 旧", "text": "旧的"}, {"i": 0, "label": "新", "text": "新的"}]})
+    with store.as_user("eras1"):
+        po = profile.write(rd, [], "opus")
+    assert [(e["years"], e["label"], e["text"]) for e in po["eras"]] == [("2026", "新", "新的"), ("2019–2021", "旧", "旧的")]

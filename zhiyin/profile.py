@@ -514,7 +514,7 @@ WRITE_SCHEMA = {
         "observations": {"type": "array", "items": {"type": "object", "properties": {
             "claim": {"type": "string"}, "evidence": {"type": "string"}}, "required": ["claim", "evidence"]}},
         "eras": {"type": "array", "items": {"type": "object", "properties": {
-            "label": {"type": "string"}, "text": {"type": "string"}}, "required": ["label", "text"]}},
+            "i": {"type": "integer"}, "label": {"type": "string"}, "text": {"type": "string"}}, "required": ["i", "label", "text"]}},
         "drafts": {"type": "array", "items": {"type": "object", "properties": {
             "text": {"type": "string"}, "post": {"type": "integer"}, "stranger": {"type": "integer"},
             "unsaid": {"type": "integer"}}, "required": ["text", "post", "stranger", "unsaid"]}},
@@ -546,7 +546,8 @@ What to write, in @LANG@ (keep song titles and artist names exactly as given; @T
   sound items or the headline say. claim: @CLAIM@, no numbers: what the habit shows about them, never the habit
   itself, which belongs in the evidence. evidence: @EVIDENCE@ with the facts that show it, at most two numbers and
   three names, counted the way a person counts (years, months, songs, plays; never ranks). Give the facts and stop.
-- eras: the periods given, in the same order: label (a few words) and text (one sentence) in @LANG@.
+- eras: one for each period given: i (its number), label (a few words, never its years, which the page shows beside
+  it) and text (one sentence) in @LANG@.
 - drafts, then headline: the one line under the name of their taste, on their page and on the card they may post. Say
   what the reading adds up to about them, one sentence of @HEADLINE@, preferring what they may not have noticed about
   themselves. A stranger who sees only the card must get it in one read: everyday words, one idea, no numbers or
@@ -674,12 +675,16 @@ def write(rd: dict, songs: list[dict], model: str = "opus") -> dict:
               + "\n\nHow they live with music:\n" + "\n".join(f"- {x['reading']} Evidence: {x['evidence']}" for x in rd["listener"])
               + f"\n\nTension: {rd['tension']['reading']} Evidence: {rd['tension']['evidence']}"
               + f"\n\nWhat has stayed: {rd['constant']}\nWhat changed: {rd['changes']}"
-              + "\n\nPERIODS, newest first:\n" + "\n".join(f"- {e['years']}: {e['label']}. {e['text']}" for e in rd["eras"]))
+              + "\n\nPERIODS, newest first:\n" + "\n".join(f"{i}. {e['years']}: {e['label']}. {e['text']}"
+                                                         for i, e in enumerate(rd["eras"])))
     out = llm.call(prompt, _sys(WRITE_SYSTEM), WRITE_SCHEMA, model=model, timeout=600)
-    if len(out["eras"]) != len(rd["eras"]):   # each period is written beside its own ranks: once more, all of them
-        out = llm.call(prompt + f"\n\n(Write all {len(rd['eras'])} periods, in the order given.)", _sys(WRITE_SYSTEM),
+    # each period is written beside its own ranks, matched by number: one run wrote them oldest first
+    if {w["i"] for w in out["eras"]} != set(range(len(rd["eras"]))):
+        out = llm.call(prompt + f"\n\n(Write all {len(rd['eras'])} periods, each with its number.)", _sys(WRITE_SYSTEM),
                        WRITE_SCHEMA, model=model, timeout=600)
-    eras = [{**e, "label": w["label"], "text": w["text"]} for e, w in zip(rd["eras"], out["eras"])]
+    wrote = {w["i"]: w for w in out["eras"]}
+    eras = [{**e, "label": _no_years(wrote[i]["label"], e["years"]), "text": wrote[i]["text"]}
+            for i, e in enumerate(rd["eras"]) if i in wrote]
     lang, name = i18n.of(), out["name"].strip().rstrip("。.!！")
     return {"headline": out["headline"].strip(), "sound": out["sound"], "observations": out["observations"], "eras": eras,
             "name": _in_script(name, lang) if _fits(name, lang) else "", "lang": lang}
@@ -865,6 +870,11 @@ def name_taste(rows: list[tuple[str, str, str]], lang: str, lines: int = LABEL_L
             break
         prompt += f"\n\n(\"{out}\" is too long: {w['label']}.)"
     return _in_script(out, lang)
+
+
+def _no_years(label: str, years: str) -> str:
+    """The page shows the years beside the label; one run wrote them into it too."""
+    return label[len(years):].lstrip(" ·:：-–") if label.startswith(years) and label != years else label
 
 
 def _fits(name: str, lang: str) -> bool:
