@@ -424,6 +424,7 @@ async function unask(created) {
 }
 
 const STEPS = () => [t('读取你的喜欢'), t('了解你的口味'), t('挑第一期电台')];
+let thinSwap = false;   // a listener whose app likes are too few is pasting a longer list
 function prepHTML() {
   const me = S.me;
   if (!me) return '';
@@ -432,7 +433,11 @@ function prepHTML() {
     const j = S.jobs?.setup, step = Math.max(1, j?.step || (me.status === 'building' ? 2 : 1));
     return `<div class="prep"><b>${t('正在准备你的电台 · {n}/3', { n: step })}</b><p>${esc(STEPS()[step - 1])}${t('。')}${step === 1 ? t('要几分钟，可以先听着，好了会告诉你。') : t('大约一刻钟，可以先听着，好了会告诉你。')}</p></div>`;
   }
-  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${me.netease ? t('你的{app}喜欢里有 {n} 首在 YouTube Music 上找得到，至少要 20 首才分得出口味。先听「先听着」；在{app}多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0, app: appShort(me.netease.app) }) : t('你在 YouTube Music 有 {n} 首喜欢，至少要 20 首才分得出口味。先听「先听着」；多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0 })}</p><button class="tb" data-k="setup">${t('现在就看一次')}</button></div>`;
+  if (me.status === 'thin' && me.netease && thinSwap) return `<form class="prep prep-swap" id="neForm" autocomplete="off"><b>${t('换一份歌单')}</b><p>${t('贴一份更长的公开歌单，自己建的也行。电台会改从这份歌单出发。')}</p>
+    <input name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false" placeholder="${t('粘贴网易云或 QQ 音乐的链接')}" aria-label="${t('网易云或 QQ 音乐的链接')}">
+    <p class="mk-err" role="alert"></p>
+    <div class="prep-acts"><button class="tb" type="submit">${t('从这份歌单开始')}</button><button class="tb" type="button" data-k="thinswap">${t('取消')}</button></div></form>`;
+  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${me.netease ? t('你的{app}喜欢里有 {n} 首在 YouTube Music 上找得到，至少要 20 首才分得出口味。先听「先听着」；在{app}多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0, app: appShort(me.netease.app) }) : t('你在 YouTube Music 有 {n} 首喜欢，至少要 20 首才分得出口味。先听「先听着」；多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0 })}</p><div class="prep-acts"><button class="tb" data-k="setup">${t('现在就看一次')}</button>${me.netease ? `<button class="tb" data-k="thinswap">${t('换一份歌单')}</button>` : ''}</div></div>`;
   if (me.status === 'error' && me.setup_issue === 'nochannel') return `<div class="prep"><b>${t('这个 Google 账号还没有 YouTube 频道')}</b><p>${t('没有频道，YouTube 不让别的应用读你点过的喜欢。建一个频道只要一分钟，不用发视频；建好回来点「再试一次」。')}</p><div class="prep-acts"><a class="tb" href="https://www.youtube.com/create_channel" target="_blank" rel="noopener">${t('去建频道')}</a><button class="tb" data-k="setup">${t('再试一次')}</button></div></div>`;
   if (me.status === 'error') return `<div class="prep"><b>${t('准备电台时出了问题')}</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">${t('再试一次')}</button></div>`;
   return '';
@@ -3626,6 +3631,12 @@ async function act(k, btn) {
   else if (k === 'unask') unask(+btn.dataset.c);
   else if (k === 'unaskall') unask(null);
   else if (k === 'setup') { try { await api('/api/setup', {}); await reload(); poll(); } catch (err) { toast(err.message); } }
+  else if (k === 'thinswap') {
+    thinSwap = !thinSwap;
+    renderStations();
+    $('#stations').scrollLeft = 0;   // on a phone the card sits in the sideways strip
+    if (thinSwap) $('#neForm input')?.focus({ preventScroll: true });
+  }
   else if (k === 'synclikes') {
     const on = btn.getAttribute('aria-checked') !== 'true';
     btn.setAttribute('aria-checked', on);
@@ -3792,6 +3803,7 @@ document.addEventListener('submit', async (e) => {
     err.textContent = '';
     try {
       const r = await api('/api/netease', { link });
+      thinSwap = false;
       S.jobs = r.jobs;
       await reload();
       poll();
