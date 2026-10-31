@@ -2276,6 +2276,9 @@ function arcText(x, str, c, r, mid, low, spacing) {
   return total;
 }
 
+// a signed-in listener's card says what the top of their page says
+const cardLine = () => (!guest() && !EAR.roast && !S.stale_lang && S.portrait?.headline) || '';
+
 async function cardCanvas() {
   await document.fonts.ready;
   if (EAR.list.some((s) => !earCol.has(s.vid))) await Promise.race([earColors(), new Promise((r) => setTimeout(r, 3000))]);
@@ -2321,6 +2324,7 @@ async function cardCanvas() {
   for (const l of lines) { y += size * 0.96; x.fillText(l, M, y); y += size * 0.2; }
   const songs = EAR.list.length, first = yearOf(EAR.span[0]), liked = EAR.n ?? (S.library.songs || songs);
   const kinds = EAR.sectors.length ? S.lanes.length : 0;
+  const line = cardLine();
   if (EAR.roast) {
     // Claude's line about the taste takes the counts' place: the record's centre and rings carry those
     y += 58;
@@ -2330,6 +2334,14 @@ async function cardCanvas() {
     let rl = null, rs = 38;
     for (rs of [38, 34]) { font(400, rs); if ((rl = headLines(x, EAR.roast, W - 2 * M, true))) break; }
     if (!rl) { font(400, rs = 32); rl = wrapLines(x, EAR.roast, W - 2 * M).slice(0, 3); }
+    x.fillStyle = INK2;
+    for (const l of rl) { y += rs * 1.45; x.fillText(l, M, y); }
+  } else if (line) {
+    // the portrait's headline, under the name as on the page; the record carries the counts
+    y += 34;
+    let rl = null, rs = 38;
+    for (rs of [38, 34]) { font(400, rs); if ((rl = headLines(x, line, W - 2 * M, true))) break; }
+    if (!rl) { font(400, rs = 32); rl = wrapLines(x, line, W - 2 * M).slice(0, 3); }
     x.fillStyle = INK2;
     for (const l of rl) { y += rs * 1.45; x.fillText(l, M, y); }
   } else {
@@ -2498,7 +2510,7 @@ async function cardAct(k, btn) {
   const l = linkFor();
   // the link rides along where the app keeps text with an image (Messages, X, LINE); ?ref=card counts who it brings
   if (k === 'sharenow') {
-    try { await navigator.share({ files: [card.file], text: `${EAR.label || t('你的喜欢')}${guest() && EAR.roast ? `\n${t('Claude 锐评')}：${EAR.roast}` : ''}\n${l ? l.url : `${location.origin}/card?ref=card`}` }); ev('share_send'); } catch {}
+    try { await navigator.share({ files: [card.file], text: `${EAR.label || t('你的喜欢')}${guest() && EAR.roast ? `\n${t('Claude 锐评')}：${EAR.roast}` : cardLine() ? `\n${cardLine()}` : ''}\n${l ? l.url : `${location.origin}/card?ref=card`}` }); ev('share_send'); } catch {}
     return;
   }
   if (k === 'cardlink') return makeLink(btn);
@@ -3141,15 +3153,9 @@ function renderEar() {
       </div>`}
     </header>
     ${g ? guestNextHTML() : ''}
-    ${full ? `<section class="sec"><h2>${t('你的口味')}<small>${t('点封面就放这个电台。关掉的，下一期起不再出现。')}</small></h2>
+    ${full ? `${portraitHTML(po)}<section class="sec"><h2>${t('你的口味')}<small>${t('点封面就放这个电台。关掉的，下一期起不再出现。')}</small></h2>
       <div class="lanes">${S.lanes.map((l) => laneRow(l, sec(l.key))).join('')}</div></section>
     ${listenedHTML()}
-    <section class="sec"><h2>${t('细说你的口味')}</h2>
-      <div class="portrait">
-        <div><div class="prose" id="prose">${po.paragraphs.map((x) => `<p>${playable(x)}</p>`).join('')}</div>
-          ${po.paragraphs.length > 1 ? `<button class="tb readmore" data-k="readmore">${t('读完整段')}</button>` : ''}</div>
-        ${po.threads.length ? `<div class="threads"><h3>${t('一直没变的')}</h3><ol class="threads">${po.threads.map((x) => `<li>${playable(x)}</li>`).join('')}</ol></div>` : ''}
-      </div></section>
     <section class="sec folds">
       ${qualityHTML()}
       <details class="fold"><summary><b>${t('不算进口味的')}</b><span>${asideN ? t('{n} 首，留在你的喜欢里，但不拿来推歌', { n: asideN }) : t('留在你的喜欢里，但不拿来推歌')}</span>${I.down}</summary>
@@ -3167,6 +3173,19 @@ function renderEar() {
   if (full) loadQuality();
   if (refocus) $('#mkLink')?.focus({ preventScroll: true });
   if (MAKE && $('#mkLink')) { MAKE = false; if (matchMedia('(pointer: fine)').matches) $('#mkLink').focus({ preventScroll: true }); }
+}
+
+// Claude's reading of the listener: each thing it noticed beside the data that shows it. Profiles built before
+// 2026-11 have prose and threads instead.
+function portraitHTML(po) {
+  const body = po.observations?.length
+    ? `<ol class="reads">${po.observations.map((o) => `<li><p class="claim">${playable(o.claim)}</p><p class="ev">${playable(o.evidence)}</p></li>`).join('')}</ol>`
+    : `<div class="portrait">
+        <div><div class="prose" id="prose">${po.paragraphs.map((x) => `<p>${playable(x)}</p>`).join('')}</div>
+          ${po.paragraphs.length > 1 ? `<button class="tb readmore" data-k="readmore">${t('读完整段')}</button>` : ''}</div>
+        ${po.threads.length ? `<div class="threads"><h3>${t('一直没变的')}</h3><ol class="threads">${po.threads.map((x) => `<li>${playable(x)}</li>`).join('')}</ol></div>` : ''}
+      </div>`;
+  return `<section class="sec"><h2>${t('细说你的口味')}</h2>${body}</section>`;
 }
 
 // the re-roll button rides on the name's last word (or character), so it never wraps onto a line by itself

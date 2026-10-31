@@ -22,16 +22,19 @@ _TITLE = re.compile(r"(《[^》]*》|〈[^〉]*〉)")
 WRITE = {
     "zh-Hans": {"lang": "Simplified Chinese", "name": "2-4 Simplified Chinese characters",
                 "headline": "at most 30 Chinese characters", "reason": "at most 34 characters",
+                "claim": "at most 24 Chinese characters", "evidence": "at most 80 Chinese characters",
                 "intent": "one short Simplified Chinese phrase (no more than 16 characters)",
                 "titles": "Put song titles inside 《》.", "cliche": "你一定会喜欢",
                 "label": "at most 12 Chinese characters (a Latin name counts as one character)"},
     "zh-Hant": {"lang": "Traditional Chinese as written in Taiwan and Hong Kong (never a Simplified character)",
                 "name": "2-4 Traditional Chinese characters", "headline": "at most 30 Chinese characters",
+                "claim": "at most 24 Chinese characters", "evidence": "at most 80 Chinese characters",
                 "reason": "at most 34 characters",
                 "intent": "one short Traditional Chinese phrase (no more than 16 characters)",
                 "titles": "Put song titles inside 《》.", "cliche": "你一定會喜歡",
                 "label": "at most 12 Chinese characters (a Latin name counts as one character)"},
     "en": {"lang": "English", "name": "1-3 English words", "headline": "at most 18 words",
+           "claim": "at most 14 words", "evidence": "at most 45 words",
            "reason": "at most 16 words", "intent": "one short English phrase (no more than 6 words)",
            "titles": "Put song titles inside curly quotes “ ”.", "cliche": "you'll love this",
            "label": "at most 6 words (count them)"},
@@ -110,7 +113,7 @@ def convert(text, src: str, dst: str):
     return "".join(p if _TITLE.fullmatch(p) else _t2s.convert(p) for p in _TITLE.split(text))
 
 
-_TEXT_KEYS = {"headline", "paragraphs", "threads", "label", "text", "name", "blurb", "when", "what", "why", "reason",
+_TEXT_KEYS = {"headline", "paragraphs", "threads", "claim", "evidence", "label", "text", "name", "blurb", "when", "what", "why", "reason",
               "intent", "sub", "lead", "years"}
 # names, and the listener's own words, stay as they are
 _NAMES = {"artists", "album", "title", "seeds", "core_artists", "explore_artists", "q", "avoid", "queries", "english"}

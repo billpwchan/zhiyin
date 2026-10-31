@@ -18,7 +18,8 @@ def listener() -> str:
 def _sys(template: str) -> str:
     w = i18n.WRITE[i18n.of()]
     return (template.replace("@LISTENER@", listener()).replace("@LANG@", w["lang"]).replace("@NAME@", w["name"])
-            .replace("@HEADLINE@", w["headline"]).replace("@TITLES@", w["titles"]))
+            .replace("@HEADLINE@", w["headline"]).replace("@TITLES@", w["titles"]).replace("@CLAIM@", w["claim"])
+            .replace("@EVIDENCE@", w["evidence"]))
 
 
 TAG_SCHEMA = {
@@ -92,15 +93,6 @@ def tag(force: bool = False, batch: int = 100, workers: int = 4) -> dict:
 LANE_SCHEMA = {
     "type": "object",
     "properties": {
-        "portrait": {"type": "object", "properties": {
-            "headline": {"type": "string"},
-            "paragraphs": {"type": "array", "items": {"type": "string"}},
-            "eras": {"type": "array", "items": {"type": "object", "properties": {
-                "from_rank": {"type": "integer"}, "to_rank": {"type": "integer"},
-                "years": {"type": "string"}, "label": {"type": "string"}, "text": {"type": "string"}},
-                "required": ["from_rank", "to_rank", "years", "label", "text"]}},
-            "threads": {"type": "array", "items": {"type": "string"}},
-        }, "required": ["headline", "paragraphs", "eras", "threads"]},
         "lanes": {"type": "array", "items": {"type": "object", "properties": {
             "key": {"type": "string"},
             "name": {"type": "string"},
@@ -128,7 +120,7 @@ LANE_SCHEMA = {
             "what": {"type": "string"}, "ranks": {"type": "array", "items": {"type": "integer"}}, "why": {"type": "string"}},
             "required": ["what", "ranks", "why"]}},
     },
-    "required": ["portrait", "lanes", "focus", "set_aside"],
+    "required": ["lanes", "focus", "set_aside"],
 }
 
 LANE_SYSTEM = """You are a world-class music editor, writing the taste model behind one person's private recommender.
@@ -143,9 +135,8 @@ Think like a listener and an editor, not a statistician:
 - PLAYED, when given, is how often they actually play each song: weigh it with recency when ordering lanes and
   choosing seeds. A song played on many days without a like still speaks for their taste; only liked ranks can be seeds.
 - EARLIER LIKES, when given, are what they saved in another app years before their likes here, by artist (the list
-  names say when). They are where their taste comes from: let the portrait tell that part of the story and let threads run
-  through it, but keep eras on the ranked likes, never seed from them, and give them a lane only where recent likes or
-  plays carry it on.
+  names say when). They are where their taste comes from: never seed from them, and give them a lane only where recent
+  likes or plays carry it on.
 - 6 to 8 lanes for songs, ordered by how central they are NOW (weight recent likes and repeat-liked songs far more
   than their oldest likes). Do not make a lane for long focus mixes; they are handled separately.
 - Old likes that no longer reflect the person (meme songs, practice or cover clips, one-off party
@@ -163,12 +154,7 @@ Think like a listener and an editor, not a statistician:
 - blurb: one plain @LANG@ sentence on the sound. when: one plain @LANG@ phrase on when they reach for it.
 - focus: the long background mixes they save for work (e.g. lofi, jazz or ambient playlists). blurb and when in
   plain @LANG@; queries = 8-10 YouTube search queries (any language) that would find NEW long mixes in the same
-  spirit; avoid = what would make a focus mix wrong for them.
-- portrait (@LANG@, keeping song titles and artist names exactly as given (@TITLES@); warm and specific, no flattery, no clichés, no bullet-y
-  slogans): headline = ONE sentence of @HEADLINE@ that names the through-line of their taste; 3-4 short paragraphs that
-  read their taste with concrete artists/songs as evidence; eras = 4-6 periods by rank range, with years taken from the "liked around" dates (never guessed from
-  release years),
-  a short label and one sentence each; threads = 3-5 things that stay constant across languages and years."""
+  spirit; avoid = what would make a focus mix wrong for them."""
 
 
 def _summary_lines(tracks, tags):
@@ -227,6 +213,254 @@ def _earlier() -> str:
     return (f"\n\nEARLIER LIKES, kept in {app} before their likes here begin: {len(a['songs'])} songs by artist "
             f"(artist|songs|released|lists|a few titles; lists: {legend}):\n" + "\n".join(rows)
             + (f"\nOne song each: {', '.join(once)}" if once else ""))
+
+
+RUN = 25   # consecutive likes: one artist holding several of them is a run on that artist
+
+
+def evidence(songs: list[dict], tags: dict) -> str:
+    """What the portrait stands on, counted here so the model reads the numbers instead of counting them."""
+    from collections import Counter, defaultdict
+    from statistics import median
+
+    from . import accounts, ear, signals
+    from .text import fold, song_key
+    songs = sorted(songs, key=lambda t: t["rank"])
+    if len(songs) < 20:
+        return ""
+    lang = i18n.of()
+    ts = dict(zip((t["rank"] for t in songs), ear._times(songs)))
+    ne = (accounts.prefs().get("netease") or {}).get("link")
+    released = bool(ne) and library.app_of(ne) == "qq"   # QQ Music shows no like dates: they are guessed from releases
+    exact = all(t.get("source") in ("google", "163") for t in songs)
+
+    def tg(t):
+        return tags.get(t["vid"]) or {}
+
+    def who(t):
+        return t["artists"][0]["name"] if t["artists"] else ""
+
+    def month(t):
+        return ear._month(ts[t["rank"]])
+
+    shown = {fold(who(t)): i18n.script(who(t), lang) for t in songs if who(t)}
+    ranks = defaultdict(list)
+    for t in songs:
+        if who(t):
+            ranks[fold(who(t))].append(t["rank"])
+    by_rank = {t["rank"]: t for t in songs}
+    out = []
+
+    if not released:
+        years = defaultdict(Counter)
+        for t in songs:
+            years[int(ts[t["rank"]])][tg(t).get("lang") or "?"] += 1
+        out.append("LANGUAGE OF THE LIKES BY YEAR (year: likes, top languages): " + "; ".join(
+            f"{y}: {sum(c.values())}, " + ", ".join(f"{k} {round(100 * n / sum(c.values()))}%" for k, n in c.most_common(3))
+            for y, c in sorted(years.items())))
+
+    best = {}
+    for i in range(len(songs)):
+        for k, n in Counter(fold(who(t)) for t in songs[i:i + RUN] if who(t)).items():
+            if n > best.get(k, (0, 0))[0]:
+                best[k] = (n, i)
+    runs = sorted(((n, k, i) for k, (n, i) in best.items() if n >= 4), reverse=True)[:8]
+    if runs:
+        def run_at(k, i):
+            if released:
+                return ""
+            return f", around {month(next(t for t in songs[i:i + RUN] if fold(who(t)) == k))}"
+        out.append(f"RUNS (one artist holding many of {RUN} consecutive likes): " + "; ".join(
+            f"{shown[k]} {n} of {RUN}{run_at(k, i)}, {len(ranks[k])} liked in all" for n, k, i in runs))
+
+    if not released:
+        back = []
+        for k, rs in ranks.items():
+            if len(rs) >= 3:
+                g, a, b = max((ts[b] - ts[a], a, b) for a, b in zip(rs[::-1], rs[-2::-1]))
+                if g >= 2 and a - b > 30:   # estimated dates can jump; many likes between can't
+                    back.append((g, k, a, b))
+        if back:
+            out.append("RETURNS (an artist liked, then none for years, then liked again): " + "; ".join(
+                f"{shown[k]}: around {month(by_rank[a])}, then none until {month(by_rank[b])}, {len(ranks[k])} in all"
+                for _, k, a, b in sorted(back, reverse=True)[:8]))
+
+    def song(t):
+        """(title, artist) of the song itself: a cover or live take counts under the original it names."""
+        o = tg(t).get("original") or ""
+        if " - " in o and tg(t).get("kind") in ("cover", "live", "remix", "medley"):
+            title, artist = o.rsplit(" - ", 1)
+            return title, artist
+        return t["title"], who(t)
+    same = defaultdict(list)
+    for t in songs:
+        title, artist = song(t)
+        same[(song_key(title), fold(artist))].append(t)
+    twice = sorted((v for v in same.values() if len(v) >= 2), key=lambda v: (-len(v), ts[v[-1]["rank"]] - ts[v[0]["rank"]]))
+    if twice:
+        def kept(v):
+            title, artist = song(v[-1])
+            kinds = ", ".join(sorted({tg(t).get("kind") or "song" for t in v}))
+            when = "" if released else f"; around {month(v[-1])} and {month(v[0])}"
+            return f'"{title}", {i18n.script(artist, lang)} x{len(v)} ({kinds}{when})'
+        out.append(f"THE SAME SONG KEPT MORE THAN ONCE: {len(twice)} songs. " + "; ".join(kept(v) for v in twice[:8]))
+
+    kinds = Counter(tg(t).get("kind") or "song" for t in songs)
+    out.append(f"VERSIONS, of {len(songs)} likes: " + ", ".join(f"{n} {k}" for k, n in kinds.most_common() if k != "song"))
+    en = Counter(tg(t).get("energy") for t in songs)
+    out.append("ENERGY (1 very calm to 5 very high): " + ", ".join(f"{e}: {en[e]}" for e in range(1, 6)))
+
+    if not released:
+        lag = [(max(0.0, ts[t["rank"]] - tg(t)["year"]), t) for t in songs if 1900 < (tg(t).get("year") or 0) <= ts[t["rank"]] + 1]
+        if len(lag) >= 30:
+            xs = [x for x, _ in lag]
+            per = defaultdict(list)
+            for x, t in lag:
+                per[tg(t).get("lang")].append(x)
+            out.append(
+                f"HOW OLD A SONG IS WHEN THEY LIKE IT ({len(xs)} songs with a known year): median {median(xs):.1f} years; "
+                f"{round(100 * sum(x < 1 for x in xs) / len(xs))}% within a year of release, "
+                f"{round(100 * sum(x >= 10 for x in xs) / len(xs))}% at 10 years or more; median by language: "
+                + ", ".join(f"{k} {median(v):.1f}" for k, v in per.items() if len(v) >= 15)
+                + ("" if exact else ". Like dates are lower bounds here, so the true gaps are at least this long"))
+            out.append("THE OLDEST SONGS THEY LIKED (released, liked around): " + "; ".join(
+                f'"{t["title"]}", {shown.get(fold(who(t)), "?")} ({tg(t)["year"]}, {int(ts[t["rank"]])})'
+                for _, t in sorted(lag, key=lambda p: -p[0])[:8]))
+
+    h = signals.history()
+    hs = h.get("songs") or {}
+    if hs:
+        span = " to ".join(str(x)[:7] for x in h.get("span") or [])
+        mine = {t[k]: t["rank"] for t in songs for k in ("vid", "mv", "ll") if t.get(k)}
+        art = defaultdict(lambda: [0, 0, 0])
+        # a channel's name is often not the artist's name in the likes (Eason Chan, 陳奕迅): the liked songs it played link them
+        same_as = defaultdict(set)
+        for v, s in hs.items():
+            k = fold(s["artist"])
+            a = art[k]
+            a[0] += s["n"]
+            a[1] += 1
+            if v in mine:
+                a[2] += 1
+                same_as[k].add(fold(who(by_rank[mine[v]])))
+        called = {fold(s["artist"]): i18n.script(s["artist"], lang) for s in hs.values()}
+
+        def liked(k):
+            return sum(len(rs) for j, rs in ranks.items() if j == k or j in same_as[k])
+        out.append(f"MOST PLAYED ARTISTS, {span} (artist: plays, songs played, of those liked, songs of theirs liked in "
+                   "all): " + "; ".join(f"{called[k]}: {p}, {n}, {lk}, {liked(k)}"
+                                       for k, (p, n, lk) in sorted(art.items(), key=lambda kv: -kv[1][0])[:12]))
+        rep = [v for v, s in hs.items() if s["days"] >= 3]
+        out.append(f"REPLAYED (played on 3 or more days, {span}): {len(rep)} songs, {sum(v in mine for v in rep)} of them liked")
+        if not released:
+            kept = {mine[v] for v, s in hs.items() if s["days"] >= 2 and v in mine}
+            yrs = defaultdict(lambda: [0, 0])
+            for t in songs:
+                y = yrs[int(ts[t["rank"]])]
+                y[0] += 1
+                y[1] += t["rank"] in kept
+            out.append(f"LIKES STILL PLAYED (songs liked each year that were played on 2 or more days, {span}): "
+                       + ", ".join(f"{y} {p} of {n}" for y, (n, p) in sorted(yrs.items())))
+
+    a = signals.archive()
+    if a.get("songs"):
+        then = Counter(fold(s["artists"][0]) for s in a["songs"] if s["artists"])
+        was = {fold(s["artists"][0]): i18n.script(s["artists"][0], lang) for s in a["songs"] if s["artists"]}
+        place = {k: i + 1 for i, k in enumerate(sorted(ranks, key=lambda k: -len(ranks[k])))}
+        out.append("THEN AND NOW (artist: songs in the earlier lists, songs liked here, place among the most liked here): "
+                   + "; ".join(f"{was[k]} {n}, {len(ranks.get(k, []))}" + (f", #{place[k]}" if k in place else "")
+                               for k, n in then.most_common(15)))
+        new = sorted(((len(rs), k) for k, rs in ranks.items() if k not in then), reverse=True)[:10]
+        out.append("MOST LIKED HERE AND ABSENT FROM THE EARLIER LISTS: " + ", ".join(f"{shown[k]} {n}" for n, k in new))
+    return "\n\nEVIDENCE, counted from the same data (trust these numbers over your own counting):\n- " + "\n- ".join(out)
+
+
+PORTRAIT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "headline": {"type": "string"},
+        "observations": {"type": "array", "items": {"type": "object", "properties": {
+            "claim": {"type": "string"}, "evidence": {"type": "string"}}, "required": ["claim", "evidence"]}},
+        "eras": {"type": "array", "items": {"type": "object", "properties": {
+            "from_rank": {"type": "integer"}, "to_rank": {"type": "integer"},
+            "years": {"type": "string"}, "label": {"type": "string"}, "text": {"type": "string"}},
+            "required": ["from_rank", "to_rank", "years", "label", "text"]}},
+    },
+    "required": ["headline", "observations", "eras"],
+}
+
+PORTRAIT_SYSTEM = """You write the part of one person's music page that reads them, from their own listening data.
+@LISTENER@
+They open it to see whether you understood them, and they may post it. The bar: they think "how did it notice that",
+and a friend who knows them nods. Being right and specific is the whole job; sounding insightful is not.
+
+You get every liked song with tags, newest first (songs that don't speak for them are already left out); EVIDENCE,
+counted by code from the same data, whose numbers you trust over your own counting; and, when known, what they played
+this past year and what they kept in another app years before.
+
+Finding what to say:
+- Look at how they listen as much as at what: all of one artist at once or a song at a time; new releases or old
+  songs; the studio cut, the live take or a cover; liking what they play, or playing what they never like; which
+  language each year belonged to; who came back after years away; what they left behind; what doesn't fit the rest.
+- Test every candidate: would it be false for most people who like the same artists? If it would be true of anyone
+  with these genres, drop it. "You like smooth R&B with warm vocals" fails. "You kept one song three times, the
+  studio cut, a live take and a cover, six years apart" passes.
+- Stand every observation on their data: a number from EVIDENCE, a song, a year. Never guess what the data can't
+  show: why they listen, how they feel, the time of day, who with, their job or their age.
+- Where two things in the data pull against each other, say so: one real tension is worth three agreements.
+- The earlier lists, when given, are where they come from: what survived into the likes here, and what didn't. When
+  something they used to keep is gone, look for what took its place before calling it lost.
+- Before writing, list at least ten candidates for yourself and check each against all of the data, not only the line
+  it came from. Keep the four or five that pass best and that together cover different sides of them: how they find
+  music, how they keep it, what changed, what pulls against the rest.
+
+What to write (@LANG@; keep song titles and artist names exactly as given; @TITLES@):
+- headline: one sentence of @HEADLINE@, the most recognisable true thing about how they listen. It sits under the
+  name of their taste and on the card they share, so it must be theirs alone. Not a summary of genres or of years.
+- observations: 4 or 5, strongest first, each a different point and none repeating the headline. claim: your
+  reading of what the data says about how they listen, in one plain sentence of @CLAIM@; a reading a friend would
+  offer, never a number restated. evidence: one or two sentences of @EVIDENCE@ from their data that show it, naming
+  at most three songs or artists and the number that matters. Give the data and stop; the claim already said what it
+  means.
+- eras: 4-6 periods by rank range, newest first, with years from the "liked around" dates (never from release
+  years) written like 2019–2021 or 2026, a short label and one sentence each on what changed, naming at most two
+  artists.
+- Count the way a person does, in years, months, songs and plays; never in ranks or likes in between.
+
+How it sounds:
+- A friend who has been paying attention, talking to them ("you"). Short declarative sentences that the facts carry.
+  Dry humour where the data is funny; never mean, never flattering, never praising their taste.
+- Say a thing once and stop. No hedging (seems, perhaps, in a way, 似乎, 或许, 某种程度上), no verdict on who they are
+  as a person, no line explaining what the line before it meant.
+- Never: slogans; mirrored or parallel clauses (对仗); "not X but Y" (不是…而是, 与其说…不如说); "from X to Y" (从…到…);
+  rhetorical questions; colons or dashes; exclamation marks; metaphors; more than three names in a row; the words soul,
+  journey, story, texture, vibe, warm, tender, eclectic, through-line, 灵魂, 旅程, 故事, 诉说, 仿佛, 底色, 质感, 氛围,
+  治愈, 温柔, 温暖, 慵懒, 松弛, 交织, 贯穿, 一脉相承, 骨子里, 不仅…更.
+- In Chinese, write the way a person talks in writing: numbers in Arabic digits, full-width punctuation, no 「」
+  around ideas, no four-character set phrases strung together."""
+
+PORTRAIT_MIXES = 30
+
+
+def portrait(prof: dict, model: str = "opus") -> dict:
+    """The page's reading of the listener, written apart from the stations so it gets the model's whole attention."""
+    from . import settings
+    nm = settings.not_me()
+    tags = store.read_json(store.TAGS) or {}
+    aside = {r for s in prof.get("set_aside", []) for r in s["ranks"]}
+    tracks = library.load()
+    songs = [t for t in tracks if not t["long"] and not settings.is_not_me(t, nm) and t["rank"] not in aside]
+    mixes = [t for t in tracks if t["long"]]
+    lanes = "\n".join(f"- {ln['name']}: {ln['blurb']}" for ln in prof.get("lanes", []))
+    prompt = (
+        "LIKED SONGS (rank|liked around|title|artists|kind|lang|scene|sound|mood|energy):\n"
+        + "\n".join(_summary_lines(songs, tags))
+        + evidence(songs, tags)
+        + (f"\n\nLONG FOCUS MIXES SAVED: {len(mixes)} (some titles): "
+           + " / ".join(m["title"][:60] for m in mixes[:PORTRAIT_MIXES]) if mixes else "")
+        + _played(songs) + _earlier()
+        + (f"\n\nTHEIR STATIONS, already described elsewhere on the page:\n{lanes}" if lanes else ""))
+    return llm.call(prompt, _sys(PORTRAIT_SYSTEM), PORTRAIT_SCHEMA, model=model, timeout=900)
 
 
 def synthesize(model: str = "opus") -> dict:
@@ -300,7 +534,10 @@ def build(model: str = "opus", log=print) -> dict:
     log(i18n.tr("找出你的几种听歌状态"))
     prof = synthesize(model)
     log(i18n.tr("把每首歌放进对应的电台"))
-    prof["assign"] = assign(prof)
+    with store.Pool(1) as ex:
+        po = ex.submit(portrait, prof, model)
+        prof["assign"] = assign(prof)
+        prof["portrait"] = po.result()
     prev = store.read_json(store.PROFILE)
     if prev:
         stamp = time.strftime("%Y%m%d-%H%M", time.localtime(prev.get("built", time.time())))
@@ -378,6 +615,20 @@ def name_taste(rows: list[tuple[str, str, str]], lang: str, lines: int = LABEL_L
         return out
     # the script of the likes can leak into the label (粵語 for a Simplified reader)
     return i18n.zh_punct(i18n.convert(out, "zh-Hant" if lang == "zh-Hans" else "zh-Hans", lang))
+
+
+def rewrite_portrait(model: str = "opus") -> dict:
+    """A new reading of the listener on the stations they have, as when an imported history or earlier lists add to
+    what is known about them."""
+    llm.require()
+    prof = store.read_json(store.PROFILE)
+    if not prof or i18n.family(prof.get("lang", "zh-Hans")) != i18n.family(i18n.of()):
+        raise ValueError("no profile in this language: rebuild it")
+    prof["portrait"] = portrait(prof, model)
+    if prof.get("lang") != i18n.of():   # written in the reader's script now: the rest follows on serve
+        prof["portrait"] = i18n.convert_tree(prof["portrait"], i18n.of(), prof.get("lang", "zh-Hans"))
+    store.write_json(store.PROFILE, prof)
+    return prof["portrait"]
 
 
 def absorb_new(log=print) -> int:

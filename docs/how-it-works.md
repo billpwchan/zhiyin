@@ -61,6 +61,13 @@ Lists you kept in another app years before your likes here can tell the portrait
 by artist (how many songs, from which years, a few titles). Their songs count as ones you have and their artists as
 ones you know, but they never seed or join a station.
 
+The portrait at the top of **Your Ear** is written in a call of its own, apart from the stations. Code first counts
+what it may stand on: which language led your likes each year, runs on one artist, artists who came back after years
+away, the same song kept twice, how old a song is when you like it, whom you play without liking, and which of your
+earlier lists survived. Claude then writes a headline and four or five observations from those counts and your
+songs, each next to the data that shows it, and is told to drop any that would be true of anyone with your genres.
+`zhiyin portrait` writes it again on the stations you have, as after importing a history or earlier lists.
+
 With the same read-only access as the likes, Zhiyin also reads, at most once a day, the music you gave a thumbs-down
 on YouTube, the music channels you subscribe to, and the songs in playlists you made. The thumbs-down songs are
 never recommended and count as refused sounds; playlist songs count as ones you already have; a subscribed artist

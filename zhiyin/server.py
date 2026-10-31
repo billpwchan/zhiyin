@@ -818,7 +818,12 @@ def _own_card() -> dict:
     if not rec["label"] or not rec["songs"]:
         raise HTTPException(409, i18n.tr("名字还没起好，等一下再分享"))
     n = sum(1 for t in library.load() if not t["long"])
-    return {"label": rec["label"], "n": n, "since": int(rec["span"][0]), "lang": i18n.of()}
+    # the portrait's headline sits under the name on the card, as on the page
+    prof = store.read_json(store.PROFILE) or {}
+    line = None if i18n.stale() else ((prof.get("portrait") or {}).get("headline") or None)
+    if line:
+        line = i18n.convert(line, prof.get("lang", "zh-Hans"), i18n.of())
+    return {"label": rec["label"], "n": n, "since": int(rec["span"][0]), "lang": i18n.of(), "line": line}
 
 
 @app.post("/api/card/share")
@@ -845,7 +850,8 @@ async def card_share(request: Request, token: str = ""):
             raise HTTPException(429, i18n.tr("今天分享得够多了，明天再来", d["lang"]))
         seen.append(now)
         c, nonce, uid = d, d["nonce"], None
-    out = cards.save(img, c["label"], c["lang"], c["n"], c["since"], uid, nonce, c.get("roast") or None, c.get("pop"))
+    out = cards.save(img, c["label"], c["lang"], c["n"], c["since"], uid, nonce, c.get("roast") or None, c.get("pop"),
+                     c.get("line"))
     store.count("card_shared", _ref_of_user() if uid else _ref_cookie(request))
     return {"url": f"{google.public_url()}/c/{out['id']}", **out}
 
@@ -887,6 +893,8 @@ def card_page(cid: str, request: Request):
         text = (f'{i18n.tr("「{r}」", cl, r=i18n.typeset(c["roast"], cl))}{i18n.tr("让 Claude 也锐评一下你的歌单。", cl)}' if c.get("roast")
                 else i18n.tr("{n} 首喜欢，{y} 年至今，每一圈是一年。做一张你自己的。", cl, n=c["n"], y=c["since"]) if c["since"]
                 else i18n.tr("{n} 首喜欢，每一圈是一年。做一张你自己的。", cl, n=c["n"]))
+        if c.get("line") and not c.get("roast"):
+            text = i18n.tr("「{r}」", cl, r=i18n.typeset(c["line"], cl)) + text
         og = (f'<meta name="description" content="{escape(text)}">\n<meta property="og:type" content="website">\n'
               f'<meta property="og:site_name" content="{escape(i18n.tr("知音", cl))}">\n'
               f'<meta property="og:title" content="{escape(title)}">\n<meta property="og:description" content="{escape(text)}">\n'

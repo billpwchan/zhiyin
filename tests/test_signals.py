@@ -220,3 +220,51 @@ def test_the_profile_reads_what_they_play_and_what_they_kept_elsewhere_years_ago
     assert "\n-|6|9|2026-10|夜阑人静|moon tang" in prompt   # played often, never liked; names in the reader's script
     assert "EARLIER LIKES, kept in QQ Music" in prompt and "0=2016前我喜欢" in prompt and "\n周杰伦|2|2003-2008|0|说好的幸福呢 / 晴天" in prompt and "One song each: K.will" in prompt
     assert "never seed from them" in system
+
+
+def test_the_portrait_reads_counts_made_from_the_likes_not_its_own_counting():
+    from zhiyin import profile
+    def song(rank, vid, title, artist, liked, **tag):
+        return ({"rank": rank, "vid": vid, "title": title, "artists": [{"name": artist}], "long": False, "type": "ATV",
+                 "dur": 200, "liked_est": liked, "source": "google"},
+                {"kind": "song", "lang": "yue", "scene": "x", "sound": "x", "mood": "x", "energy": 2, "year": 2015, **tag})
+    rows = [song(i, f"run{i:08d}", f"Run {i}", "Karencici", "2026-09-01") for i in range(6)]
+    rows += [song(6, "back0000001", "Back", "Crush", "2026-08-01"), song(7, "cover000001", "玻璃 (Cover)", "Someone", "2026-07-01",
+                                                                         kind="cover", original="玻璃 - Gareth.T")]
+    rows += [song(8 + i, f"fill{i:07d}", f"Fill {i}", f"Filler {i}", f"{2025 - i // 12}-06-01") for i in range(40)]
+    rows += [song(48, "glass000001", "玻璃", "Gareth.T", "2021-01-01"), song(49, "back0000002", "Before", "Crush", "2020-05-01"),
+             song(50, "back0000003", "Long before", "Crush", "2020-03-01"), song(51, "eason000001", "葡萄成熟時", "陳奕迅", "2020-02-01"),
+             song(52, "eason000002", "K歌之王", "陳奕迅", "2020-01-01")]
+    with store.as_user("ev1"):
+        signals.save_history([["eason000001", 27, 9, "2026-01-01", "2026-10-01", 5.0, "葡萄成熟時", "Eason Chan"]],
+                             ["2025-11-28", "2026-10-30"], 27)
+        ev = profile.evidence([t for t, _ in rows], {t["vid"]: g for t, g in rows})
+    assert "Karencici 6 of 25" in ev and "6 liked in all" in ev
+    assert "Crush: around 2020-05, then none until 2026-08, 3 in all" in ev
+    assert 'THE SAME SONG KEPT MORE THAN ONCE: 1 songs. "玻璃", Gareth.T x2 (cover, song' in ev   # the cover counts under its original
+    assert "Eason Chan: 27, 1, 1, 2" in ev   # a channel's name links to the artist through the liked song it played
+
+
+def test_the_portrait_is_its_own_call_and_lands_beside_the_stations(monkeypatch):
+    from zhiyin import llm, profile
+    seen = []
+
+    def fake(prompt, system, schema, **kw):
+        props = schema["properties"]
+        seen.append(next(iter(props)))
+        if "observations" in props:
+            return {"headline": "h", "observations": [{"claim": "c", "evidence": "e"}], "eras": []}
+        if "lanes" in props:
+            return {"lanes": [{"key": "a", "name": "A", "english": "A", "blurb": "b", "when": "w", "sound": "s", "langs": ["yue"],
+                               "energy": [1, 3], "seeds": [0], "core_artists": [], "explore_artists": [], "avoid": [],
+                               "discovery": 0.3}], "focus": {}, "set_aside": []}
+        return {"items": [{"i": 0, "lane": "a", "also": "none"}]}
+    monkeypatch.setattr(llm, "call", fake)
+    monkeypatch.setattr(llm, "require", lambda *a: None)
+    with store.as_user("prof2"):
+        store.write_json(store.LIBRARY, {"tracks": [{"rank": 0, "vid": "liked000001", "title": "玻璃", "artists": [{"name": "Gareth.T"}],
+                                                     "long": False, "type": "ATV", "dur": 200, "liked_est": "2026-09-01"}]})
+        store.write_json(store.TAGS, {"liked000001": {"kind": "song", "lang": "yue", "scene": "x", "sound": "x", "mood": "x", "energy": 2}})
+        prof = profile.build(log=lambda *a: None)
+        assert prof["portrait"]["observations"][0]["claim"] == "c" and prof["assign"] == {"liked000001": ["a"]}
+        assert "portrait" not in profile.LANE_SCHEMA["properties"]

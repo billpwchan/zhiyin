@@ -1,62 +1,71 @@
 {
  "portrait": {
-  "headline": "Soft voices over a warm, swaying groove, from Rio to Tokyo to Taipei, always closer to dusk than to noon.",
-  "paragraphs": [
-   "Your newest saves start with Fujii Kaze. “Shinunoga E-Wa”, “Kirari”, “Matsuri” and “Nan-Nan” sit at the top, followed by Vaundy’s “odoriko” and four Hoshino Gen songs. It’s all J-pop built on piano and bass, with gospel and funk underneath. Scroll down and you reach KIRINJI’s “Aliens”, Suchmos and Lamp. That softer stretch links straight back to your earliest saves, classic city pop: Anri, Yamashita Tatsuro’s “Sparkle” and Matsubara Miki’s “真夜中のドア〜stay with me - Mayonaka no Door~stay with me”. Living in Tokyo seems to have blended old records and new songs into one sound.",
-   "Beneath the groove runs a very quiet thread. Laufey, Norah Jones, Chet Baker’s “Almost Blue” and Bill Evans’s “Peace Piece” lead on to Ryuichi Sakamoto and Joe Hisaishi. “Summer” is the only song you saved twice. You lean toward hushed voices, or solo piano with plenty of empty space around it. Bossa nova has the same calm: João Gilberto softly sings “Saudade Fez um Samba”, and Nara Leão barely raises her voice. Even your indie leans quiet, like Men I Trust, Clairo’s “Bags” and Sufjan Stevens’s “Mystery of Love”.",
-   "What the Taipei years left behind are singer-songwriters and bands, not big pop stars: Cheer Chen’s “旅行的意义 (Travel is Meaningful)”, Sunset Rollercoaster, deca joins, Accusefive and Wu Guang-zhong. There is one stinging song, No Party for Cao Dong’s “爛泥”, and a run of Eason Chan ballads that stand for Cantonese heartbreak. Khalil Fong and David Tao matter most. They are the soul singers of Mandopop, and they explain why Zion.T, Crush and DEAN sit comfortably next to D’Angelo, Erykah Badu and Frank Ocean.",
-   "Language is rarely what decides it. Groove, falsetto and chord color are. “Week End”, “Yanghwa BRDG”, “Take Me” and “Japanese Denim” come from four countries but share one mood."
+  "headline": "Eleven years, six languages, and nobody has ever got more than four of your likes.",
+  "observations": [
+   {
+    "claim": "You came back to Japanese after nine years, this time to the revival.",
+    "evidence": "In 2015 every like was Japanese city pop, with Anri and Tatsuro Yamashita. Apart from film scores, Japanese then vanished until 2025, when it made up 80% of your likes, with KIRINJI “Drifter” and Suchmos “STAY TUNE”."
+   },
+   {
+    "claim": "You dig through Japan's back catalogue but took Korea as it came out.",
+    "evidence": "When you liked them, your Japanese songs were a median 25.4 years old. Your Korean ones were 2.7 years old."
+   },
+   {
+    "claim": "R&B is how you get into each new language.",
+    "evidence": "D'Angelo in 2017, then Crush and Zion.T in 2019, then David Tao and Khalil Fong in 2021. Each time the language changed, the falsetto and the slow groove stayed."
+   },
+   {
+    "claim": "You liked the Ipanema song twice, sung by two different women.",
+    "evidence": "Astrud Gilberto's “The Girl From Ipanema” in June 2016, then Lisa Ono's “Garota De Ipanema” in May 2017. After her you didn't like another Japanese singer until 2025."
+   },
+   {
+    "claim": "Your quiet library has got loud only in the last year.",
+    "evidence": "Only 9 of 160 songs are upbeat, and none are at full energy. Five of those nine came after October 2025, including Vaundy “踊り子 - odoriko” and Fujii Kaze “まつり - Matsuri”."
+   }
   ],
   "eras": [
    {
     "from_rank": 0,
-    "to_rank": 14,
+    "to_rank": 17,
     "years": "2025–2026",
-    "label": "Tokyo Soul Pop",
-    "text": "Fujii Kaze, Hoshino Gen and Vaundy lead, while KIRINJI, Suchmos and Lamp supply the softer nights."
+    "label": "Back in Japanese",
+    "text": "Men I Trust's dream pop gave way to Lamp and KIRINJI, and then you liked four songs each by Gen Hoshino and Fujii Kaze."
    },
    {
-    "from_rank": 15,
+    "from_rank": 18,
     "to_rank": 50,
-    "years": "2023–2025",
-    "label": "Quiet Piano",
-    "text": "Dream pop, jazz pop, classic jazz vocals, Bill Evans, and piano by Ryuichi Sakamoto and Joe Hisaishi, including the one song you saved twice."
+    "years": "2023–2024",
+    "label": "Piano and standards",
+    "text": "Indie folk and Sakamoto's solo piano led you to 1950s Chet Baker and Bill Evans, and then to four songs by Laufey."
    },
    {
-    "from_rank": 51,
+    "from_rank": 52,
     "to_rank": 82,
     "years": "2021–2022",
-    "label": "Taipei and Hong Kong",
-    "text": "Taiwanese indie folk and dream pop, Mandopop R&B from Khalil Fong and David Tao, and Eason Chan ballads."
+    "label": "Mandarin and Cantonese",
+    "text": "You liked four Eason Chan ballads, then turned to Taiwanese indie, with Cheer Chen and four songs by Sunset Rollercoaster."
    },
    {
     "from_rank": 83,
-    "to_rank": 108,
-    "years": "2019–2021",
-    "label": "Seoul Indie and R&B",
-    "text": "HYUKOH, JANNABI and IU, alongside Korean R&B from Zion.T, Crush, DEAN and Heize."
+    "to_rank": 107,
+    "years": "2019–2020",
+    "label": "Seoul, as it happened",
+    "text": "First the Korean R&B of Crush and DEAN, then IU and HYUKOH, almost all of it liked within a couple of years of release."
    },
    {
     "from_rank": 109,
     "to_rank": 135,
     "years": "2017–2019",
-    "label": "Neo-Soul Roots",
-    "text": "Frank Ocean, Daniel Caesar, and the classics by D’Angelo and Erykah Badu, the grammar behind every groove that followed."
+    "label": "Neo-soul in English",
+    "text": "D'Angelo and Erykah Badu came first, then four songs by Frank Ocean, and in 2018 every like was in English."
    },
    {
     "from_rank": 136,
     "to_rank": 162,
     "years": "2015–2017",
-    "label": "Bossa and City Pop",
-    "text": "Whispered bossa nova from João Gilberto and Jobim, paired with 80s Japanese city pop from Anri and Yamashita Tatsuro."
+    "label": "City pop and bossa",
+    "text": "Anri and Tatsuro Yamashita filled 2015, then Jobim and João Gilberto took over 2016."
    }
-  ],
-  "threads": [
-   "Bass-led swaying grooves, paced like a stroll and never pushing too hard",
-   "Soft or falsetto lead vocals that sound close to the mic",
-   "Jazz chords under pop melodies, from Jobim to KIRINJI to Khalil Fong",
-   "Nostalgia for nights and late summer",
-   "Real players and warm keyboard tones (Rhodes, piano, nylon-string guitar) rather than stiff electronic production"
   ]
  },
  "lanes": [

@@ -15,6 +15,8 @@ def main():
     sub.add_parser("sync", help="re-read likes from your account (needs auth)")
     p = sub.add_parser("profile", help="rebuild the taste profile (tags, lanes, portrait)")
     p.add_argument("--model", default="opus")
+    p = sub.add_parser("portrait", help="rewrite only the portrait (headline, observations, eras), keeping the stations")
+    p.add_argument("--model", default="opus")
     sub.add_parser("listen", help="fetch a preview of every liked song and learn what it sounds like (once, ~1 hour)")
     sub.add_parser("refresh", help="build a new edition of recommendations")
     sub.add_parser("setup", help="first run: sync, profile, listen and refresh in one go (about an hour)")
@@ -58,7 +60,7 @@ def main():
     p.add_argument("--go", action="store_true", help="submit for real (without it: the estimate only)")
     a = ap.parse_args()
 
-    if a.cmd in ("setup", "profile", "refresh", "ask"):
+    if a.cmd in ("setup", "profile", "portrait", "refresh", "ask"):
         from . import accounts, i18n
         i18n.migrate()
         if not accounts.prefs(store.uid()).get("lang"):   # nobody has opened the app yet to say which language
@@ -91,6 +93,12 @@ def main():
         from . import profile
         prof = profile.build(a.model)
         print(f"{len(prof['lanes'])} lanes: " + ", ".join(l["name"] for l in prof["lanes"]))
+    elif a.cmd == "portrait":
+        from . import profile
+        po = profile.rewrite_portrait(a.model)
+        print(po["headline"])
+        for o in po["observations"]:
+            print(f"- {o['claim']} {o['evidence']}")
     elif a.cmd == "listen":
         from . import audio, library
         print(audio.ensure([t for t in library.load() if not t["long"]], timeout=4 * 3600, itunes_budget=2000))

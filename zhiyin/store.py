@@ -163,7 +163,7 @@ def _migrate(con: sqlite3.Connection) -> None:
     if "roast" not in {r[1] for r in con.execute("pragma table_info(card_names)")}:
         _add_column(con, "card_names", "roast text")
     card_cols = {r[1] for r in con.execute("pragma table_info(cards)")}
-    for c in ("roast text", "pop integer"):
+    for c in ("roast text", "pop integer", "line text"):
         if c.split()[0] not in card_cols:
             _add_column(con, "cards", c)
     usage_cols = {r[1] for r in con.execute("pragma table_info(usage)")}

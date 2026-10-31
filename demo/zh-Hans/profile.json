@@ -1,62 +1,71 @@
 {
  "portrait": {
-  "headline": "轻柔的嗓音，配上温暖摇摆的律动，从里约到东京再到台北，总是更靠近黄昏，而不是正午。",
-  "paragraphs": [
-   "你最新收藏的歌从藤井风开始。《Shinunoga E-Wa》《Kirari》《Matsuri》和《Nan-Nan》排在最上面，接着是 Vaundy 的《odoriko》和四首星野源的歌。这些都是以钢琴和贝斯为骨架的日本流行乐，底下带着福音和放克的底色。往下翻，会看到 KIRINJI 的《Aliens》、Suchmos 和 Lamp。这段更柔和的歌，直接连回你最早收藏的经典城市流行：Anri、山下达郎的《Sparkle》，还有松原みき的《真夜中のドア〜stay with me - Mayonaka no Door~stay with me》。住在东京，似乎把老唱片和新歌融成了同一种声音。",
-   "在律动之下，还藏着一条很安静的线。Laufey、Norah Jones、Chet Baker 的《Almost Blue》和 Bill Evans 的《Peace Piece》，一路通向坂本龙一和久石让。《Summer》是你唯一收藏了两次的歌。你偏爱低声细语的人声，或是留白很多的钢琴独奏。波萨诺瓦也有同样的平静：João Gilberto 轻轻唱着《Saudade Fez um Samba》，Nara Leão几乎不抬高声音。就连你听的独立音乐也偏安静，比如 Men I Trust、Clairo 的《Bags》和 Sufjan Stevens 的《Mystery of Love》。",
-   "台北那些年留给你的，是创作歌手和乐团，而不是大牌流行巨星：陈绮贞的《旅行的意义 (Travel is Meaningful)》、落日飞车、deca joins、Accusefive 和伍佰。其中有一首刺痛人心的歌，是草东没有派对的《爛泥》，还有一连串陈奕迅的情歌，代表粤语歌里的心碎。最重要的是方大同和陶喆。他们是华语流行里的灵魂歌手，也解释了为什么 Zion.T、Crush 和 DEAN 能自然地和 D’Angelo、Erykah Badu、Frank Ocean 放在一起。",
-   "决定你喜好的，很少是语言，而是律动、假声和和弦的色彩。《Week End》《Yanghwa BRDG》《Take Me》和《Japanese Denim》来自四个国家，却有同一种情绪。"
+  "headline": "每隔两年换一种语言，只有日语回来过",
+  "observations": [
+   {
+    "claim": "每换一种语言，你都先去找那里唱假声的男歌手",
+    "evidence": "2017年是D'Angelo，2019年是Zion.T，2025年底到2026年是Fujii Kaze，中间那几年的中文歌里还有陶喆和方大同各4首。"
+   },
+   {
+    "claim": "一个歌手你最多收4首，然后就换人",
+    "evidence": "有8位歌手正好各4首，Frank Ocean、IU、Eason Chan都在里面，没有一位超过4首。"
+   },
+   {
+    "claim": "你先听老的，过好几年才去听后来学它的人",
+    "evidence": "2015年收的是Anri那批80年代城市流行，十年后的2025年才收KIRINJI和Suchmos。"
+   },
+   {
+    "claim": "你收韩语歌赶的是新歌，收日语歌大多在翻旧歌",
+    "evidence": "韩语歌从发行到你收下，中间一般隔2.7年，日语歌一般隔25.4年。"
+   },
+   {
+    "claim": "最近这一年是你听得最热闹的一年",
+    "evidence": "160首里能量到4的只有9首，其中5首是2025年10月以后收的，比如《まつり》《何なんw》《踊り子》。能量5的一首也没有。"
+   }
   ],
   "eras": [
    {
     "from_rank": 0,
     "to_rank": 14,
     "years": "2025–2026",
-    "label": "东京灵魂流行",
-    "text": "藤井风、星野源和 Vaundy 领头，KIRINJI、Suchmos 和 Lamp 带来更柔和的夜晚。"
+    "label": "日语回来了",
+    "text": "隔了快十年，日语又成了主角，先是KIRINJI那种夜晚城市流行，后来换成Fujii Kaze带福音合唱的放克钢琴。"
    },
    {
     "from_rank": 15,
     "to_rank": 50,
     "years": "2023–2025",
-    "label": "静谧钢琴",
-    "text": "梦幻流行、爵士流行、经典爵士人声、Bill Evans，以及坂本龙一和久石让的钢琴曲，其中包括你收藏了两次的那首歌。"
+    "label": "爵士和钢琴",
+    "text": "先是坂本龙一和独立民谣，接着一路往回听到50年代的Chet Baker，再回到现在的Laufey和梦幻流行。"
    },
    {
-    "from_rank": 51,
+    "from_rank": 52,
     "to_rank": 82,
     "years": "2021–2022",
-    "label": "台北与香港",
-    "text": "台湾独立民谣和梦幻流行，方大同和陶喆的华语 R&B，以及陈奕迅的情歌。"
+    "label": "中文两年",
+    "text": "2021年是Eason Chan的粤语情歌和陶喆，2022年转去台湾独立，陈绮贞和落日飞车，之后中文就没再出现。"
    },
    {
     "from_rank": 83,
-    "to_rank": 108,
-    "years": "2019–2021",
-    "label": "首尔独立与R&B",
-    "text": "HYUKOH、JANNABI 和 IU，还有 Zion.T、Crush、DEAN 和 Heize 的韩国 R&B。"
+    "to_rank": 107,
+    "years": "2019–2020",
+    "label": "韩语两年",
+    "text": "先是Crush、DEAN的韩国R&B，2020年转到IU和HYUKOH，这一年的歌全是韩语，2020年底之后一首也没有了。"
    },
    {
     "from_rank": 109,
     "to_rank": 135,
     "years": "2017–2019",
-    "label": "新灵魂根源",
-    "text": "Frank Ocean、Daniel Caesar，以及 D’Angelo 和 Erykah Badu 的经典作品，是后来每一种律动背后的语法。"
+    "label": "英语neo-soul",
+    "text": "从D'Angelo、Erykah Badu那批90年代neo-soul听起，到2018年整年是英语，Frank Ocean收了4首。"
    },
    {
     "from_rank": 136,
     "to_rank": 162,
     "years": "2015–2017",
-    "label": "波萨与城市",
-    "text": "João Gilberto 和 Jobim 低声吟唱的波萨诺瓦，搭配 Anri 和山下达郎的80年代日本城市流行。"
+    "label": "城市流行和波萨",
+    "text": "最早是山下达郎、Anri的80年代日本城市流行，2016年起换成João Gilberto的低声波萨诺瓦。"
    }
-  ],
-  "threads": [
-   "以贝斯为主导的摇摆律动，节奏像散步，从不用力过猛",
-   "轻柔或假声的主唱，听起来离麦克风很近",
-   "流行旋律下的爵士和弦，从 Jobim 到 KIRINJI，再到方大同",
-   "对夜晚和夏末的怀旧",
-   "真人演奏和温暖的键盘音色（Rhodes、钢琴、尼龙弦吉他），而不是生硬的电子制作"
   ]
  },
  "lanes": [

@@ -229,14 +229,15 @@ def shares_today(who: str) -> int:
 
 
 def save(img: bytes, label: str, lang: str, n: int, since: int, who: str | None, nonce: str | None,
-         roast: str | None = None, pop: int | None = None) -> dict:
+         roast: str | None = None, pop: int | None = None, line: str | None = None) -> dict:
     cid = secrets.token_urlsafe(6).replace("-", "x").replace("_", "y")
     key = secrets.token_urlsafe(18)
     (DIR / f"{cid}.jpg").write_bytes(img)
     con = store.db()
-    con.execute("insert into cards(id, created, label, lang, n, since, uid, del, nonce, roast, pop) "
-                "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (cid, time.time(), label, lang, n, since, who, hashlib.sha256(key.encode()).hexdigest(), nonce, roast, pop))
+    con.execute("insert into cards(id, created, label, lang, n, since, uid, del, nonce, roast, pop, line) "
+                "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (cid, time.time(), label, lang, n, since, who, hashlib.sha256(key.encode()).hexdigest(), nonce, roast, pop,
+                 line))
     con.commit()
     return {"id": cid, "key": key}
 

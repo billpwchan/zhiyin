@@ -631,6 +631,10 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 .prose p:last-child { margin-bottom: 0; }
 .prose:not(.open) p:nth-child(n + 2) { display: none; }
 .readmore { margin: 10px 0 0 -10px; }
+.reads { margin: 0; padding: 0; list-style: none; }
+.reads li { display: grid; grid-template-columns: minmax(0, 23em) minmax(0, 34em); gap: 6px 64px; padding: 22px 0; border-top: 1px solid var(--line); }
+.reads .claim { margin: 0; font-size: 18px; line-height: 1.55; font-weight: 500; color: var(--fg); text-wrap: balance; }
+.reads .ev { margin: 0; padding-top: 1px; font-size: 15px; line-height: 1.8; color: rgba(255, 255, 255, .66); text-wrap: pretty; }
 .threads { margin: 0; padding: 0; list-style: none; counter-reset: t; }
 .threads h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--fg-2); }
 .threads li { counter-increment: t; display: grid; grid-template-columns: 26px 1fr; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.65; color: rgba(255, 255, 255, .8); }
@@ -936,6 +940,9 @@ a.m-acct:hover { background: var(--hover); }
   .lrow { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; }
   .lrow .lc-play { width: 52px; height: 52px; }
   .portrait { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .reads li { grid-template-columns: minmax(0, 1fr); padding: 16px 0 18px; }
+  .reads .claim { font-size: 17px; }
+  .reads .ev { font-size: 14px; line-height: 1.75; }
   .eras2 { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .eras2 .replay { justify-self: start; }
   .era2 .l, .era2 .yf { display: none; }

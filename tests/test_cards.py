@@ -355,3 +355,10 @@ def test_a_profiles_own_lists_are_read_until_the_numbers_run_out(monkeypatch):
     assert {s["title"]: s["lists"] for s in got["songs"]} == {"A": [0, 1], "B": [1], "C": [2]}
     assert got["songs"][0]["aka"] == ["에스"] and got["songs"][0]["released"] == "2015-01-02"
     assert 202 not in asked and max(asked[1:]) == 3 + qqmusic.FOLDER_GAP   # QQ Music's own lists are never read
+
+
+def test_a_listeners_own_card_page_opens_with_the_portraits_headline():
+    from fastapi.testclient import TestClient
+    c = cards.save(_jpeg(), "方大同和 Gareth.T 的常客", "zh-Hant", 856, 2016, "owner", None, line="5年換了5種主打語言，今年輪到日文")
+    page = TestClient(server.app, headers={"Accept-Language": "zh-TW"}).get(f"/c/{c['id']}")
+    assert 'content="「5 年換了 5 種主打語言，今年輪到日文」856 首喜歡' in page.text

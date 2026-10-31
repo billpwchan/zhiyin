@@ -8,7 +8,7 @@ wedges when the stations arrive (stage "full")."""
 import itertools
 import time
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, timedelta
 
 import numpy as np
 
@@ -307,6 +307,7 @@ def facts(tracks, ts, lane_of, lanes, tags, real, lang="zh-Hans", names=True, re
 
 
 def _month(x: float) -> str:
+    """The month of a fractional year as _year made it (twelve equal parts would put May 1st in April)."""
     y = int(x)
-    m = min(12, int((x - y) * 12) + 1)
-    return f"{y}-{m:02d}"
+    d = date(y, 1, 1) + timedelta(days=round((x - y) * 365.25))
+    return f"{d.year}-{d.month:02d}" if d.year == y else f"{y}-12"
