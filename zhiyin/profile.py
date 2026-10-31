@@ -142,8 +142,8 @@ Think like a listener and an editor, not a statistician:
   several languages). Language-specific lanes are right where the language is the point.
 - PLAYED, when given, is how often they actually play each song: weigh it with recency when ordering lanes and
   choosing seeds. A song played on many days without a like still speaks for their taste; only liked ranks can be seeds.
-- EARLIER LIKES, when given, are songs they saved in another app years before their likes here (the list names say
-  when). They are where their taste comes from: let the portrait tell that part of the story and let threads run
+- EARLIER LIKES, when given, are what they saved in another app years before their likes here, by artist (the list
+  names say when). They are where their taste comes from: let the portrait tell that part of the story and let threads run
   through it, but keep eras on the ranked likes, never seed from them, and give them a lane only where recent likes or
   plays carry it on.
 - 6 to 8 lanes for songs, ordered by how central they are NOW (weight recent likes and repeat-liked songs far more
@@ -184,7 +184,6 @@ def _summary_lines(tracks, tags):
 
 
 PLAYED_LINES = 150
-ARCHIVE_LINES = 2000
 
 
 def _played(songs: list[dict]) -> str:
@@ -211,10 +210,23 @@ def _earlier() -> str:
     lang = i18n.of()
     app = {"qq": "QQ Music", "163": "NetEase Cloud Music"}.get(a.get("key", "").split(":")[0], "another app")
     legend = " / ".join(f"{i}={l['title']}" for i, l in enumerate(a["lists"]))
-    return (f"\n\nEARLIER LIKES, kept in {app} before their likes here begin (title|artists|released|lists; lists: "
-            f"{legend}):\n"
-            + "\n".join(f"{i18n.script(s['title'], lang)}|{', '.join(i18n.script(x, lang) for x in s['artists'])}|"
-                        f"{(s.get('released') or '?')[:4]}|{','.join(map(str, s['lists']))}" for s in a["songs"][:ARCHIVE_LINES]))
+    # by artist, not song by song: a long archive listed in full crowded out the likes and the room to think
+    by = {}
+    for s in a["songs"]:
+        by.setdefault(s["artists"][0] if s["artists"] else "?", []).append(s)
+    rows, once = [], []
+    for name, ss in sorted(by.items(), key=lambda kv: -len(kv[1])):
+        if len(ss) == 1:
+            once.append(i18n.script(name, lang))
+            continue
+        ys = sorted(s["released"][:4] for s in ss if (s.get("released") or "")[:4].isdigit())
+        years = (ys[0] if ys[0] == ys[-1] else f"{ys[0]}-{ys[-1]}") if ys else "?"
+        titles = " / ".join(i18n.script(s["title"], lang) for s in sorted(ss, key=lambda s: -len(s["lists"]))[:3])
+        rows.append(f"{i18n.script(name, lang)}|{len(ss)}|{years}|{','.join(map(str, sorted({i for s in ss for i in s['lists']})))}|"
+                    f"{titles}")
+    return (f"\n\nEARLIER LIKES, kept in {app} before their likes here begin: {len(a['songs'])} songs by artist "
+            f"(artist|songs|released|lists|a few titles; lists: {legend}):\n" + "\n".join(rows)
+            + (f"\nOne song each: {', '.join(once)}" if once else ""))
 
 
 def synthesize(model: str = "opus") -> dict:

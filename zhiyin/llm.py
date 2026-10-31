@@ -309,14 +309,14 @@ def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, re
         try:
             # the system prompt repeats across a listener's stations and songs, so it is the part worth caching
             with _api().messages.stream(
-                    model=MODELS[model], max_tokens=32000, timeout=timeout,
+                    model=MODELS[model], max_tokens=64000, timeout=timeout,
                     system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                     messages=[{"role": "user", "content": prompt}],
                     output_config={"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}) as st:
                 msg = st.get_final_message()
             usd += cost(model, msg.usage)
             if msg.stop_reason in ("refusal", "max_tokens"):
-                raise LLMError(f"stopped: {msg.stop_reason}")
+                raise LLMError(f"stopped: {msg.stop_reason} after {msg.usage.output_tokens} output tokens")
             text = next(b.text for b in msg.content if b.type == "text")
             return {"data": json.loads(text), "usd": usd, "tok": _tokens(msg.usage)}
         except anthropic.APIStatusError as e:
@@ -339,7 +339,7 @@ def run_batch(prompt: str, system: str, schema: dict, model: str, effort: str = 
     """Half price for work nobody is waiting on; most batches come back within the hour."""
     api = _api()
     b = api.messages.batches.create(requests=[{"custom_id": "1", "params": {
-        "model": MODELS[model], "max_tokens": 32000,
+        "model": MODELS[model], "max_tokens": 64000,
         "system": [{"type": "text", "text": system}],
         "messages": [{"role": "user", "content": prompt}],
         "output_config": {"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}}}])
