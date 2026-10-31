@@ -13,6 +13,7 @@ _VERSION = re.compile(r"\b(live|remix|cover|acoustic|ver\.?|version|instrumental
 
 _T2S = opencc.OpenCC("t2s")
 _HAN = re.compile(r"[㐀-鿿]")
+_VARIANTS = str.maketrans({"妳": "你"})   # Taiwan's "you" to a woman, which OpenCC keeps: 為妳寫的歌 is 为你写的歌
 
 
 @functools.lru_cache(maxsize=1 << 16)
@@ -20,7 +21,7 @@ def fold(s: str) -> str:
     """A name or title as a key: case, width, spacing, punctuation and Chinese script don't matter (後來 is 后来)."""
     s = unicodedata.normalize("NFKC", s or "").lower()
     if _HAN.search(s):
-        s = _T2S.convert(s)
+        s = _T2S.convert(s).translate(_VARIANTS)
     return re.sub(r"[\s\W_]+", "", s)
 
 

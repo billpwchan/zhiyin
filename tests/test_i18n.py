@@ -187,3 +187,4 @@ def test_timed_lyric_words_convert_as_one_phrase():
 def test_a_name_is_the_same_key_in_either_script():
     from zhiyin.text import fold, song_key
     assert fold("劉若英") == fold("刘若英") and song_key("後來 (Live)") == song_key("后来")
+    assert song_key("為妳寫的歌") == song_key("为你写的歌")
