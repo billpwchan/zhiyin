@@ -491,3 +491,160 @@ def for_reader(d: dict, lang: str) -> dict:
     if lang == "zh-Hant":
         lines = [{**l, "tr": i18n.convert(l["tr"], "zh-Hans", "zh-Hant")} if l.get("tr") else l for l in lines]
     return {**d, "lines": lines}
+
+
+# ---------- staging: where a song opens up, and the line it turns on ----------
+# Immersive opens the room for the chorus and holds still on one line. Code reads the sections from the lyric itself:
+# headings when the source wrote them, otherwise runs of lines sung again later, and long silences between lines.
+# Claude then corrects the chorus, finds a bridge and picks the line, once per song, kept with the lyric for everyone.
+# Everything is in the lyric's own seconds, so a listener's timing nudge moves it with the words.
+
+STAGE_V = 1
+MARKED = {"chorus": "chorus", "refrain": "chorus", "hook": "chorus", "postchorus": "chorus", "副歌": "chorus",
+          "bridge": "bridge", "桥段": "bridge", "橋段": "bridge"}
+BREAK_S = 6   # a silence this long between sung lines is a break
+
+
+def _sung(lines: list[dict]) -> list[dict]:
+    return [l for l in lines if l["x"] and not SECTION.match(l["x"])]
+
+
+def _end(sung: list[dict], i: int) -> float:
+    l = sung[i]
+    nxt = sung[i + 1]["t"] if i + 1 < len(sung) else l["t"] + 8
+    return round(min(l.get("e") or l["t"] + 5, nxt), 3)
+
+
+def _span(sung: list[dict], a: int, b: int, kind: str) -> list:
+    return [round(sung[a]["t"], 3), _end(sung, b), kind]
+
+
+def _runs(flags: list[bool], least: int = 2, mend: bool = True) -> list[tuple[int, int]]:
+    """Runs of flagged lines at least `least` long. With `mend`, one unflagged line after two flagged ones doesn't
+    break a run (a chorus whose third line changes the second time)."""
+    out, a = [], None
+    for i, f in enumerate(flags + [False, False]):
+        if f and a is None:
+            a = i
+        elif not f and a is not None and not (mend and i + 1 < len(flags) and flags[i + 1] and i - a >= 2):
+            if i - a >= least:
+                out.append((a, i - 1))
+            a = None
+    return out
+
+
+def _same(a: str, b: str) -> bool:
+    if not a or not b or a == b:
+        return bool(a) and a == b
+    if min(len(a), len(b)) < 4 or min(len(a), len(b)) < 0.85 * max(len(a), len(b)):
+        return False
+    m = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    return m.quick_ratio() >= 0.85 and m.ratio() >= 0.85
+
+
+def structure(lines: list[dict]) -> dict:
+    """A song's chorus and breaks from its lyric alone: [[from s, to s, kind], ...] with kind chorus, bridge or break."""
+    sung = _sung(lines)
+    out = {"v": STAGE_V, "sec": [], "heart": [], "by": "code"}
+    if len(sung) < 4:
+        return out
+    kinds, kind = [], None
+    for l in lines:
+        m = SECTION.match(l["x"]) if l["x"] else None
+        if m:
+            kind = MARKED.get(re.sub(r"[\s-]", "", m.group(1).lower()), "verse")
+        elif l["x"]:
+            kinds.append(kind)
+    if "chorus" in kinds:
+        for k in ("chorus", "bridge"):
+            out["sec"] += [_span(sung, a, b, k) for a, b in _runs([x == k for x in kinds], 1, False)]
+    else:
+        keys = [norm(l["x"]) for l in sung]
+        n = len(keys)
+        count = [sum(_same(keys[i], keys[j]) for j in range(n) if j != i) for i in range(n)]
+        flags = [c > 0 for c in count]
+        # a song that repeats most of itself: only what comes back most often is the chorus
+        if sum(flags) > 0.6 * n:
+            flags = [c >= 2 for c in count]
+        out["sec"] += [_span(sung, a, b, "chorus") for a, b in _runs(flags)]
+    for i in range(len(sung) - 1):
+        quiet = sung[i].get("e") or sung[i]["t"] + 5
+        if sung[i + 1]["t"] - quiet >= BREAK_S:
+            out["sec"].append([round(quiet, 3), round(sung[i + 1]["t"], 3), "break"])
+    out["sec"].sort()
+    return out
+
+
+STAGE_SCHEMA = {"type": "object", "properties": {
+    "chorus": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}}},
+    "bridge": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}}},
+    "heart": {"type": "integer"}}, "required": ["chorus", "bridge", "heart"]}
+STAGE_SYSTEM = """You stage a song's lyrics for a full-screen player. The room opens up while the chorus is sung, and once
+in the song everything else falls away and a single line is held: the line the song turns on, the one a listener would
+quote back to a friend, at the moment it lands hardest.
+
+You get the sung lines (index, second it starts, text, and a translation when there is one) and the chorus runs code
+guessed from repeated lines. Return:
+- chorus: each run sung as the chorus or the hook the song keeps coming back to, as [first index, last index]. Keep
+  code's runs when they are right and fix them when they are not: a verse whose words repeat is not a chorus, and a
+  chorus whose words change still is.
+- bridge: the run of a bridge, sung once and usually between the last two choruses, or [] when there is none.
+- heart: the index of the one line to hold, at the occurrence where it lands hardest (often its last time, or the end
+  of the bridge). Never a vocalisation (oh, yeah, la la), never a line that only says the title unless the whole song
+  turns on it.
+Indices only, from the list given."""
+_stage_running: set[str] = set()
+
+
+def _staged(d: dict) -> dict:
+    s = d.get("stage")
+    return s if s and s.get("v") == STAGE_V else structure(d["lines"])
+
+
+def stage(d: dict) -> dict | None:
+    """What the player stages a found lyric by: Claude's reading once there is one, code's until then."""
+    return _staged(d) if d.get("found") else None
+
+
+def stage_later(vid: str) -> bool:
+    """Start Claude's reading of a lyric's sections and heart line in the background. Returns True if started."""
+    path = _path(vid)
+    if not path.exists() or vid in _stage_running:
+        return False
+    d = json.loads(path.read_text())
+    s = d.get("stage") or {}
+    if not d.get("found") or (s.get("v") == STAGE_V and s.get("by") == "AI") or len(_sung(d["lines"])) < 6:
+        return False
+    if d.get("stage_retry", 0) > time.time() or d.get("stage_failed") == STAGE_V or llm.unavailable():
+        return False
+    _stage_running.add(vid)
+
+    def run():
+        try:
+            sung = _sung(d["lines"])
+            code = structure(d["lines"])
+            at = {round(l["t"], 3): i for i, l in enumerate(sung)}
+            guess = [[at.get(a), next((i for i, l in enumerate(sung) if _end(sung, i) == b), None)] for a, b, k in code["sec"] if k == "chorus"]
+            rows = [f"{i}\t{l['t']:.1f}\t{l['x']}" + (f"\t{l['tr']}" if l.get("tr") else "") for i, l in enumerate(sung)]
+            prompt = "LINES\n" + "\n".join(rows) + "\n\nCODE'S CHORUS RUNS\n" + json.dumps([g for g in guess if None not in g])
+            res = llm.call(prompt, STAGE_SYSTEM, STAGE_SCHEMA, model="sonnet", timeout=180, retries=1)
+            sec = [_span(sung, r[0], r[1], k) for k in ("chorus", "bridge") for r in res[k]
+                   if isinstance(r, list) and len(r) == 2 and 0 <= r[0] <= r[1] < len(sung)]
+            h = res["heart"]
+            heart = [round(sung[h]["t"], 3)] if 0 <= h < len(sung) and len(norm(sung[h]["x"])) >= 2 else []
+            if not sec and not heart:
+                raise ValueError("nothing staged")
+            d["stage"] = {"v": STAGE_V, "sec": sorted(sec + [s for s in code["sec"] if s[2] == "break"]), "heart": heart, "by": "AI"}
+            d.pop("stage_retry", None)
+        except llm.LLMError:
+            d["stage_retry"] = time.time() + 3600
+        except Exception:
+            d["stage_failed"] = STAGE_V
+        finally:
+            # the lyric may have been replaced meanwhile (a word-timed find): stage only the one read
+            cur = json.loads(path.read_text()) if path.exists() else {}
+            if cur.get("lines") == d["lines"]:
+                store.write_json(path, {**cur, **{k: d[k] for k in ("stage", "stage_retry", "stage_failed") if k in d}})
+            _stage_running.discard(vid)
+    threading.Thread(target=contextvars.copy_context().run, args=(run,), daemon=True).start()
+    return True

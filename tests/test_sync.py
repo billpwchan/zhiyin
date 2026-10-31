@@ -931,3 +931,47 @@ def test_a_korean_singer_qq_music_writes_in_chinese_is_found_under_their_own_nam
     assert library.match_app(qq(4, "Loanna", "李闰珉", "YR", 262)) is None
     assert library.match_app(qq(5, "그댄 행복에 살텐데", "金范洙", "KB", 310))["vid"] == "kimbumsoo1"
     assert library.match_app(qq(6, "董小姐", "宋冬野", "SD", 200)) is None
+
+
+def _song(rows):
+    return [{"t": float(t), "x": x} for t, x in rows]
+
+
+def test_a_lyric_shows_its_chorus_where_lines_come_back_and_its_breaks_where_it_goes_quiet():
+    from zhiyin import lyrics
+    verse = ["走过你家门口", "灯还亮着", "我没敢停留", "风吹过街角"]
+    chorus = ["如果那天我说出口", "你会不会回头", "我们会不会就此不同"]
+    rows = [(10 + 4 * i, x) for i, x in enumerate(verse)] + [(26 + 4 * i, x) for i, x in enumerate(chorus)]
+    rows += [(60 + 4 * i, x) for i, x in enumerate(["夏天过去了", "你搬去了远方", "信也少了", "我学会了等"])]
+    rows += [(76 + 4 * i, x) for i, x in enumerate(chorus[:2] + ["我们会不会就此不一样"])]
+    got = lyrics.structure(_song(rows))
+    assert [s[2] for s in got["sec"]] == ["chorus", "break", "chorus"]
+    # a last line that changes is left to Claude: code only claims the lines that come back
+    assert got["sec"][0][:2] == [26.0, 34.0] and got["sec"][1] == [39.0, 60.0, "break"] and got["sec"][2][0] == 76.0
+    assert got["heart"] == [] and got["by"] == "code"
+
+
+def test_section_headings_written_by_the_source_are_taken_as_they_are():
+    from zhiyin import lyrics
+    rows = [(0, "[Verse]"), (1, "a line"), (4, "another one"), (8, "[Chorus]"), (9, "sing it loud"), (12, "sing it now"),
+            (16, "[Bridge]"), (17, "once only"), (20, "[Chorus]"), (21, "sing it loud"), (24, "sing it now")]
+    got = lyrics.structure(_song(rows))
+    assert [(s[0], s[2]) for s in got["sec"]] == [(9.0, "chorus"), (17.0, "bridge"), (21.0, "chorus")]
+
+
+def test_claude_names_the_sections_and_the_line_once_and_its_indices_are_checked(monkeypatch):
+    import json
+    import threading
+    from zhiyin import llm, lyrics
+    words = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"]
+    lines = _song([(5 * i, f"the {w} line") for i, w in enumerate(words)])
+    lyrics._path("stage000001").write_text(json.dumps({"vid": "stage000001", "found": True, "lang": "en", "lines": lines}))
+    calls = []
+    monkeypatch.setattr(llm, "unavailable", lambda: None)
+    monkeypatch.setattr(llm, "call", lambda *a, **k: calls.append(a[0]) or {"chorus": [[2, 3], [9, 12], [5]], "bridge": [[6, 6]], "heart": 7})
+    monkeypatch.setattr(threading, "Thread", lambda target, args, daemon: type("T", (), {"start": lambda s: target(*args)})())
+    assert lyrics.stage_later("stage000001")
+    got = lyrics.stage(json.loads(lyrics._path("stage000001").read_text()))
+    assert got["by"] == "AI" and got["sec"] == [[10.0, 20.0, "chorus"], [30.0, 35.0, "bridge"]] and got["heart"] == [35.0]
+    assert "5\t25.0\tthe sixth line" in calls[0]
+    assert not lyrics.stage_later("stage000001") and len(calls) == 1

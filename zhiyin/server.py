@@ -1962,4 +1962,5 @@ def lyrics_(vid: Annotated[str, Query(pattern=VID)], t: str = "", a: str = "", a
     lang = i18n.of()
     to = "en" if lang == "en" else "zh"
     return {**lyrics.for_reader(res, lang), "source": i18n.tr(res["source"], lang) if res.get("source") else None,
-            "translating": lyrics.translate_later(vid, to) or f"{vid}:{to}" in lyrics._tr_running}
+            "translating": lyrics.translate_later(vid, to) or f"{vid}:{to}" in lyrics._tr_running,
+            "stage": lyrics.stage(res), "staging": lyrics.stage_later(vid) or vid in lyrics._stage_running}

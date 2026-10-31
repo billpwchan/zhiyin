@@ -910,6 +910,7 @@ function tick() {
   const c = $('#tCur'), e = $('#tDur');
   if (c) c.textContent = fmt(t);
   if (e) e.textContent = fmt(d);
+  paintMarks(d);
   Player.closing(t, d);
   if (Player.playing && d - t < 20 && Q && Q.i >= Q.tracks.length - 1 && !extend.busy) {
     extend.busy = true;
@@ -975,6 +976,10 @@ const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hang
 const glued = (a, b) => /\S$/.test(a) && /^\S/.test(b) && !CJK.test(a.at(-1)) && !CJK.test(b[0]);
 // In the stage view a word's size follows how long it is sung: up to 1.28 times for two seconds or more.
 const wordSize = (dur) => +(1 + 0.28 * clamp((dur - 0.5) / 1.5)).toFixed(2);
+// How much light each part of a song gets in immersive (Flow): the chorus opens the room, a break lets it settle. The
+// first chorus is held back a little so the later ones have somewhere to go.
+const LIFT = { intro: 0.15, verse: 0.4, chorus: 1, first: 0.85, bridge: 0.6, break: 0.28, outro: 0.18 };
+const GRAPHEMES = 'Segmenter' in Intl ? new Intl.Segmenter() : null;
 
 // Before the first words, in immersive: why this song is here, said from the listener's own data where it can be.
 function introHTML(p) {
@@ -985,7 +990,7 @@ function introHTML(p) {
 }
 
 const Lyr = {
-  cache: new Map(), vid: null, data: null, idx: -2, hold: 0, raf: 0, lastF: [],
+  cache: new Map(), vid: null, data: null, idx: -2, hold: 0, raf: 0, lastF: [], kind: '', heartOn: false,
   tr: store.get('tr') ?? true, ro: store.get('ro') ?? false,
   get delay() { return (store.get(acct('off')) || {})[this.vid] || 0; },
   set delay(v) { const o = store.get(acct('off')) || {}; o[this.vid] = Math.round(v * 100) / 100; if (!o[this.vid]) delete o[this.vid]; store.set(acct('off'), o); },
@@ -999,17 +1004,24 @@ const Lyr = {
   },
   prefetch() { Q?.tracks.slice(Q.i + 1, Q.i + 3).forEach((p) => this.fetch(p)); },
   async load(p) {
-    if (this.vid !== p.vid) { this.vid = p.vid; this.data = null; this.idx = -2; this.render(); }
+    if (this.vid !== p.vid) {
+      this.vid = p.vid; this.data = null; this.idx = -2; this.kind = ''; this.heartOn = false;
+      Object.assign(Flow, { lift: LIFT.verse, focus: 0 });
+      $('.room')?.classList.remove('heart');
+      this.render();
+    }
     const d = await this.fetch(p);
     if (cur()?.vid !== p.vid) return;
-    if (d.translating) {
-      // A Japanese/Korean/English song with no translation anywhere is being translated in the background.
+    if (d.translating || d.staging) {
+      // A Japanese/Korean/English song with no translation anywhere is being translated in the background; Claude is
+      // reading where a song's chorus is and the line it turns on.
       clearTimeout(this.again);
       this.again = setTimeout(() => { if (cur()?.vid === p.vid) { this.cache.delete(p.vid); this.load(p); } }, 12000);
     }
     this.data = d.found ? this.prep(d) : null;
     this.idx = -2;
     this.render();
+    paintMarks();
     layoutStage();
     paintCredits();
     this.run();
@@ -1020,7 +1032,18 @@ const Lyr = {
     if (d.lines[0]?.t > 4) lines.push({ t: 0, x: '', gap: true, intro: true });
     for (const l of d.lines) lines.push({ ...l, gap: !l.x });
     lines.forEach((l, i) => { l.end = lines[i + 1]?.t ?? (l.e || l.t + 6); });
-    return { ...d, lines };
+    const st = d.stage || { sec: [], heart: [] }, sung = lines.filter((l) => !l.gap);
+    let n = 0;
+    const secs = st.sec.map(([a, b, k]) => ({ a, b, k, n: k === 'chorus' ? n++ : 0 }));
+    const heart = st.heart.length ? lines.findIndex((l) => !l.gap && Math.abs(l.t - st.heart[0]) < 0.06) : -1;
+    const last = sung.at(-1);
+    return { ...d, lines, secs, heart, first: sung[0]?.t ?? 0, last: last ? last.e || last.t + 5 : 0 };
+  },
+  // the part of the song at lyric time t, and how much light it gets
+  part(t) {
+    const d = this.data, s = d.secs.find((x) => t >= x.a && t < x.b);
+    const kind = s ? s.k : t < d.first - 0.5 ? 'intro' : t > d.last + 1.5 ? 'outro' : 'verse';
+    return { kind, lift: kind === 'chorus' && !s.n ? LIFT.first : LIFT[kind] };
   },
   html() {
     const d = this.data;
@@ -1095,6 +1118,7 @@ const Lyr = {
       this.lastF = [];
       this.paintPip();
     }
+    this.stage(t, k, force);
     const l = L[k];
     if (!l) return;
     if (l.w) {
@@ -1109,6 +1133,37 @@ const Lyr = {
     } else if (l.gap) {
       const f = clamp((t - l.t) / Math.max(0.5, l.end - l.t - 0.6));
       for (const host of this.hosts()) $(`.ll[data-i="${k}"]`, host)?.style.setProperty('--f', f.toFixed(3));
+    }
+  },
+  // The room's light and the sheet's staging follow the part of the song being sung. Held on the heart line: the
+  // other lines step back, it grows slowly while it is sung, and its letters arrive one after another.
+  stage(t, k, force) {
+    const { kind, lift } = this.part(t), heart = k >= 0 && k === this.data.heart;
+    Flow.lift = lift;
+    if (kind === this.kind && heart === this.heartOn && !force) return;
+    this.kind = kind;
+    for (const host of this.hosts()) {
+      host.classList.toggle('chorus', kind === 'chorus');
+      host.classList.toggle('heart', heart);
+      const lx = heart && $(`.ll[data-i="${k}"]:not(.w) .lx`, host);
+      if (lx && !lx.querySelector('.ch') && GRAPHEMES) {
+        // letter by letter, but a Latin word still wraps as a whole
+        let i = 0;
+        const chars = (s) => [...GRAPHEMES.segment(s)].map((g) => `<span class="ch" style="--i:${i++}">${esc(g.segment)}</span>`).join('');
+        lx.innerHTML = lx.textContent.split(/(\s+)/).map((w) => (!w || /^\s+$/.test(w) ? w : CJK.test(w) ? chars(w) : `<span class="nb">${chars(w)}</span>`)).join('');
+      }
+    }
+    $('.room')?.classList.toggle('heart', heart);
+    if (heart !== this.heartOn) {
+      this.heartOn = heart;
+      Flow.focus = heart ? 1 : 0;
+      const el = heart ? $(`.lyr .ll[data-i="${k}"]`) : null, sc = el?.closest('.ly-scroll');
+      if (sc) {
+        // where the line comes to rest, not where its spring is drawing it from
+        const rs = sc.getBoundingClientRect(), rx = $('.lx', el).getBoundingClientRect();
+        const y = el.closest('.one') ? rs.top + rs.height * 0.46 : rs.top + el.offsetTop - sc.scrollTop + el.offsetHeight / 2;
+        Flow.fpos = [(rx.left + rx.width / 2) / innerWidth, 1 - y / innerHeight];
+      }
     }
   },
   follow(host, el, snap) {
@@ -1152,6 +1207,20 @@ const Lyr = {
     this.sync(true);
   },
 };
+
+// Where the choruses are, on the song's progress bar: a click just ahead of one starts it from its first line.
+function paintMarks(d = Player.time()[1]) {
+  const bar = $('#bar'), L = Lyr.data, off = L ? Lyr.delay : 0;
+  if (!bar) return;
+  const key = L && d ? `${Lyr.vid}:${Math.round(d)}:${off}:${L.secs.length}` : '';
+  if (bar.dataset.mk === key) return;
+  bar.dataset.mk = key;
+  $$('.mk', bar).forEach((m) => m.remove());
+  if (!key) return;
+  const at = (s) => clamp((s + off) / d) * 100;
+  bar.insertAdjacentHTML('afterbegin', L.secs.filter((s) => s.k === 'chorus')
+    .map((s) => `<b class="mk" data-at="${s.a + off}" style="left:${at(s.a).toFixed(2)}%;width:${(at(s.b) - at(s.a)).toFixed(2)}%" title="${t('副歌')}"></b>`).join(''));
+}
 
 function paintCredits() {
   const el = $('#nCred');
@@ -1260,12 +1329,14 @@ function paintBackdrop() {
 /* ---------- immersive: the cover's colours, slowly flowing ---------- */
 // One small WebGL canvas at an eighth of the window, drawn at most 30 times a second and stretched to fill it: the
 // cover seen through three slowly turning, warped lenses, so its colours drift around the room (one turn in 30-50 s).
-// A new song's cover crossfades in over 700 ms. Reduced motion gets a still frame; without WebGL the blurred cover stays.
+// The light follows the song (Stage): brighter, fuller and quicker while the chorus is sung, gathered onto the one line
+// the song turns on. A new cover's light spreads out from where the cover is, and entering immersive the room lights up
+// from it. Reduced motion gets still frames; without WebGL the blurred cover stays.
 const FLOW_FS = `precision mediump float;
 varying vec2 uv;
 uniform sampler2D a, b;
-uniform float mixv, time;
-uniform vec2 res;
+uniform float ma, mb, wave, open, lift, focus, time;
+uniform vec2 res, orig, fpos;
 vec2 rot(vec2 p, float r) { float c = cos(r), s = sin(r); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
 vec3 paint(sampler2D s, vec2 c, float t) {
   vec3 col = vec3(0.);
@@ -1279,18 +1350,21 @@ vec3 paint(sampler2D s, vec2 c, float t) {
   return col / 3.;
 }
 void main() {
-  vec2 c = uv - .5;
-  c.x *= res.x / res.y;
-  float t = time * .19635;
-  vec3 col = mix(paint(a, c, t), paint(b, c, t), mixv);
+  vec2 asp = vec2(res.x / res.y, 1.), c = (uv - .5) * asp;
+  vec2 z = c * (1. - .14 * lift);   // the lenses widen as the song opens up
+  float d = length((uv - orig) * asp);
+  vec3 col = mix(paint(a, z, time), paint(b, z, time), mix(mb, ma, smoothstep(wave - .5, wave, d)));
   float l = dot(col, vec3(.2126, .7152, .0722));
   // bright covers are pressed down harder, so a white sleeve doesn't put a grey cloud behind white words
-  col = mix(vec3(l), col, 1.35) * .42 / (1. + max(0., l - .45) * 1.6);
+  col = mix(vec3(l), col, 1.15 + .35 * lift) * (.34 + .17 * lift) / (1. + max(0., l - .45) * 1.6);
   col *= 1. - .35 * dot(c, c);
+  col *= mix(1., .45 + .8 * (1. - smoothstep(.15, .9, length((uv - fpos) * asp))), focus);
+  col *= 1. - smoothstep(open - .6, open, d);
   gl_FragColor = vec4(col, 1.);
 }`;
 const Flow = {
-  gl: null, cv: null, u: null, tex: [], front: 0, from: 0, to: 0, mixAt: -1e9, url: '', want: '', raf: 0, last: 0, on: false, t0: performance.now(),
+  gl: null, cv: null, u: null, tex: [], front: 0, from: 0, to: 0, waveAt: -1e9, openAt: -1e9, url: '', want: '', raf: 0, last: 0, on: false,
+  lift: LIFT.verse, focus: 0, fpos: [.5, .5], l: LIFT.verse, f: 0, ph: 0, at: 0, orig: null,
   init() {
     if (this.gl !== null) return !!this.gl;
     this.gl = false;
@@ -1312,7 +1386,7 @@ const Flow = {
     const at = gl.getAttribLocation(pr, 'p');
     gl.enableVertexAttribArray(at);
     gl.vertexAttribPointer(at, 2, gl.FLOAT, false, 0, 0);
-    this.u = Object.fromEntries(['a', 'b', 'mixv', 'time', 'res'].map((n) => [n, gl.getUniformLocation(pr, n)]));
+    this.u = Object.fromEntries(['a', 'b', 'ma', 'mb', 'wave', 'open', 'lift', 'focus', 'time', 'res', 'orig', 'fpos'].map((n) => [n, gl.getUniformLocation(pr, n)]));
     gl.uniform1i(this.u.a, 0);
     gl.uniform1i(this.u.b, 1);
     this.tex = [0, 1].map((i) => {
@@ -1352,7 +1426,9 @@ const Flow = {
       this.from = first ? back : this.front;
       this.to = back;
       this.front = back;
-      this.mixAt = first || REDUCED.matches ? -1e9 : performance.now();
+      if (first) this.openAt = performance.now();
+      else this.waveAt = performance.now();
+      this.orig = null;
       document.body.classList.add('flow');
       this.loop();
     };
@@ -1367,9 +1443,27 @@ const Flow = {
     this.draw(performance.now());
   },
   draw(now) {
-    const gl = this.gl, f = clamp((now - this.mixAt) / 700);
-    gl.uniform1f(this.u.time, REDUCED.matches ? 0 : (now - this.t0) / 1000);
-    gl.uniform1f(this.u.mixv, this.from + (this.to - this.from) * (f * f * (3 - 2 * f)));
+    const gl = this.gl, u = this.u, still = REDUCED.matches, dt = Math.min(100, now - (this.at || now));
+    this.at = now;
+    // the light eases into each part of the song over a second or two; the turning quickens with it
+    const ease = (tau) => (still ? 1 : 1 - Math.exp(-dt / tau)), out = (x) => 1 - (1 - x) ** 3;
+    this.l += (this.lift - this.l) * ease(900);
+    this.f += (this.focus - this.f) * ease(this.focus > this.f ? 450 : 1100);
+    if (!still) this.ph += (dt / 1000) * 0.19635 * (0.6 + 0.8 * this.l);
+    // measured on the first frame after a change, once the layout has moved the cover to where it now is
+    if (!this.orig) {
+      const r = $('#frame')?.getBoundingClientRect();
+      this.orig = r?.width ? [(r.left + r.width / 2) / innerWidth, 1 - (r.top + r.height / 2) / innerHeight] : [0.5, 0.5];
+    }
+    gl.uniform1f(u.time, this.ph);
+    gl.uniform1f(u.ma, this.from);
+    gl.uniform1f(u.mb, this.to);
+    gl.uniform1f(u.wave, still ? 9 : out(clamp((now - this.waveAt) / 1700)) * 3.1);
+    gl.uniform1f(u.open, still ? 9 : out(clamp((now - this.openAt) / 1500)) * 3.4);
+    gl.uniform1f(u.lift, this.l);
+    gl.uniform1f(u.focus, this.f);
+    gl.uniform2f(u.orig, ...this.orig);
+    gl.uniform2f(u.fpos, ...this.fpos);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   },
   loop() {
@@ -1379,15 +1473,16 @@ const Flow = {
       if (!this.on) return;
       if (now - this.last >= 32) { this.last = now; this.draw(now); }
       // still frames once the crossfade is done, if motion is reduced; nothing while the tab is away
-      if (!document.hidden && (!REDUCED.matches || now - this.mixAt < 800)) this.raf = requestAnimationFrame(step);
+      if (!document.hidden && (!REDUCED.matches || now - Math.max(this.waveAt, this.openAt) < 1800)) this.raf = requestAnimationFrame(step);
     };
     this.raf = requestAnimationFrame(step);
   },
   start() {
     if (!this.init()) return;
     this.on = true;
+    this.orig = null;
+    if (this.url) { document.body.classList.add('flow'); this.openAt = performance.now(); }
     this.size();
-    if (this.url) document.body.classList.add('flow');
     this.set(this.want);
     this.loop();
   },
@@ -3756,7 +3851,11 @@ document.addEventListener('click', async (e) => {
   const pl = e.target.closest('[data-play]');
   if (pl) { e.preventDefault(); return playVid(pl.dataset.play); }
   const bar = e.target.closest('.bar');
-  if (bar) { const b = bar.getBoundingClientRect(); return Player.seek((e.clientX - b.left) / b.width); }
+  if (bar) {
+    const b = bar.getBoundingClientRect();
+    const mk = $$('.mk', bar).find((m) => Math.abs(m.getBoundingClientRect().left - e.clientX) < 10);
+    return mk ? Player.seekTo(Math.max(0, +mk.dataset.at - 0.4)) : Player.seek((e.clientX - b.left) / b.width);
+  }
   const btn = e.target.closest('[data-k]');
   if (btn) act(btn.dataset.k, btn);
 });

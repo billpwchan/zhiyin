@@ -274,6 +274,9 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .bar::before { content: ""; position: absolute; left: 0; right: 0; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .14); transition: height var(--fast) var(--ease); }
 .bar i { position: absolute; left: 0; right: 0; height: 4px; border-radius: 2px; background: var(--fg); transform-origin: left; transform: scaleX(var(--p, 0)); transition: height var(--fast) var(--ease); }
 .bar:hover::before, .bar:hover i { height: 6px; border-radius: 3px; }
+/* where the choruses are (paintMarks): a little lighter under the track */
+.bar .mk { position: absolute; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .2); transition: height var(--fast) var(--ease); }
+.bar:hover .mk { height: 6px; border-radius: 3px; }
 .ctl { margin-top: 12px; display: flex; align-items: center; gap: 6px; margin-left: -6px; }
 .ctl .gap { width: 10px; }
 .ctl .push { flex: 1; }
@@ -1039,10 +1042,24 @@ a.m-acct:hover { background: var(--hover); }
 .lyr.one .ll .lt, .lyr.one .ll .lr { margin-top: .5em; font-size: .4em; }
 .lyr.one .ll.gap { display: block; height: auto; }
 .lyr.one .intro-c .i-main { margin: 0 auto; font-size: .56em; }
+/* the words follow the song (Lyr.stage): while the chorus is sung the line is a size larger and the sheet steps back */
+.imm .ll .lx { display: block; transform-origin: 0 100%; transition: transform 900ms cubic-bezier(.2, .8, .2, 1); }
+.imm.stage .ll .lx { transform-origin: 50% 100%; }
+.imm .lyr.chorus .ll.on .lx { transform: scale(1.07); }
+.imm .lyr.chorus:not(.browse) .ll:not(.on) { opacity: max(.1, .32 - .05 * var(--d, 4)); }
+/* the line the song turns on is held alone: it grows slowly while it is sung, its letters arriving one after another */
+.imm .lyr.heart:not(.browse) .ll:not(.on) { opacity: 0; filter: blur(6px); transition-duration: 900ms; }
+.imm .lyr.heart .ll.on .lx { transform: scale(1.16); transition: transform 3.2s cubic-bezier(.2, .7, .2, 1); }
+.imm .lyr.heart .ll.on:not(.w) .lx { background: none; color: #fff; animation: none; }
+.imm .lyr.heart .ch { display: inline-block; white-space: pre; animation: arrive 900ms cubic-bezier(.2, .8, .2, 1) both; animation-delay: min(calc(var(--i) * 38ms), 1.4s); }
+@keyframes arrive { from { opacity: 0; transform: translateY(.32em); filter: blur(8px); } }
+.imm .lyr .ly-foot, .imm .room .meta { transition: opacity 900ms var(--ease); }
+.imm .lyr.heart .ly-foot { opacity: 0; }
+.imm .room.heart .meta { opacity: .28; }
 .imm.idle { cursor: none; }
 .imm.idle .views { opacity: 0; }
 /* a hidden pointer resting on the words doesn't light the line that scrolls under it */
-.imm.idle .lyr:not(.browse):not(.one) .ll:not(.on):hover { opacity: max(.16, .4 - .04 * var(--d, 4)); filter: blur(calc(max(0, var(--d, 0) - 1) * .5px)); }
+.imm.idle .lyr:not(.browse):not(.one):not(.chorus):not(.heart) .ll:not(.on):hover { opacity: max(.16, .4 - .04 * var(--d, 4)); filter: blur(calc(max(0, var(--d, 0) - 1) * .5px)); }
 /* On a phone it is one screen that never scrolls, so YouTube's player stays on its cover: the song on top, the words
    in between, the controls at the thumb. */
 @media (max-width: 899px) {
