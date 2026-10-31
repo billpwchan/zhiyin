@@ -41,7 +41,9 @@ SECTION = re.compile(r"^\s*[\[(（【]?\s*(hook|verse|chorus|pre-?chorus|post-?c
 LRC_TS = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
 YRC_LINE = re.compile(r"^\[(\d+),(\d+)\](.*)$")
 YRC_WORD = re.compile(r"\((\d+),(\d+),\d+\)")
-VERSION = re.compile(r"live|remix|karaoke|伴奏|inst|纯音乐|純音樂|cover|翻唱|dj|現場|现场|demo|acoustic", re.I)
+# whole words only: "Love Instantly", "Alive" and "Discover" are not versions
+VERSION = re.compile(r"(?<![a-z])(?:live|remix\w*|karaoke|inst(?:rumental)?|cover|dj|demo|acoustic)(?![a-z])|伴奏|纯音乐|純音樂|翻唱|現場|现场",
+                     re.I)
 SHOW_ROLES = {"作词": "作词", "作詞": "作词", "词": "作词", "詞": "作词", "作曲": "作曲", "曲": "作曲",
               "编曲": "编曲", "編曲": "编曲", "制作人": "制作", "製作人": "制作", "监制": "监制", "監製": "监制"}
 

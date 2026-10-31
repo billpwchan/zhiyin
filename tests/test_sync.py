@@ -621,6 +621,9 @@ def test_a_netease_like_is_found_on_youtube_music_by_title_length_and_artist_in_
         "那英 默": [_hit("nayingmo01", "默 - Mo", "Na Ying")],
         "Álvaro Soler Sofía": [_hit("alvarosofi", "Sofia", "Alvaro Soler")],
         "宋冬野 安和桥": [_hit("songdongy2", "安和桥", "Sun Yanzi")],
+        "Urban Zakapa 그날에 우리": [_hit("zakapa0001", "My Love (그날에 우리)", "Urban Zakapa")],   # Korean in brackets
+        "Khalil Fong 爱立刻": [_hit("khalilinst", "愛立刻 - Love Instantly", "Khalil Fong")],   # "Inst" in a word
+        "Sia Alive": [_hit("sialive001", "Alive (Live)", "Sia"), _hit("siaalive01", "Alive", "Sia")],
     }
     monkeypatch.setattr(ytm, "search", lambda q, kind="songs", limit=10: hits.get(q, []))
     assert library.match_app(_ne(1, "爱情转移", "陈奕迅"))["vid"] == "easonchan1" and asked == [10]
@@ -631,6 +634,9 @@ def test_a_netease_like_is_found_on_youtube_music_by_title_length_and_artist_in_
     assert library.match_app(_ne(6, "默", "那英"))["vid"] == "nayingmo01"
     assert library.match_app(_ne(7, "Sofía", "Álvaro Soler"))["vid"] == "alvarosofi"
     assert library.match_app(_ne(8, "安和桥", "宋冬野")) is None   # another singer's pinyin
+    assert library.match_app(_ne(9, "그날에 우리", "Urban Zakapa"))["vid"] == "zakapa0001"
+    assert library.match_app(_ne(11, "爱立刻", "Khalil Fong"))["vid"] == "khalilinst"
+    assert library.match_app(_ne(12, "Alive", "Sia"))["vid"] == "siaalive01"   # the live take is still someone else's
 
 
 def test_netease_likes_become_the_library_and_an_unliked_song_leaves(monkeypatch):

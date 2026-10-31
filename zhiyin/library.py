@@ -166,6 +166,7 @@ def sync_from_google(log=print, glimpsed=None) -> dict:
 
 _CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 _HAN_NAME = re.compile(r"[\u3400-\u9fff]{2,4}")
+_BRACKETED = re.compile(r"[(（]([^()（）]+)[)）]")
 
 
 def _bare(s: str) -> str:
@@ -224,9 +225,11 @@ def match_app(t: dict) -> dict | None:
         if VERSION.search(h["title"]) and not VERSION.search(t["title"]):
             continue
         cand = ", ".join(a["name"] for a in h["artists"])
-        # "默 - Mo", "Sofia" for "Sofía": YouTube Music glosses titles and drops accents
+        # "默 - Mo", "Sofia" for "Sofía", "My Love (그날에 우리)": YouTube Music glosses titles, drops accents and
+        # puts a Korean title in brackets after an English one
         if not cand or max(_sim(t["title"], h["title"]),
-                           _sim(_bare(t["title"]), _bare(display_title(h["title"], h["artists"])))) < 0.9:
+                           _sim(_bare(t["title"]), _bare(display_title(h["title"], h["artists"]))),
+                           *(_sim(t["title"], p) for p in _BRACKETED.findall(h["title"]))) < 0.9:
             continue
         if _artist_sim(names, cand) >= 0.6:
             return h
