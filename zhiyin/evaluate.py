@@ -7,7 +7,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from . import candidates, library, settings, store, ytm
+from . import candidates, library, profile, settings, store, ytm
 from .text import fold, song_key
 
 
@@ -122,7 +122,8 @@ def audio_check(holdout: int = 80):
 # narrows the same pools to rank.SCREEN_K; all model calls go out as one Message Batch (half price) and are kept by
 # request, so a second run only pays for what is new. Everything stays under data/eval/screen on this machine.
 ARMS = {"opus": ("opus", "high"), "sonnet": ("sonnet", "high"), "opus-medium": ("opus", "medium"),
-        "sonnet-medium": ("sonnet", "medium")}
+        "sonnet-medium": ("sonnet", "medium"), "opus-taste": ("opus", "high"), "sonnet-taste": ("sonnet", "high")}
+# the "-taste" arms add what a reading of the window's older likes found their ears need (profile.read on those alone)
 OUT_PER_READ = {"high": 3500, "medium": 1500}   # output tokens a screen read spends, mostly thinking (measured on editions)
 
 
@@ -180,7 +181,8 @@ def screen_build(windows: int = 4, size: int = 60, min_train: int = 200, log=pri
             log(f"w{k} {lane['key']}: pool {len(pool)}, went on to like {len(lanes[-1]['hits'])}")
         own = [t["vid"] for t in later if t["rank"] >= cut - size]
         store.write_json(out / f"w{k}.json", {"uid": store.uid(), "window": k, "size": size, "train": len(train),
-                                               "later": len(later), "own": own, "lanes": lanes})
+                                               "later": len(later), "own": own, "lanes": lanes,
+                                               "taste": profile.read(prof_k, "opus", train, own=False)})
         found = {h for l in lanes for h in l["hits"].values()}
         log(f"w{k}: {len(train)} older likes, {len(later)} later; {len(found)} of them in a pool, "
             f"{len(found & set(own))} of the window's own {len(own)}")
@@ -209,7 +211,10 @@ def screen_submit(arms=("opus", "sonnet"), passes: int = 3, go: bool = False, lo
                 for seed in range(passes):
                     rid = _request_id(w, l["key"], arm, seed)
                     if rid not in done:
-                        todo.append((rid, arm, rank.screen_prompt(l["head"], l["pool"], l["key"], seed)))
+                        head = l["head"] + (rank.taste_lines(w.get("taste")) if arm.endswith("-taste") else "")
+                        if arm.endswith("-taste") and not w.get("taste"):
+                            continue
+                        todo.append((rid, arm, rank.screen_prompt(head, l["pool"], l["key"], seed)))
     if not todo:
         log("nothing to ask: every read has an answer")
         return
@@ -335,7 +340,8 @@ def screen_report(arms=("opus", "sonnet"), passes: int = 3, log=print) -> dict:
     for n in names:
         log(f"  {n:16s} kept {out['kept'][n]:3d} of {len(units)}   (any later like: {out['kept_later'][n]} of {len(later)})")
     pairs = [(f"{x} {y}", "graph") for x in arms for y in (f"x{passes}", "+ graph")] \
-        + [(f"{x} + graph", f"{x} x{passes}") for x in arms] + [(f"{arms[0]} + graph", f"{x} + graph") for x in arms[1:]]
+        + [(f"{x} + graph", f"{x} x{passes}") for x in arms] + [(f"{arms[0]} + graph", f"{x} + graph") for x in arms[1:]] \
+        + [(f"{x} x1", f"{arms[0]} x1") for x in arms[1:]]
     for a, b in pairs:
         lo, hi = interval(a, b)
         log(f"  {a} minus {b}: {out['kept'][a] - out['kept'][b]:+d} (95% {lo:+d} to {hi:+d})")

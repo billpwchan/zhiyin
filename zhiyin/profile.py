@@ -636,14 +636,15 @@ def _sound(songs: list[dict]) -> str:
 PORTRAIT_MIXES = 30
 
 
-def read(prof: dict, model: str = "opus") -> dict:
+def read(prof: dict, model: str = "opus", tracks: list[dict] | None = None, own: bool = True) -> dict:
     """What a perceptive friend would work out about the listener's ears, in English: for their page and for the
-    editor that chooses their songs."""
+    editor that chooses their songs. `tracks` narrows the likes it reads (an eval window's older likes), and without
+    `own` it reads the likes alone: nothing from the app, their plays or their lists, which may postdate them."""
     from . import settings
     nm = settings.not_me()
     tags = store.read_json(store.TAGS) or {}
     aside = {r for s in prof.get("set_aside", []) for r in s["ranks"]}
-    tracks = library.load()
+    tracks = library.load() if tracks is None else tracks
     songs = [t for t in tracks if not t["long"] and not settings.is_not_me(t, nm) and t["rank"] not in aside]
     mixes = [t for t in tracks if t["long"]]
     lanes = "\n".join(f"- {ln['name']}: {ln['blurb']}" for ln in prof.get("lanes", []))
@@ -651,11 +652,11 @@ def read(prof: dict, model: str = "opus") -> dict:
     prompt = (
         "LIKED SONGS (rank|liked around|title|artists|kind|lang|scene|sound|mood|energy|known):\n"
         + "\n".join(_summary_lines(songs, tags, known=True))
-        + _sound(songs) + _app()
+        + _sound(songs) + (_app() if own else "")
         + (f"\n\nEVIDENCE, counted from the same data (trust these numbers over your own counting):\n{ev}" if ev else "")
         + (f"\n\nLONG FOCUS MIXES SAVED: {len(mixes)} (some titles): "
            + " / ".join(m["title"][:60] for m in mixes[:PORTRAIT_MIXES]) if mixes else "")
-        + _played(songs) + _lists()
+        + (_played(songs) + _lists() if own else "")
         + (f"\n\nTHEIR STATIONS:\n{lanes}" if lanes else ""))
     return llm.call(prompt, READ_SYSTEM.replace("@LISTENER@", listener()), READ_SCHEMA, model=model, timeout=900)
 

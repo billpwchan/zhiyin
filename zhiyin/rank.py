@@ -210,6 +210,15 @@ def screen_pool(lane: dict, cands: dict) -> list[dict]:
                   key=lambda c: -candidates.score(c, lane))[:SCREEN_CAP]
 
 
+def taste_lines(rd: dict | None) -> str:
+    """What a reading of all their likes found their ears need (profile.read), for the screen."""
+    if not rd:
+        return ""
+    return ("\n\nWHAT THEIR EARS NEED, from a reading of all their likes:\n" + rd["core"]
+            + "\nA song must have: " + " ".join(x["quality"] for x in rd["loves"])
+            + "\nWhat loses them: " + " ".join(x["quality"] for x in rd["loses"]))
+
+
 def screen_head(lane: dict, story: list[str], went: list[str]) -> str:
     return (f"LANE: {lane['name']} ({lane['english']})\nSound: {lane['sound']}\nWhen: {lane['when']}\n"
             f"Languages: {', '.join(lane['langs'])} | energy {lane['energy']}\nAvoid: {'; '.join(lane['avoid'])}\n"
