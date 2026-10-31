@@ -188,3 +188,248 @@ def test_a_name_is_the_same_key_in_either_script():
     from zhiyin.text import fold, song_key
     assert fold("劉若英") == fold("刘若英") and song_key("後來 (Live)") == song_key("后来")
     assert song_key("為妳寫的歌") == song_key("为你写的歌")
+
+
+def test_each_piece_of_claudes_text_is_judged_by_what_it_is_written_in():
+    assert i18n.written_in("K-pop 二代以后的 R&B，夜里开车听", "en") == "zh"
+    assert i18n.written_in("Crowd Lu's new work, as warm as “愚人節快樂”", "zh-Hans") == "en"
+    assert i18n.written_in("Night Drives", "en") == "en" and i18n.written_in("City Pop", "zh-Hans") == "zh"
+    assert i18n.written_in("Gareth.T、Kiri T、moon tang、Dear Jane", "zh-Hans") == "zh"   # names, not English
+    assert i18n.written_in("2016–2018", "en") is None
+    for name in ("The 周杰伦 years", "陈奕迅 deep cuts", "Like 陈奕迅 and 林宥嘉, slower"):   # names inside English
+        assert i18n.written_in(name, "en") == "en", name
+    assert i18n.written_in("那几年循环 Coldplay 和 Keane", "en") == "zh"
+    assert i18n.written_in("后来换成了 Coldplay、Keane 这些", "en") == "zh"
+
+
+def _translator(monkeypatch, calls, fail=False):
+    from zhiyin import llm
+
+    def call(prompt, system, schema, **kw):
+        calls.append(prompt)
+        if fail:
+            raise llm.LLMError("down")
+        lines = [ln.split("\t") for ln in prompt.split("\n")]
+        return {"out": [{"i": int(i), "x": f"EN {text}"} for i, _, text in lines]}
+    monkeypatch.setattr(llm, "call", call)
+    monkeypatch.setattr(llm, "unavailable", lambda *a, **k: None)
+
+
+def _listener(name):
+    from zhiyin import accounts, store
+    uid = accounts.redeem(accounts.invite(name))
+    accounts.set_status(uid, "ready")
+    accounts.set_prefs(uid, lang="zh-Hans")
+    with store.as_user(uid):
+        lane = {"key": "k", "name": "夜车", "english": "night drive", "blurb": "夜里开车听的", "when": "开夜车的时候", "sound": "",
+                "langs": [], "energy": "", "core_artists": [], "avoid": [], "discovery": 0.3}
+        store.write_json(store.PROFILE, {"lang": "zh-Hans", "lanes": [lane],
+                                         "portrait": {"headline": "你在夜里听得最多", "paragraphs": []}})
+        store.write_json(store.EDITION, {"id": "e", "lang": "zh-Hans", "focus": None, "created": store.now(), "lanes": [
+            {"key": "k", "name": "夜车", "blurb": "夜里开车听的", "when": "开夜车的时候", "picks": [
+                {"vid": "v", "title": "后来", "artists": [{"name": "刘若英"}], "reason": "和你常听的那几首一样慢"}], "reserve": []}]})
+        store.write_json(store.IDENT, {"label": "夜行的人", "lang": "zh-Hans"})
+    return uid
+
+
+def _settled(uid):
+    import time
+
+    from zhiyin import server
+    for _ in range(200):
+        j = server._jobs.get((uid, "retell"))
+        if not j or not j["running"]:
+            return j
+        time.sleep(0.02)
+    raise AssertionError("still filling")
+
+
+def _client(uid, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from zhiyin import accounts, server
+    monkeypatch.setattr(server, "AUTH", True)
+    c = TestClient(server.app)
+    c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+    c.headers["X-Zhiyin-Uid"] = uid
+    return c
+
+
+def test_a_switch_waits_for_the_words_then_turns_the_whole_page_over(monkeypatch):
+    from zhiyin import accounts, ear, store
+    calls = []
+    _translator(monkeypatch, calls)
+    uid = _listener("S")
+    c = _client(uid, monkeypatch)
+    me = c.post("/api/account/lang", json={"lang": "en"}).json()["me"]
+    assert (me["lang"], me["lang_to"]) in (("zh-Hans", "en"), ("en", None))   # the page stays Chinese until it's ready
+    assert not _settled(uid)["error"] and accounts.prefs(uid)["lang"] == "en" and "lang_to" not in accounts.prefs(uid)
+    st = c.get("/api/state").json()
+    assert st["portrait"]["headline"] == "EN 你在夜里听得最多" and not st["stale_lang"]
+    lane = st["edition"]["lanes"][0]
+    assert (lane["name"], lane["when"], lane["picks"][0]["reason"]) == ("EN 夜车", "EN 开夜车的时候", "EN 和你常听的那几首一样慢")
+    with store.as_user(uid):
+        assert ear.label() == "EN 夜行的人"
+        assert store.read_json(store.PROFILE)["portrait"]["headline"] == "你在夜里听得最多"   # what Claude wrote is kept
+    n = len(calls)
+    # back and forth again: nothing to write, nothing to wait for
+    assert c.post("/api/account/lang", json={"lang": "zh-Hant"}).json()["me"]["lang"] == "zh-Hant"
+    assert c.get("/api/state").json()["portrait"]["headline"] == "你在夜裡聽得最多"
+    assert c.post("/api/account/lang", json={"lang": "en"}).json()["me"]["lang"] == "en" and len(calls) == n
+
+
+def test_a_switch_happens_even_when_claude_fails_and_the_rest_follows_later(monkeypatch):
+    from zhiyin import accounts, store
+    calls = []
+    _translator(monkeypatch, calls, fail=True)
+    uid = _listener("F")
+    c = _client(uid, monkeypatch)
+    c.post("/api/account/lang", json={"lang": "en"})
+    assert _settled(uid)["error"] and accounts.prefs(uid)["lang"] == "en"
+    st = c.get("/api/state").json()
+    assert st["stale_lang"] and st["portrait"]["headline"] == "你在夜里听得最多"
+    with store.as_user(uid):   # the share card leaves the headline off rather than print it in the other language
+        assert i18n.translated("你在夜里听得最多", "zh-Hans", "en") is None
+    n = len(calls)
+    c.get("/api/state")
+    assert len(calls) == n   # not again on every visit after a failure
+
+
+def test_text_written_in_the_old_language_after_a_switch_is_put_into_the_new_one(monkeypatch):
+    from zhiyin import store
+    calls = []
+    _translator(monkeypatch, calls)
+    uid = _listener("B")
+    c = _client(uid, monkeypatch)
+    c.post("/api/account/lang", json={"lang": "en"})
+    _settled(uid)
+    with store.as_user(uid):   # an ask that started before the switch, written in Chinese
+        store.write_json(store.ASKS, [{"q": "下雨天", "lang": "zh-Hans", "intent": "下雨天慢慢听", "created": 1, "picks": []}])
+    c.get("/api/state")
+    assert not _settled(uid)["error"]
+    assert c.get("/api/state").json()["asks"][0]["intent"] == "EN 下雨天慢慢听"
+
+
+def test_a_job_writes_in_the_language_it_started_in():
+    import contextvars
+
+    from zhiyin import accounts, store
+    uid = _listener("P")
+
+    def job():
+        i18n.pin()
+        accounts.set_prefs(uid, lang="en")   # switched while it runs
+        return i18n.of(), i18n.tr("{n} 首", n=2)
+    with store.as_user(uid):
+        lang, msg = contextvars.copy_context().run(job)
+        assert lang == "zh-Hans" and msg == "2 首" and i18n.of() == "en"
+        assert i18n.again(msg) == "2 songs"   # a job's last line, read after the switch
+        with i18n.writing("zh-Hant"):   # a portrait rewritten in its own language
+            assert i18n.of() == "zh-Hant"
+        assert i18n.of() == "en"
+
+
+def test_what_a_job_wrote_before_a_switch_shows_in_the_new_language_when_it_ends(monkeypatch):
+    import time
+
+    from zhiyin import accounts, server, store
+    calls = []
+    _translator(monkeypatch, calls)
+    uid = _listener("J")
+
+    def build(log):   # a build that started in Chinese; the listener switched halfway
+        accounts.set_prefs(uid, lang="en")
+        store.write_json(store.ASKS, [{"q": "下雨天", "lang": i18n.of(), "intent": "下雨天慢慢听", "created": 1, "picks": []}])
+        return {}
+    with store.as_user(uid):
+        j = server._start("ask", build)
+        for _ in range(200):
+            if not j["running"]:
+                break
+            time.sleep(0.02)
+        assert not j["error"] and store.read_json(store.ASKS)[0]["lang"] == "zh-Hans"
+        assert i18n.translated("下雨天慢慢听", "zh-Hans", "en") == "EN 下雨天慢慢听"   # filled before it ended
+
+
+def test_lines_claude_leaves_out_are_not_asked_for_on_every_visit(monkeypatch):
+    from zhiyin import llm, store
+    calls = []
+
+    def call(prompt, system, schema, **kw):
+        calls.append(prompt)
+        lines = [ln.split("\t") for ln in prompt.split("\n")]
+        return {"out": [{"i": int(i), "x": f"EN {text}"} for i, _, text in lines if "一样慢" not in text]}
+    monkeypatch.setattr(llm, "call", call)
+    monkeypatch.setattr(llm, "unavailable", lambda *a, **k: None)
+    uid = _listener("L")
+    c = _client(uid, monkeypatch)
+    c.post("/api/account/lang", json={"lang": "en"})
+    assert _settled(uid)["result"]["left"] == ["和你常听的那几首一样慢"]
+    n = len(calls)
+    c.get("/api/state")
+    assert len(calls) == n and not _settled(uid)["running"]
+    with store.as_user(uid):   # a new edition's lines still are
+        ed = store.read_json(store.EDITION)
+        ed["lanes"][0]["when"] = "下班路上"
+        store.write_json(store.EDITION, ed)
+    c.get("/api/state")
+    _settled(uid)
+    assert len(calls) > n
+
+
+def test_nothing_claude_wrote_for_the_sample_reads_as_the_other_language():
+    # Chinese around English names, English quoting Chinese titles: each judged as the language it was written in
+    assert i18n.written_in("Sergio Mendes with The Black Eyed Peas，《Mas Que Nada》", "zh-Hans") == "zh"
+    root = Path(__file__).resolve().parents[1] / "demo"
+    for f in sorted(root.rglob("*.json")):
+        d = json.loads(f.read_text())
+        for doc in d if isinstance(d, list) else [d]:
+            if not isinstance(doc, dict) or "lang" not in doc:
+                continue
+            wrong = [t for t, _ in i18n._texts(doc) if i18n.written_in(t, doc["lang"]) not in (None, i18n.family(doc["lang"]))]
+            assert not wrong, (f.name, wrong[:3])
+
+
+def test_a_name_translated_one_way_comes_back_as_it_was_written(monkeypatch):
+    from zhiyin import store
+    uid = _listener("R")
+    with store.as_user(uid):   # the edition took the profile's English name into Chinese; now read in English again
+        store.write_json(store.TRANSLATIONS, {"zh-Hans": {"Night Groove": "夜色律动"}})
+        assert i18n.localize("夜色律动", "zh-Hans", "en") == "Night Groove"
+        assert i18n.localize("夜色律动", "zh-Hans", "zh-Hant") == "夜色律動"
+
+
+def test_a_switch_left_hanging_by_a_restart_is_taken_up_on_the_next_visit(monkeypatch):
+    from zhiyin import accounts
+    calls = []
+    _translator(monkeypatch, calls)
+    uid = _listener("H")
+    accounts.set_prefs(uid, lang_to="en")   # asked for, then the server restarted: no job, the page says "preparing"
+    c = _client(uid, monkeypatch)
+    c.get("/api/state")
+    _settled(uid)
+    assert accounts.prefs(uid)["lang"] == "en" and "lang_to" not in accounts.prefs(uid)
+
+
+def test_another_language_picked_while_one_fails_is_the_one_that_happens(monkeypatch):
+    from zhiyin import accounts, llm
+    uid = _listener("A")
+
+    def call(prompt, system, schema, **kw):
+        accounts.set_prefs(uid, lang_to="zh-Hant")   # changed their mind while English was being prepared
+        raise llm.LLMError("down")
+    monkeypatch.setattr(llm, "call", call)
+    monkeypatch.setattr(llm, "unavailable", lambda *a, **k: None)
+    c = _client(uid, monkeypatch)
+    c.post("/api/account/lang", json={"lang": "en"})
+    assert not _settled(uid)["error"] and accounts.prefs(uid)["lang"] == "zh-Hant" and "lang_to" not in accounts.prefs(uid)
+
+
+def test_a_taste_name_in_the_other_language_is_translated_not_replaced(monkeypatch):
+    from zhiyin import accounts, llm, server, store
+    monkeypatch.setattr(llm, "unavailable", lambda *a, **k: None)
+    uid = _listener("N")
+    accounts.set_prefs(uid, lang="en")
+    with store.as_user(uid):
+        server._want_label()
+    assert (uid, "label") not in server._jobs

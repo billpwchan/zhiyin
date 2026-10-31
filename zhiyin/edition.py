@@ -222,8 +222,9 @@ def build_focus(prof, known, rng, log, n=4):
 
 
 def _script(prof: dict, text: str) -> str:
-    """Profile text in the script the edition is written in (its reasons follow the reader; the profile may not)."""
-    return i18n.convert(text, prof.get("lang", "zh-Hans"), i18n.of())
+    """Profile text in the language and script the edition is written in (its reasons follow the reader; the profile
+    may not)."""
+    return i18n.localize(text, prof.get("lang", "zh-Hans"), i18n.of())
 
 
 # Gathering candidates leans on YouTube Music from one address, so only a few listeners gather at once. The editor
@@ -242,6 +243,7 @@ def played_since(ed: dict | None) -> set[str]:
 
 def build(log=print, model: str = "opus", only: set[str] | None = None) -> dict:
     """A new edition. With `only`, just those stations get new songs; the rest keep the ones not yet heard."""
+    i18n.repin()
     llm.require()   # before an hour of gathering that the editor then couldn't use
     t0 = time.time()
     prof = store.read_json(store.PROFILE)

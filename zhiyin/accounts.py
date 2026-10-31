@@ -4,6 +4,7 @@ import hashlib
 import json
 import secrets
 import shutil
+import threading
 import time
 
 from . import cards, store
@@ -32,12 +33,16 @@ def prefs(uid: str | None = None) -> dict:
     return u["prefs"] if u else {}
 
 
+_prefs_lock = threading.Lock()   # read, merge, write: two writers at once would each drop the other's keys
+
+
 def set_prefs(uid: str, **kv) -> dict:
-    p = {**(get(uid) or {}).get("prefs", {}), **kv}
-    p = {k: v for k, v in p.items() if v is not None}
-    con = store.db()
-    con.execute("update users set prefs=? where id=?", (json.dumps(p, ensure_ascii=False), uid))
-    con.commit()
+    with _prefs_lock:
+        p = {**(get(uid) or {}).get("prefs", {}), **kv}
+        p = {k: v for k, v in p.items() if v is not None}
+        con = store.db()
+        con.execute("update users set prefs=? where id=?", (json.dumps(p, ensure_ascii=False), uid))
+        con.commit()
     return p
 
 

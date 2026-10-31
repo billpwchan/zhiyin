@@ -2086,28 +2086,25 @@ function friendsHTML() {
     <ul class="plain">${list}${add}</ul></section>`;
 }
 
+// A switch that needs Claude's text put into the new language keeps the page as it is until that's done (the server
+// says so with lang_to), then the whole page turns over at once.
 function langHTML() {
-  const busy = S.jobs?.retell?.running;
-  return `<section class="sh-sec"><h3>${t('语言')}</h3><ul class="plain acct"><li>${busy ? `<span><small>${t('正在把口味描述和推荐理由改写成{lang}…', { lang: LANGS[LANG] })}</small></span>` : ''}
-    <div class="seg" role="radiogroup" aria-label="${t('语言')}">${Object.entries(LANGS).map(([k, v]) => `<button role="radio" data-lang="${k}" lang="${k}" aria-checked="${k === LANG}">${v}</button>`).join('')}</div></li></ul></section>`;
+  const to = S.me?.lang_to;
+  return `<section class="sh-sec"><h3>${t('语言')}</h3><ul class="plain acct"><li>${to ? `<span><small>${t('正在准备{lang}版，好了会自动换过去', { lang: LANGS[to] })}</small></span>` : ''}
+    <div class="seg" role="radiogroup" aria-label="${t('语言')}">${Object.entries(LANGS).map(([k, v]) => `<button role="radio" data-lang="${k}" lang="${k}" aria-checked="${k === (to || LANG)}">${v}</button>`).join('')}</div></li></ul></section>`;
 }
 
 async function setLang(lang) {
-  if (lang === LANG) return;
+  if (lang === (S.me?.lang_to || LANG)) return;
   if (SAMPLE()) { location.href = `/lang?to=${lang}&back=${encodeURIComponent(location.pathname + location.hash)}`; return; }
   try {
-    await api('/api/account/lang', { lang });
-    location.reload();
+    const r = await api('/api/account/lang', { lang });
+    if (r.me.lang !== LANG) { location.reload(); return; }
+    S.me = r.me;
+    S.jobs = r.jobs;
+    renderSheet();
+    poll();
   } catch (err) { toast(t('没保存上，稍后再试')); }
-}
-
-// Claude wrote the portrait and reasons for a reader of the other language (the listener switched since).
-function staleLangNote() {
-  if (!S.stale_lang) return;
-  if (S.jobs?.retell?.running) { toast(t('正在把口味描述和推荐理由改写成{lang}…', { lang: LANGS[LANG] }), [], 6000); return; }
-  toast(t('口味描述和推荐理由还是另一种语言写的'), [[t('改写成{lang}', { lang: LANGS[LANG] }), async () => {
-    try { S.jobs = await api('/api/account/retell', {}); poll(); toast(t('正在把口味描述和推荐理由改写成{lang}…', { lang: LANGS[LANG] }), [], 6000); } catch (err) { toast(err.message); }
-  }]], 12000);
 }
 
 /* ---------- settings: a drawer over the page, the music keeps playing ---------- */
@@ -4076,9 +4073,11 @@ async function finished(done) {
       loadEar();
       continue;
     }
-    if (k === 'retell') {
-      if (j.error) toast(t('没改写成功：{e}', { e: j.error.slice(0, 60) }));
-      else { EAR = null; route(); renderSheet(); toast(t('改写好了')); }
+    if (k === 'retell') {   // Claude's text is in the reader's language now; a switch waiting on it has happened
+      if (S.me?.lang !== LANG) { location.reload(); return; }
+      EAR = null;
+      route();
+      renderSheet();
       continue;
     }
     if (k === 'refresh' && !j.error && S.edition?.id !== prevEd) {
@@ -4167,7 +4166,6 @@ async function boot() {
   if (ne) followOn(ne);
   if (cur()) { Player.load(cur(), false); trackChanged(); }
   if (Object.values(S.jobs || {}).some((j) => j?.running)) poll();
-  setTimeout(staleLangNote, 1200);
 }
 
 applyLang();

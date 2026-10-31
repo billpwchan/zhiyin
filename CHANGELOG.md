@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Switching between Chinese and English turns the whole page over at once. What Claude wrote (the portrait, station
+  names and descriptions, reasons, asks and the name for your taste) is put into the new language first, and the page
+  waits for it instead of mixing the two. What Claude wrote is kept as written, so switching
+  back is instant and costs nothing, and text finished after a switch is filled in on the next visit.
 - Immersive follows the song. The light is low through the intro, steady in the verses and opens up in each chorus,
   where the line being sung is a size larger. The line the song turns on, chosen once per song by Claude, is held
   alone while it is sung, its letters arriving one after another. The progress bar marks the choruses, and a click

@@ -1,11 +1,13 @@
 """The listener's language: what the server says to them, what Claude writes for them, and turning text that was
 already written in one Chinese script into the other. Messages are written in Simplified Chinese where they are used
 and looked up here, the same way web/i18n.js does it for the page."""
+import contextlib
 import contextvars
 import functools
 import json
 import os
 import re
+import threading
 
 import opencc
 
@@ -76,12 +78,40 @@ def system() -> str:
 
 # A visitor trying the sample listener has no account to keep a language in: their browser's choice for this request.
 reader: contextvars.ContextVar[str | None] = contextvars.ContextVar("zhiyin_reader", default=None)
+# A job writes everything in the language it started in (pin), so a switch halfway through doesn't leave one document
+# in two languages; fill() then puts it into the new one.
+_pinned: contextvars.ContextVar[tuple[str, str] | None] = contextvars.ContextVar("zhiyin_pinned", default=None)
+
+
+def pin() -> None:
+    """From here on in this context, the listener's language stays what it is now."""
+    _pinned.set((store.uid(), of()))
+
+
+def repin() -> None:
+    """Inside a job, from here on: the language the listener reads now. A job that builds documents one after another
+    (a first run: the profile, then the stations) starts each in the language chosen by then."""
+    u = store.uid()
+    if (p := _pinned.get()) and p[0] == u:
+        _pinned.set((u, (accounts.prefs(u) or {}).get("lang") or system()))
+
+
+@contextlib.contextmanager
+def writing(lang: str):
+    """Inside it, Claude writes for a reader of `lang`, whatever the listener reads."""
+    held = _pinned.set((store.uid(), lang))
+    try:
+        yield
+    finally:
+        _pinned.reset(held)
 
 
 def of(uid: str | None = None) -> str:
     """The listener's language: their choice, set from their browser the first time they open the app."""
     if store.is_sample(uid) or (uid or store.uid()) == store.CARDS:
         return reader.get() or "en"
+    if (p := _pinned.get()) and p[0] == (uid or store.uid()):
+        return p[1]
     return (accounts.prefs(uid or store.uid()) or {}).get("lang") or system()
 
 
@@ -141,11 +171,12 @@ def _slots(obj, out: list, key: str | None = None) -> list:
 
 
 def convert_tree(obj, src: str, dst: str):
-    if src == dst or "en" in (src, dst) or obj is None:
+    """A document Claude wrote for a reader of `src`, as a reader of `dst` sees it (localize, piece by piece)."""
+    if obj is None:
         return obj
     obj = json.loads(json.dumps(obj))
     for c, k in _slots(obj, []):
-        c[k] = convert(c[k], src, dst)
+        c[k] = localize(c[k], src, dst)
     return obj
 
 
@@ -284,21 +315,6 @@ def for_reader(obj, lang: str):
     return obj
 
 
-def stale() -> bool:
-    """Written by Claude for a reader of the other language (Chinese vs English)."""
-    prof = store.read_json(store.PROFILE) or {}
-    return bool(prof.get("portrait")) and family(prof.get("lang", "zh-Hans")) != family(of())
-
-
-RETELL_SCHEMA = {"type": "object", "properties": {"out": {"type": "array", "items": {"type": "object", "properties": {
-    "i": {"type": "integer"}, "x": {"type": "string"}}, "required": ["i", "x"]}}}, "required": ["out"]}
-RETELL_SYSTEM = """You rewrite the text of one listener's private music recommender for them, now that they read @LANG@.
-Each input line is "index<TAB>text": a taste portrait, the names and descriptions of their listening lanes, and the
-one-line reason given for each recommended song. Return each line in natural @LANG@ with the same index and meaning,
-about as long as the original, plain and specific. Song titles, album names and artist names stay exactly as written.
-@TITLES@ Lane names stay short (@NAME@). Chinese takes full-width punctuation (，。：；？！). Add nothing about the
-listener, such as whether an artist is new to them: the page says that itself."""
-
 _CJK = "\u3400-\u9fff\u3040-\u30ff"
 _HALF = re.compile(rf"(?<=[{_CJK}》」』）])\s*([,;:?!])\s*|\s*([,;:?!])\s*(?=[{_CJK}《「『（])")
 _FULL = {",": "，", ";": "；", ":": "：", "?": "？", "!": "！"}
@@ -310,40 +326,201 @@ def zh_punct(text: str) -> str:
     return "".join(p if _TITLE.fullmatch(p) else _HALF.sub(lambda m: _FULL[m.group(1) or m.group(2)], p) for p in _TITLE.split(text))
 
 
-def retell(log) -> dict:
-    """Rewrite what Claude already wrote (portrait, lanes, reasons) in the listener's language, without rebuilding."""
-    from . import llm, rank
-    lang = of()
-    w = WRITE[lang]
-    system = (RETELL_SYSTEM.replace("@LANG@", w["lang"]).replace("@TITLES@", w["titles"]).replace("@NAME@", w["name"]))
-    docs = {f: store.read_json(f) for f in (store.PROFILE, store.EDITION, store.ASKS)}
-    units = [d for d in (docs[store.PROFILE], docs[store.EDITION], *(docs[store.ASKS] or [])) if d]
-    units = [d for d in units if family(d.get("lang", "zh-Hans")) != family(lang)]
-    todo = [(d, c, k) for d in units for c, k in _slots(d, [])]
-    log(tr("改写 {n} 段", n=len(todo)))
-    chunks = [todo[i:i + 120] for i in range(0, len(todo), 120)]
+# ---------- what Claude wrote, in the reader's language ----------
+# Claude writes for the language the listener reads when it writes, and that text is kept as written. A listener who
+# switches between Chinese and English reads it through a per-listener table of translations (store.TRANSLATIONS,
+# {lang: {written: translated}}), filled in by fill() for what they would otherwise read in the other language. The
+# Chinese scripts need no table: OpenCC turns one into the other as the text is served.
+_QUOTED = re.compile(r"《[^》]*》|〈[^〉]*〉|“[^”]*”|「[^」]*」|『[^』]*』|\"[^\"]*\"")
+_HANZI = re.compile(r"[㐀-鿿぀-ヿ]+")
+_WORD = re.compile(r"[A-Za-z][A-Za-z'’-]+")
+# English prose has these; a run of names in Chinese text ("Gareth.T、Kiri T、moon tang") doesn't
+_ZH_MARK = re.compile(r"[，。、；：！？]")   # Chinese punctuation: written as Chinese, even around English names
+_GLUE = re.compile(r"\b(the|a|an|and|or|of|to|in|on|at|for|with|from|by|is|are|was|it|its|you|your|this|that|but|as|like|than)\b", re.I)
+_tm_lock = threading.Lock()
+_tm_seen: dict = {}
 
-    def run(chunk):
-        prompt = "\n".join(f"{i}\t{c[k]}".replace("\n", " ") for i, (_, c, k) in enumerate(chunk))
-        res = llm.call(prompt, system, RETELL_SCHEMA, model="sonnet", timeout=600, retries=1)
-        for x in res["out"]:
-            if 0 <= x["i"] < len(chunk) and x["x"].strip():
-                _, c, k = chunk[x["i"]]
-                c[k] = x["x"].strip() if lang == "en" else zh_punct(x["x"].strip())
-                if k == "reason":
-                    c[k] = rank.about_them(c[k])
-    with store.Pool(3) as ex:   # each call bills the listener whose job this is
-        list(ex.map(run, chunks))
-    for d in units:
-        d["lang"] = lang
-    for f, d in docs.items():
-        now = store.read_json(f)
-        same = (f == store.PROFILE and (now or {}).get("built") == (d or {}).get("built")
-                or f == store.EDITION and (now or {}).get("id") == (d or {}).get("id")
-                or f == store.ASKS and [x.get("created") for x in now or []] == [x.get("created") for x in d or []])
-        if d and same:   # otherwise it was rebuilt meanwhile, already in the new language
-            store.write_json(f, d)
-    return {"lines": len(todo)}
+
+def written_in(text: str, lang: str) -> str | None:
+    """The language family a piece of Claude's text is in ("zh" or "en"), by what it is mostly written in outside the
+    titles it quotes; `lang`, the language it was written for, when it is too short to tell or only names; None for
+    text without words (a year, a count). A document written before a switch can hold both, so each piece is judged
+    by itself."""
+    rest = _QUOTED.sub(" ", text)
+    runs = _HANZI.findall(rest)
+    # a name ("The 周杰伦 years") weighs one word, a run of Chinese prose one per two characters
+    han, words = sum(1 if len(r) <= 4 else len(r) // 2 for r in runs), len(_WORD.findall(rest))
+    if not han and not words:
+        return None
+    if han >= 2 and han >= words or _ZH_MARK.search(rest) and (runs or family(lang) == "zh"):
+        return "zh"
+    if words >= 3 and words > 2 * han and _GLUE.search(rest) and not _ZH_MARK.search(rest):
+        return "en"
+    return family(lang)
+
+
+def _other(lang: str) -> str:
+    return "zh-Hant" if lang == "zh-Hans" else "zh-Hans"
+
+
+def _table() -> tuple[dict, dict]:
+    """The listener's translations, and the same read backwards ({lang: {translation: original}})."""
+    p = store.TRANSLATIONS
+    try:
+        st = p.stat()
+    except OSError:
+        return {}, {}
+    key = (st.st_ino, st.st_mtime_ns, st.st_size)
+    hit = _tm_seen.get(p)
+    if not hit or hit[0] != key:
+        tm = store.read_json(p) or {}
+        hit = _tm_seen[p] = (key, tm, {l: {t: s for s, t in m.items()} for l, m in tm.items() if isinstance(m, dict)})
+    return hit[1], hit[2]
+
+
+def _lookup(text: str, lang: str) -> str | None:
+    tm, back = _table()
+    got = (tm.get(lang) or {}).get(text)
+    if got:
+        return got
+    if lang != "en" and (got := (tm.get(_other(lang)) or {}).get(text)):
+        return convert(got, _other(lang), lang)
+    # a translation of something first written in this language (a station's name the edition took from the profile
+    # while the listener read the other one): the original, not a translation of the translation
+    for l, m in back.items():
+        if family(l) != family(lang) and (orig := m.get(text)):
+            return orig if lang == "en" else convert(orig, _other(lang), lang)
+    return None
+
+
+def localize(text, src: str, dst: str):
+    """Text Claude wrote for a reader of `src`, as a reader of `dst` sees it: from the table when it is in the other
+    language (as written while it has no entry yet), else in their Chinese script."""
+    if not isinstance(text, str) or not text:
+        return text
+    fam = written_in(text, src)
+    if fam and fam != family(dst):
+        return _lookup(text, dst) or text
+    if fam == "zh" and dst != "en":
+        return convert(text, src if family(src) == "zh" else _other(dst), dst)
+    return text
+
+
+def translated(text, src: str, dst: str):
+    """As localize(), but None for text the reader would get in the other language."""
+    if isinstance(text, str) and text and (fam := written_in(text, src)) and fam != family(dst) and not _lookup(text, dst):
+        return None
+    return localize(text, src, dst)
+
+
+def _docs() -> list[dict]:
+    """Everything Claude wrote for this listener and keeps: the portrait and stations, the edition, the name for their
+    taste and what they asked for. Each says which language it was written for (`lang`)."""
+    out = [d for d in (store.read_json(f) for f in (store.PROFILE, store.EDITION, store.IDENT)) if d]
+    return out + (store.read_json(store.ASKS) or [])
+
+
+def _texts(obj, key: str | None = None):
+    """(text, what it is) for every piece of written text in a document."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k in _NAMES:
+                continue
+            if isinstance(v, str):
+                if k in _TEXT_KEYS and v.strip():
+                    yield v, k
+            else:
+                yield from _texts(v, k)
+    elif isinstance(obj, list):
+        for v in obj:
+            if isinstance(v, str):
+                if key in _TEXT_KEYS and v.strip():
+                    yield v, key
+            else:
+                yield from _texts(v, key)
+
+
+def missing(lang: str | None = None) -> dict[str, str]:
+    """What this listener would read in the other language and the table can't put into theirs yet: {text: what it is}."""
+    lang = lang or of()
+    out: dict[str, str] = {}
+    for d in _docs():
+        for text, what in _texts(d):
+            fam = written_in(text, d.get("lang", "zh-Hans"))
+            if fam and fam != family(lang) and not _lookup(text, lang):
+                out.setdefault(text, what)
+    return out
+
+
+TRANSLATE_SCHEMA = {"type": "object", "properties": {"out": {"type": "array", "items": {"type": "object", "properties": {
+    "i": {"type": "integer"}, "x": {"type": "string"}}, "required": ["i", "x"]}}}, "required": ["out"]}
+TRANSLATE_SYSTEM = """You put the text of one listener's private music recommender into @LANG@, for that listener.
+Each input line is "index<TAB>kind<TAB>text". The kind says what the text is: headline (a one-line reading of their
+taste, @HEADLINE@), claim (@CLAIM@) and evidence (@EVIDENCE@) under it, paragraphs and threads (the rest of that
+reading), name (a station's name, @NAME@), label (a short name for their taste or for a period of it, @LABEL@),
+text (what that period of their listening was like), years (when that period was), blurb and when (what a station holds and when to play it), what
+and why (music kept out of the stations, and why), reason (why one song was picked, @REASON@), intent (what they asked
+for, @INTENT@).
+Write each the way someone who thought it in @LANG@ would: natural, plain and specific, with the same meaning, about
+as long as the original. Song titles, album names and artist names stay exactly as written. @TITLES@ Chinese takes
+full-width punctuation (，。：；？！). Add nothing about the listener, such as whether an artist is new to them: the
+page says that itself. Return every index."""
+CHUNK_CHARS = 2000   # under ten seconds of writing each; the chunks run side by side
+
+
+def fill(log=print, lang: str | None = None) -> dict:
+    """Put into this listener's language what they would otherwise read in the other one, keeping what Claude wrote as
+    it was (so switching back costs nothing and loses nothing), and drop entries for text no longer kept."""
+    from . import llm, rank
+    lang = lang or of()
+    todo = list(missing(lang).items())
+    got: dict[str, str] = {}
+    failed = None
+    if todo:
+        w = WRITE[lang]
+        system = TRANSLATE_SYSTEM
+        for k, v in (("LANG", w["lang"]), ("HEADLINE", w["headline"]), ("CLAIM", w["claim"]), ("EVIDENCE", w["evidence"]),
+                     ("NAME", w["name"]), ("LABEL", w["label"]), ("REASON", w["reason"]), ("INTENT", w["intent"]),
+                     ("TITLES", w["titles"])):
+            system = system.replace(f"@{k}@", v)
+        log(tr("改写 {n} 段", n=len(todo)))
+
+        def run(chunk):
+            prompt = "\n".join(f"{i}\t{what}\t{' '.join(text.split())}" for i, (text, what) in enumerate(chunk))
+            res = llm.call(prompt, system, TRANSLATE_SCHEMA, model="sonnet", timeout=300, retries=1, effort="low")
+            out = {}
+            for x in res["out"]:
+                if 0 <= x["i"] < len(chunk) and x["x"].strip():
+                    text, what = chunk[x["i"]]
+                    y = x["x"].strip() if lang == "en" else zh_punct(x["x"].strip())
+                    out[text] = rank.about_them(y) if what == "reason" else y
+            return out
+        for _ in range(2):   # once more for lines it left out or calls that failed
+            left = [x for x in todo if x[0] not in got]
+            if not left:
+                break
+            chunks, size, failed = [[]], 0, None
+            for x in left:
+                if chunks[-1] and size + len(x[0]) > CHUNK_CHARS:
+                    chunks.append([])
+                    size = 0
+                chunks[-1].append(x)
+                size += len(x[0])
+            with store.Pool(8) as ex:   # each call bills the listener whose job this is
+                for f in [ex.submit(run, c) for c in chunks]:
+                    try:
+                        got.update(f.result())
+                    except Exception as e:   # keep what came back; the rest is asked for again later
+                        failed = e
+    keep = {text for d in _docs() for text, _ in _texts(d)}
+    with _tm_lock:
+        tm = store.read_json(store.TRANSLATIONS) or {}
+        tm = {l: {s: t for s, t in m.items() if s in keep} for l, m in tm.items() if isinstance(m, dict)}
+        tm.setdefault(lang, {}).update(got)
+        store.write_json(store.TRANSLATIONS, tm)
+    if failed:
+        raise failed
+    return {"lines": len(todo), "left": [t for t, _ in todo if t not in got]}
 
 
 # ---------- messages ----------
@@ -512,9 +689,25 @@ HANT = {
 }
 
 
+class Msg(str):
+    """A message as the server said it, which can be said again in another language: a job's last line or error is
+    read after the listener may have switched."""
+    key = ""
+    kw: dict = {}
+
+
 def tr(text: str, lang: str | None = None, **kw) -> str:
     lang = lang or of()
     out = text if lang == "zh-Hans" else EN.get(text, text) if lang == "en" else HANT.get(text) or convert(text, "zh-Hans", "zh-Hant")
     if isinstance(out, tuple):
         out = out[0] if kw.get("n") == 1 else out[1]
-    return out.format(**kw) if kw else out
+    m = Msg(out.format(**kw) if kw else out)
+    m.key, m.kw = text, kw
+    return m
+
+
+def again(msg, lang: str | None = None):
+    """A message from tr() as this reader would be told it now; anything else as it is."""
+    if not isinstance(msg, Msg) or not msg.key:
+        return msg
+    return tr(msg.key, lang, **{k: again(v, lang) for k, v in msg.kw.items()})

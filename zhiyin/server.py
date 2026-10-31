@@ -206,6 +206,8 @@ def _start(kind: str, fn):
             j["step"] = step
 
     def run():
+        if kind != "retell":   # what it writes stays in one language if the listener switches meanwhile
+            i18n.pin()
         try:
             if kind in HEAVY:
                 try:
@@ -222,9 +224,11 @@ def _start(kind: str, fn):
                     _leave_line(j)
             else:
                 j["result"] = fn(log)
+            if kind != "retell":
+                _catch_up(log)
         except Exception as e:
             traceback.print_exc()
-            j["error"] = str(e)
+            j["error"] = e.args[0] if e.args and isinstance(e.args[0], i18n.Msg) else str(e)
         finally:
             j["running"] = False
             j["ended"] = time.time()
@@ -234,12 +238,25 @@ def _start(kind: str, fn):
     return j
 
 
+def _catch_up(log):
+    """A listener who switched language while a job wrote reads what it wrote in the new one as soon as it shows."""
+    was = i18n.of()
+    i18n.repin()
+    now = i18n.of()
+    if i18n.family(was) == i18n.family(now) or not i18n.missing(now) or llm.unavailable():
+        return
+    try:
+        i18n.fill(log, now)
+    except Exception:   # noqa: BLE001 - the next visit fills it in
+        traceback.print_exc()
+
+
 def _job_view(kind: str) -> dict | None:
     j = _jobs.get((store.uid(), kind))
     if not j:
         return None
-    return {"kind": kind, "running": j["running"], "error": j["error"], "msg": j["msg"], "step": j["step"],
-            "started": j["started"], "ended": j.get("ended")}
+    return {"kind": kind, "running": j["running"], "error": i18n.again(j["error"]), "msg": i18n.again(j["msg"]),
+            "step": j["step"], "started": j["started"], "ended": j.get("ended")}
 
 
 def _quota_reset() -> str:
@@ -368,7 +385,7 @@ KEEP_DAYS = 30
 FORGET_DAYS = 28    # unread this long and it goes; a hold below adds at most HOLD_DAYS, so nothing outlives KEEP_DAYS
 HOLD_DAYS = 2
 # Everything made from what YouTube's API returned for one listener. Their feedback, plays and asks are their own.
-FROM_YOUTUBE = ("LIBRARY", "GLIMPSE", "TAGS", "PROFILE", "PROFILES", "EDITION", "IDENT", "SIGNALS", "IMPLICIT")
+FROM_YOUTUBE = ("LIBRARY", "GLIMPSE", "TAGS", "PROFILE", "PROFILES", "EDITION", "IDENT", "SIGNALS", "IMPLICIT", "TRANSLATIONS")
 
 
 def _last_read(u: dict) -> float:
@@ -500,8 +517,9 @@ def _label(log):
 
 
 def _want_label():
-    """Start naming the listener's taste if it has no name in their language yet. Never in the way of anything."""
-    if store.is_sample() or ear.label() or llm.unavailable():
+    """Start naming the listener's taste if it has no name yet (one in the other language is translated, not replaced).
+    Never in the way of anything."""
+    if store.is_sample() or (store.read_json(store.IDENT) or {}).get("label") or llm.unavailable():
         return
     j = _jobs.get((store.uid(), "label"))
     if j and (j["running"] or (j["error"] and time.time() - j.get("ended", 0) < 1800)):
@@ -660,7 +678,7 @@ def _me() -> dict:
     ok = google.configured() and google.connected(u["id"])
     ne = u["prefs"].get("netease")
     return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "status": u["status"], "auth": AUTH,
-            "lang": i18n.of(u["id"]),
+            "lang": i18n.of(u["id"]), "lang_to": u["prefs"].get("lang_to"),
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
                        "error": u["prefs"].get("google_error"), "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1"},
             "setup_issue": u["prefs"].get("setup_issue"),
@@ -824,9 +842,7 @@ def _own_card() -> dict:
     n = sum(1 for t in library.load() if not t["long"])
     # the portrait's headline sits under the name on the card, as on the page
     prof = store.read_json(store.PROFILE) or {}
-    line = None if i18n.stale() else ((prof.get("portrait") or {}).get("headline") or None)
-    if line:
-        line = i18n.convert(line, prof.get("lang", "zh-Hans"), i18n.of())
+    line = i18n.translated((prof.get("portrait") or {}).get("headline") or None, prof.get("lang", "zh-Hans"), i18n.of())
     return {"label": rec["label"], "n": n, "since": int(rec["span"][0]), "lang": i18n.of(), "line": line}
 
 
@@ -1207,11 +1223,17 @@ def state():
                          t["artists"][0]["name"] if t["artists"] else ""])
     ed = store.read_json(store.EDITION)
     asks = store.read_json(store.ASKS) or []
-    edition.ground([p for l in (ed or {}).get("lanes", []) for p in l["picks"] + l.get("reserve", [])]
-                   + [p for a in asks for p in a["picks"]])
+    behind = {} if store.is_sample() else i18n.missing()
+    if not store.is_sample() and (accounts.prefs() or {}).get("lang_to") and not (_jobs.get((store.uid(), "retell")) or {}).get("running"):
+        try:   # a switch whose job was lost (the server restarted): take it up again
+            _start("retell", _settle)
+        except HTTPException:
+            pass
     if not store.is_sample() and (accounts.get() is None or accounts.get()["status"] == "ready"):
         _auto_refresh(ed)
         _auto_sync()
+        if behind:
+            _auto_settle(behind)
     out = {
         "portrait": prof.get("portrait"), "lanes": lanes, "focus": prof.get("focus"),
         "set_aside": [{"what": s["what"], "n": len(s["ranks"]), "why": s["why"]} for s in prof.get("set_aside", [])],
@@ -1220,20 +1242,22 @@ def state():
         "library": {"songs": sum(1 for t in tracks if not t["long"]), "mixes": sum(1 for t in tracks if t["long"]),
                     "synced": lib.get("synced"), "source": tracks[0]["source"] if tracks else None},
         "me": _me(), "jobs": jobs(), "owner_name": "" if store.is_sample() else (accounts.get(store.OWNER) or {}).get("name") or "",
-        "stale_lang": i18n.stale(),
+        "stale_lang": bool(behind),   # Claude's text not all in the reader's language yet: the card leaves it off
     }
-    rl = i18n.of()
-    if rl != "en":   # Claude's text was written in one Chinese script; show it in the reader's
-        pl = prof.get("lang", "zh-Hans")
-        for k in ("portrait", "lanes", "focus", "set_aside"):
-            out[k] = i18n.convert_tree(out[k], pl, rl)
-        out["edition"] = i18n.convert_tree(ed, (ed or {}).get("lang", "zh-Hans"), rl)
-        # editions before 10-27 copied the profile's script into a station's name and lines under the reader's label
-        for l in (out["edition"] or {}).get("lanes", []) + [x for x in [(out["edition"] or {}).get("focus")] if x]:
-            for k in ("name", "blurb", "when"):
-                if k in l:
-                    l[k] = i18n.convert(l[k], pl, rl)
-        out["asks"] = [i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in out["asks"]]
+    # Claude's text in the reader's language (from the translations table when written in the other) and script
+    rl, pl = i18n.of(), prof.get("lang", "zh-Hans")
+    for k in ("portrait", "lanes", "focus", "set_aside"):
+        out[k] = i18n.convert_tree(out[k], pl, rl)
+    out["edition"] = i18n.convert_tree(ed, (ed or {}).get("lang", "zh-Hans"), rl)
+    # editions before 10-27 copied the profile's script into a station's name and lines under the reader's label
+    for l in (out["edition"] or {}).get("lanes", []) + [x for x in [(out["edition"] or {}).get("focus")] if x]:
+        for k in ("name", "blurb", "when"):
+            if k in l:
+                l[k] = i18n.localize(l[k], pl, rl)
+    out["asks"] = [i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in out["asks"]]
+    # after the translations are found: they are of the reasons as written
+    edition.ground([p for l in (out["edition"] or {}).get("lanes", []) for p in l["picks"] + l.get("reserve", [])]
+                   + [p for a in out["asks"] for p in a["picks"]])
     for k in ("portrait", "lanes", "focus", "set_aside", "edition", "asks", "feedback", "not_me"):
         out[k] = _for_reader(out[k], rl)
     for row in timeline:
@@ -1391,7 +1415,7 @@ def ask_delete(b: AskDel):
     keep = [a for a in store.read_json(store.ASKS) or [] if b.created is not None and a.get("created") != b.created]
     store.write_json(store.ASKS, keep)
     rl = i18n.of()
-    return {"asks": _for_reader([i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in keep] if rl != "en" else keep, rl)}
+    return {"asks": _for_reader([i18n.convert_tree(a, a.get("lang", "zh-Hans"), rl) for a in keep], rl)}
 
 
 class Feedback(BaseModel):
@@ -1558,7 +1582,7 @@ def history_delete():
 def quality_view(days: int = Query(14, ge=1, le=365)):
     prof = store.read_json(store.PROFILE) or {}
     pl, rl = prof.get("lang", "zh-Hans"), i18n.of()
-    return {**quality.report(days), "names": {l["key"]: i18n.typeset(i18n.convert(l["name"], pl, rl), rl) for l in prof.get("lanes", [])}}
+    return {**quality.report(days), "names": {l["key"]: i18n.typeset(i18n.localize(l["name"], pl, rl), rl) for l in prof.get("lanes", [])}}
 
 
 class LaneSetting(BaseModel):
@@ -1668,33 +1692,79 @@ class Toggle(BaseModel):
     on: bool
 
 
+_lang_lock = threading.Lock()   # a switch asked for and one taking effect don't overwrite each other
+
+
 class LangReq(BaseModel):
     lang: str
 
 
 @app.post("/api/account/lang")
 def account_lang(b: LangReq):
+    """A switch happens at once when nothing Claude wrote needs putting into the new language; otherwise the page stays
+    in the old one until all of it is (_settle, a few seconds), then turns over whole: never half in each."""
     lang = i18n.norm(b.lang)
     if not lang:
         raise HTTPException(400, "lang")
-    accounts.set_prefs(store.uid(), lang=lang)
-    if i18n.stale() and not llm.unavailable():
+    uid = store.uid()
+    with _lang_lock:
+        if lang == i18n.of():
+            accounts.set_prefs(uid, lang_to=None)   # back to the one in use: a switch still being prepared is off
+            later = False
+        elif later := bool(i18n.missing(lang)) and not llm.unavailable():
+            accounts.set_prefs(uid, lang_to=lang)
+        else:
+            accounts.set_prefs(uid, lang=lang, lang_to=None)
+    if later:
         try:
-            _start("retell", i18n.retell)
+            _start("retell", _settle)
         except HTTPException:
-            pass
-    r = JSONResponse({"me": _me(), "jobs": jobs()})
+            pass   # already filling: it takes up lang_to when it ends
+    js = jobs()   # before _me(): a fill ending between the two would otherwise look finished with the switch still waiting
+    r = JSONResponse({"me": _me(), "jobs": js})
     r.set_cookie(i18n.COOKIE, lang, max_age=365 * 86400, samesite="lax", secure=google.public_url().startswith("https"))
     return r
 
 
-@app.post("/api/account/retell")
-def account_retell():
-    if not i18n.stale():
-        return jobs()
-    llm.require()
-    _start("retell", i18n.retell)
-    return jobs()
+def _settle(log):
+    """Fill the translations the listener's language (or the one they are switching to) lacks; a switch waiting on them
+    then happens, also when Claude failed (the rest is filled in later), so a choice is never left hanging."""
+    uid = store.uid()
+    while True:
+        p = accounts.prefs(uid) or {}
+        to = p.get("lang_to") or p.get("lang") or i18n.of()
+        try:
+            out, err = i18n.fill(log, to), None
+            for _ in range(2):   # a build that ended meanwhile wrote more in the old language
+                if not set(i18n.missing(to)) - set(out["left"]):
+                    break
+                out = i18n.fill(log, to)
+        except Exception as e:   # noqa: BLE001 - raised below once nothing else is waiting
+            out, err = None, e
+        with _lang_lock:
+            if (accounts.prefs(uid) or {}).get("lang_to") == to:
+                accounts.set_prefs(uid, lang=to, lang_to=None)
+            p = accounts.prefs(uid) or {}
+        if (p.get("lang_to") or p.get("lang")) == to:   # else they picked another meanwhile: that one next
+            if err:
+                raise err
+            return out
+
+
+def _auto_settle(behind: dict):
+    """Text written in the language a build started in, after the listener switched, or left untranslated when Claude
+    failed: filled in on their next visit. After a failure, or lines Claude twice left out, it waits an hour."""
+    uid = store.uid()
+    if any(j["running"] for (u, _), j in list(_jobs.items()) if u == uid):   # its _catch_up fills it in as it ends
+        return
+    j = _jobs.get((uid, "retell"))
+    if j and time.time() - j.get("ended", 0) < 3600 and (j["error"] or set(behind) <= set((j["result"] or {}).get("left", []))) \
+            or llm.unavailable():
+        return
+    try:
+        _start("retell", _settle)
+    except HTTPException:
+        pass
 
 
 @app.post("/api/account/sync-likes")

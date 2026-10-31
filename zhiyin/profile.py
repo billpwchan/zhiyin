@@ -625,6 +625,7 @@ def assign(profile: dict, batch: int = 150, workers: int = 4, only: set | None =
 
 
 def build(model: str = "opus", log=print) -> dict:
+    i18n.repin()
     llm.require()
     log(i18n.tr("给每首喜欢的歌标上听感和场景"))
     tag()
@@ -719,8 +720,14 @@ def rewrite_portrait(model: str = "opus", only_headline: bool = False) -> dict:
     what is known about them."""
     llm.require()
     prof = store.read_json(store.PROFILE)
-    if not prof or i18n.family(prof.get("lang", "zh-Hans")) != i18n.family(i18n.of()):
-        raise ValueError("no profile in this language: rebuild it")
+    if not prof:
+        raise ValueError("no profile: build it")
+    # in the profile's own language, so it stays one document in one; a reader of the other gets the translation
+    with i18n.writing(prof.get("lang", "zh-Hans")):
+        return _rewrite_portrait(prof, model, only_headline)
+
+
+def _rewrite_portrait(prof: dict, model: str, only_headline: bool) -> dict:
     if only_headline:
         from . import settings
         nm = settings.not_me()
@@ -730,8 +737,6 @@ def rewrite_portrait(model: str = "opus", only_headline: bool = False) -> dict:
         prof["portrait"] = {**po, "headline": headline(po, model, evidence(songs, store.read_json(store.TAGS) or {}))}
     else:
         prof["portrait"] = portrait(prof, model)
-    if prof.get("lang") != i18n.of():   # written in the reader's script now: the rest follows on serve
-        prof["portrait"] = i18n.convert_tree(prof["portrait"], i18n.of(), prof.get("lang", "zh-Hans"))
     store.write_json(store.PROFILE, prof)
     return prof["portrait"]
 

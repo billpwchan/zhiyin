@@ -55,7 +55,8 @@ the actual host/CDN and Anthropic account settings before publishing claims abou
 
 On the machine running Zhiyin:
 
-- your liked songs and when they were liked (if Google says so), the profile built from them, and each edition;
+- your liked songs and when they were liked (if Google says so), the profile built from them, and each edition, with
+  their translation into the other language once you switch between Chinese and English;
 - read from YouTube with the same read-only access, at most once a day along with the likes: the music you gave a
   thumbs-down, the music channels you subscribe to, and the songs in playlists you made (not the ones saved from
   Zhiyin's stations);
@@ -147,7 +148,7 @@ says so.
 |---|---|---|
 | YouTube Music (unauthenticated) | song and artist ids | radio, related songs, artist pages, playlists, cover art |
 | YouTube Data API, with your Google token | your likes, thumbs-down music, subscriptions and own playlists; song IDs and ratings when syncing likes; a title, description and song IDs when saving a station | read likes and the other signals, synchronize ratings, create a private playlist at your request |
-| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, the names, makers, dates and most frequent artists of the lists you keep in NetEase or QQ Music with the artists and a few titles of your own lists there, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, the lyrics of a song the first time it plays (to mark its chorus and the line it turns on), and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations, song parts and rewritten text |
+| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, the names, makers, dates and most frequent artists of the lists you keep in NetEase or QQ Music with the artists and a few titles of your own lists there, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, the lyrics of a song the first time it plays (to mark its chorus and the line it turns on), and, when you switch between English and Chinese, the portrait, stations and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations, song parts and translations of its own text |
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
 | NetEase Cloud Music | the playlist or profile id someone pasted to make a record without signing in, or to start stations from; the ids of the artists in it | read that public playlist and 听歌排行, and for a listener whose stations start from a profile or who added one on Your Ear, the other public playlists there once a week; other names of an artist (Eason Chan for 陈奕迅) to find its songs on YouTube Music |

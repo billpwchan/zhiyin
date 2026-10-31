@@ -94,12 +94,10 @@ def _song(t, x, lane, ang, nm) -> list:
 
 
 def label() -> str | None:
-    """The short name Claude gave this listener's taste, in the reader's script; None if it was written in the
-    other language."""
+    """The short name Claude gave this listener's taste, in the reader's language and script; None while it is only
+    in the other language."""
     d = store.read_json(store.IDENT) or {}
-    if not d.get("label") or i18n.family(d.get("lang")) != i18n.family(i18n.of()):
-        return None
-    return i18n.convert(d["label"], d.get("lang", "zh-Hans"), i18n.of())
+    return i18n.translated(d.get("label") or None, d.get("lang", "zh-Hans"), i18n.of())
 
 
 def build() -> dict:
@@ -127,7 +125,7 @@ def build() -> dict:
                 "real_dates": real, "stage": stage, "center": center(mine, tags), "label": label(), "built": time.time()}
     assign = prof.get("assign", {})
     pl = prof.get("lang", "zh-Hans")
-    lanes = {ln["key"]: i18n.convert(ln["name"], pl, rl) for ln in prof.get("lanes", [])}
+    lanes = {ln["key"]: i18n.localize(ln["name"], pl, rl) for ln in prof.get("lanes", [])}
     lane_of = {t["vid"]: (assign.get(t["vid"]) or ["none"])[0] for t in tracks}
     lane_of = {v: (k if k in lanes else "none") for v, k in lane_of.items()}
     ts = dict(zip((t["rank"] for t in tracks), _times(tracks)))   # by rank: a song liked twice sits on two rings
@@ -175,7 +173,7 @@ def build() -> dict:
     for er in (prof.get("portrait") or {}).get("eras", []):
         inside = [x for r, x in rank_t.items() if er["to_rank"] >= r >= er["from_rank"]]
         if inside:
-            eras.append({"years": er["years"], "label": i18n.convert(er["label"], pl, rl), "text": i18n.convert(er["text"], pl, rl),
+            eras.append({"years": er["years"], "label": i18n.localize(er["label"], pl, rl), "text": i18n.localize(er["text"], pl, rl),
                          "t0": round(min(inside), 3), "t1": round(max(inside), 3)})
     eras.sort(key=lambda e: e["t0"])   # the portrait lists them newest first; the page reads them oldest first
     mine = [t for t in tracks if not settings.is_not_me(t, nm)] or tracks
