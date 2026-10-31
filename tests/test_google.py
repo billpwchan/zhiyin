@@ -89,7 +89,7 @@ def test_oauth_callback_rejects_a_different_browser_before_exchanging_tokens(mon
     assert response.headers["location"] == "/?google=stale"
 
 
-def test_expired_google_data_is_removed_for_owner_accounts_even_during_grace_and_outages(monkeypatch):
+def test_expired_google_data_is_removed_even_during_grace_and_outages(monkeypatch):
     import time
     from zhiyin import cards
 
@@ -98,7 +98,7 @@ def test_expired_google_data_is_removed_for_owner_accounts_even_during_grace_and
     monkeypatch.setattr(cards, "drop", removed_cards.append)
     expired = []
     for i in range(4):
-        uid = accounts.redeem(accounts.invite(f"Expired review {i}", mine=i == 0))
+        uid = accounts.redeem(accounts.invite(f"Expired review {i}"))
         accounts.link_google(uid, f"expired-review-{i}", f"expired{i}@example.com", "Reviewer")
         accounts.set_status(uid, "ready")
         accounts.set_prefs(uid, synced=time.time() - 31 * 86400)

@@ -1954,14 +1954,12 @@ function accountHTML() {
     const state = !me.writes_back ? t('也能把电台存成 YouTube Music 歌单。打开时 Google 会再确认一次') : sy.pending ? (sy.error === 'quota' ? t('{n} 首等待同步：今天的额度用完了，{at}后继续', { n: sy.pending, at: quotaReset() }) : sy.error === 'reconnect' ? t('{n} 首等待同步：需要重新连接', { n: sy.pending }) : t('{n} 首等待同步', { n: sy.pending })) : sy.done ? t('已同步 {n} 首', { n: sy.done }) : t('在这里点 ♥，YouTube Music 里也会是喜欢');
     rows.push(`<li><span>${t('同步喜欢到 YouTube Music')}<small>${esc(state)}</small></span><button class="sw" role="switch" data-k="synclikes" aria-checked="${me.sync_likes}" aria-label="${t('同步喜欢')}"></button></li>`);
   }
-  if (me.mine && me.claude) {
+  if (me.owner && me.claude) {
     const c = me.claude;
     rows.push(`<li><span>Claude<small>${CLAUDE_SRC[c.source] ? CLAUDE_SRC[c.source](c) + usedLine(c.used) : t('还没配置。没有它，知音选不了歌：见 docs/self-hosting.md。')}</small></span><span>${c.source === 'worker' ? (c.online ? t('在线') : t('离线')) : ''}</span></li>`);
   }
   if (me.auth) {
-    // (a bookmark per account is for switching between your own accounts; everyone else just signs in with Google)
-    if (g.email && me.mine) rows.push(`<li><span>${t('这个账号的登录书签')}<small>${t('在别的浏览器里想一键进来，就把这个链接存成书签（那里要登着 {email}）。', { email: esc(g.email) })}</small>${linkHTML(`${location.origin}/auth/google/start?mode=login&as=${encodeURIComponent(g.email)}`)}</span><span></span></li>`);
-    else if (!g.email) rows.push(`<li><span>${t('在另一台设备上登录')}<small>${t('生成一个 14 天内有效的登录链接，发给自己。')}</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">${t('生成链接')}</button></li>`);
+    if (!g.email) rows.push(`<li><span>${t('在另一台设备上登录')}<small>${t('生成一个 14 天内有效的登录链接，发给自己。')}</small>${shownLink?.kind === 'device' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="device">${t('生成链接')}</button></li>`);
     rows.push(`<li><button class="row-act" data-k="logout">${t('退出登录')}</button></li>`);
     if (!me.owner) rows.push(`<li><span>${t('断开并删除我的数据')}<small>${t('撤销 Google 授权，删掉你的喜欢、电台和反馈。')}</small></span><button class="tb danger" data-k="delete">${t('删除')}</button></li>`);
   }
@@ -1977,13 +1975,12 @@ const FRIEND_KEY_NOTE = () => t('Claude 订阅按 Anthropic 的规定只给订�
 function friendsHTML() {
   if (!friends) { api('/api/users').then((r) => { friends = r.users; renderSheet(); }).catch(() => {}); return ''; }
   const others = S.me.claude?.others;
-  const list = friends.map((u) => `<li><span>${esc(u.mine ? u.email || t('你的另一个账号') : u.name)}<small>${u.mine && u.email ? `${t('你的另一个账号')} · ` : ''}${STATUS()[u.status] || u.status}${u.songs ? ` · ${t('{n} 首喜欢', { n: u.songs })}` : ''}${u.usd7 ? ` · ${t('近 7 天 ${usd}', { usd: u.usd7.toFixed(2) })}` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : t('还没来过')}</span></li>`).join('');
+  const list = friends.map((u) => `<li><span>${esc(u.name)}<small>${STATUS()[u.status] || u.status}${u.songs ? ` · ${t('{n} 首喜欢', { n: u.songs })}` : ''}${u.usd7 ? ` · ${t('近 7 天 ${usd}', { usd: u.usd7.toFixed(2) })}` : ''}</small></span><span>${u.last_seen ? ago(u.last_seen) : t('还没来过')}</span></li>`).join('');
   const add = others
     ? `<li><form class="invite" id="invite"><input name="name" placeholder="${t('朋友的名字')}" maxlength="20" autocomplete="off"><button class="tb">${t('生成邀请链接')}</button></form>${shownLink?.kind === 'invite' ? linkHTML(shownLink.url) : ''}</li>`
     : `<li><span>${t('邀请朋友前，先配置 Claude API key')}<small>${FRIEND_KEY_NOTE()}</small></span><span></span></li>`;
-  const mine = `<li><span>${t('加你自己的另一个账号')}<small>${t('另一个 YouTube Music 账号：用它自己的 Google 登录，喜欢和电台都分开，同样用你的 Claude。')}</small>${shownLink?.kind === 'mine' ? linkHTML(shownLink.url) : ''}</span><button class="tb" data-k="mine">${t('生成登录链接')}</button></li>`;
   return `<section class="sh-sec"><h3>${t('朋友')}</h3><p>${others ? t('每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到；他们的推荐用你的 API key 计费。') : t('每位朋友用自己的 YouTube Music 喜欢算推荐，彼此看不到。')}</p>
-    <ul class="plain">${list}${add}${mine}</ul></section>`;
+    <ul class="plain">${list}${add}</ul></section>`;
 }
 
 function langHTML() {
@@ -3632,7 +3629,6 @@ async function act(k, btn) {
     S.me = r;
     toast(on ? t('之后的喜欢会同步到 YouTube Music') : t('喜欢只记在知音，不再同步'));
   } else if (k === 'device') { const r = await api('/api/account/device', {}); shownLink = { kind: 'device', url: r.url }; renderSheet(); }
-  else if (k === 'mine') { const r = await api('/api/invite', { mine: true }); shownLink = { kind: 'mine', url: r.url }; friends = null; renderSheet(); }
   else if (k === 'copy') {
     const input = btn.parentElement.querySelector('input');
     try { await navigator.clipboard.writeText(input.value); toast(t('已复制')); } catch { input.select(); }

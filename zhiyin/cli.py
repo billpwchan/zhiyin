@@ -26,11 +26,9 @@ def main():
     p = sub.add_parser("service", help="keep the app (or, with --worker, the worker) running from login (macOS launchd)")
     p.add_argument("action", choices=["install", "uninstall", "status"])
     p.add_argument("--worker", action="store_true")
-    p = sub.add_parser("invite", help="make an invite link for a friend (or, with --owner, a sign-in link for yourself; "
-                                      "with --mine, another account of your own)")
+    p = sub.add_parser("invite", help="make an invite link for a friend (or, with --owner, a sign-in link for yourself)")
     p.add_argument("name", nargs="?", default="")
     p.add_argument("--owner", action="store_true")
-    p.add_argument("--mine", action="store_true", help="another account of yours: it runs on your Claude")
     sub.add_parser("users", help="who has joined")
     sub.add_parser("check-key", help="one tiny call on the server's API key, the way listeners' calls are made")
     p = sub.add_parser("stats", help="the way in, counted per day and by where people came from")
@@ -98,11 +96,10 @@ def main():
         getattr(service, a.action)(**({"worker": a.worker} if a.action == "install" else {}))
     elif a.cmd == "invite":
         from . import accounts, google, llm
-        if not (a.owner or a.mine) and llm.HOSTED and not llm.API_KEY:
+        if not a.owner and llm.HOSTED and not llm.API_KEY:
             raise SystemExit("set ANTHROPIC_API_KEY on the server first: a Claude subscription is for your own use, "
                              "so other listeners run on an API key (docs/self-hosting.md)")
-        tok = accounts.invite(a.name or ("me" if a.owner else "我的另一个账号" if a.mine else "friend"),
-                              uid=store.OWNER if a.owner else None, mine=a.mine)
+        tok = accounts.invite(a.name or ("me" if a.owner else "friend"), uid=store.OWNER if a.owner else None)
         print(f"{google.public_url()}/i/{tok}  (valid {accounts.INVITE_DAYS} days)")
     elif a.cmd == "users":
         from . import accounts, llm

@@ -172,8 +172,15 @@ def _migrate(con: sqlite3.Connection) -> None:
             _add_column(con, "usage", f"{c} integer not null default 0")
     if "src" not in {r[1] for r in con.execute("pragma table_info(waitlist)")}:   # the NetEase likes they joined from
         _add_column(con, "waitlist", "src text")
-    if "mine" not in {r[1] for r in con.execute("pragma table_info(users)")}:
-        con.execute("alter table users add column mine integer not null default 0")
+    if "mine" in {r[1] for r in con.execute("pragma table_info(users)")}:   # the owner's second accounts, until 2026-10-31
+        # they were named for what they no longer are; their address names them until they sign in again
+        con.execute("update users set name=email where mine=1 and coalesce(email, '') != '' "
+                    "and name in ('我的另一个账号', '我的另一個帳戶', 'My other account')")
+        try:
+            con.execute("alter table users drop column mine")
+        except sqlite3.OperationalError as e:   # another process dropped it a moment ago
+            if "no such column" not in str(e):
+                raise
     for t in ("feedback", "shown", "plays"):
         if "uid" not in {r[1] for r in con.execute(f"pragma table_info({t})")}:
             con.execute(f"alter table {t} add column uid text not null default '{OWNER}'")
@@ -193,14 +200,6 @@ def _add_column(con: sqlite3.Connection, table: str, col: str) -> None:
 
 def is_sample(uid: str | None = None) -> bool:
     return (uid or globals()["uid"]()) in (SAMPLE, SAMPLE_ZH)
-
-
-def is_owners(uid: str) -> bool:
-    """The owner, or another account the owner added for themselves (a second YouTube library): the owner listening."""
-    if uid == OWNER:
-        return True
-    r = db().execute("select mine from users where id=?", (uid,)).fetchone()
-    return bool(r and r["mine"])
 
 
 def now() -> float:

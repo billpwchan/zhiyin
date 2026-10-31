@@ -26,7 +26,6 @@ own users.
 |---|---|
 | you, on your Mac | your `claude` login there, a subscription or an API key |
 | you, on your server | your API key if the server has one; otherwise your subscription (a token on the server, or the Mac worker) |
-| another account of yours (a second YouTube library) | the same as you: it is still you listening |
 | anyone you invite, or who joins on an open seat | your API key on the server, billed to you per use |
 
 The server holds to this. Your subscription only ever runs your own calls, and inviting someone stays closed until
@@ -203,11 +202,9 @@ docker exec zhiyin zhiyin stats --days 7   # per source: visits, first listens, 
 Only counts per day are kept, never who. A visitor's source sits in a cookie for 30 days so a later join still
 counts for the link that brought them, and a shared card's link carries `?ref=card`.
 
-Have a second YouTube Music account of your own? In Settings, under Friends, "Add another account of yours" (or
-`zhiyin invite --mine`) makes a link for it. It is a separate account with its own Google sign-in, likes, stations
-and feedback; the only thing it shares with yours is that it runs on your Claude, so it needs no API key. Each
-account shows a sign-in bookmark under Account (`/auth/google/start?mode=login&as=<email>`) that opens it directly
-in a browser where that Google account is signed in.
+A second YouTube Music account of your own is one more listener: invite it like a friend, or let it join on an
+open seat. It has its own sign-in, likes, stations and feedback, and its calls run on the API key like any other
+listener's.
 
 ### 5. Start the audio worker
 

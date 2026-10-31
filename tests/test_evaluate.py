@@ -33,13 +33,12 @@ def test_each_arm_is_scored_on_the_same_songs_they_went_on_to_like():
     assert abs(r["per_read_usd"]["opus"] - 0.1) < 1e-9
 
 
-def test_only_the_owners_own_accounts_are_read():
+def test_only_the_owner_is_read():
     accounts.redeem(accounts.invite("friend"))
-    mine = accounts.redeem(accounts.invite("me again", mine=True))
     con = store.db()
     con.execute("update users set status='ready'")
     con.commit()
-    assert set(evaluate.owner_accounts()) <= {store.OWNER, mine} and mine in evaluate.owner_accounts()
+    assert evaluate.owner_accounts() == [store.OWNER]
 
 
 def test_a_like_from_after_the_window_is_reported_beside_it_not_scored():

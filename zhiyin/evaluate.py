@@ -133,8 +133,8 @@ def _dir() -> Path:
 
 
 def owner_accounts() -> list[str]:
-    """The owner and their own other accounts: the only listeners these checks may read."""
-    return [r["id"] for r in store.db().execute("select id from users where (id=? or mine=1) and status='ready'", (store.OWNER,))]
+    """The owner, the only listener these checks may read."""
+    return [r["id"] for r in store.db().execute("select id from users where id=? and status='ready'", (store.OWNER,))]
 
 
 def screen_build(windows: int = 4, size: int = 60, min_train: int = 200, log=print) -> None:

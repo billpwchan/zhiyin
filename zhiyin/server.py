@@ -375,7 +375,7 @@ def _last_read(u: dict) -> float:
 
 def _unread_too_long(u: dict) -> bool:
     # Local imports belong to their operator; OAuth-derived libraries follow the same retention rule for everyone.
-    if (store.is_owners(u["id"]) and not u.get("google_sub")) or u["status"] == "new":
+    if (u["id"] == store.OWNER and not u.get("google_sub")) or u["status"] == "new":
         return False
     if any(j["running"] for (uid, _), j in list(_jobs.items()) if uid == u["id"]):
         return False   # a slow read may be about to land; deleting under it would leave its files behind
@@ -424,7 +424,7 @@ def _forget_stale(users: list[dict]) -> set[str]:
             print(f"zhiyin: likes of {u['id']} not re-read in {KEEP_DAYS} days; deleted from "
                   f"{time.strftime('%Y-%m-%d %H:%M', time.localtime(start))} unless a read works first", flush=True)
         return forgotten
-    listeners = sum(1 for u in users if not store.is_owners(u["id"]) or u.get("google_sub"))
+    listeners = sum(1 for u in users if u["id"] != store.OWNER or u.get("google_sub"))
     if len(stale) > 3 and len(stale) > listeners / 4:
         # many at once means reading is broken for everyone (a changed OAuth client, Google down), not that they left:
         # hold off a little for the operator to fix it, never past KEEP_DAYS
@@ -463,7 +463,7 @@ def _scheduler():
                         _start("setup", _setup)   # the server restarted in the middle of a first run
                     elif (u["status"] == "error" and u["prefs"].get("setup_fails", 0) < 3
                           and _can_read(u) and not llm.unavailable(u["id"])
-                          and (store.is_owners(u["id"]) or not llm.API_KEY
+                          and (u["id"] == store.OWNER or not llm.API_KEY
                                or llm.first_run_left(u["id"], (u["prefs"].get("last_sync") or {}).get("songs", 0)) > 0)
                           and not (j and (j["running"] or time.time() - j.get("ended", 0) < 1800))):
                         _start("setup", _setup)   # a first run that failed, e.g. while Claude was out
@@ -650,14 +650,14 @@ def _join_state() -> str:
 
 def _me() -> dict:
     if store.is_sample():
-        return {"uid": store.uid(), "sample": True, "name": "", "owner": False, "mine": False, "status": "ready",
+        return {"uid": store.uid(), "sample": True, "name": "", "owner": False, "status": "ready",
                 "auth": AUTH, "lang": i18n.of(), "google": {"configured": google.configured(), "connected": False,
                                                            "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1"},
                 "join": _join_state(), "sync": {}, "claude": None}
     u = accounts.get() or {"id": store.uid(), "name": "", "status": "ready", "prefs": {}, "email": None}
     ok = google.configured() and google.connected(u["id"])
     ne = u["prefs"].get("netease")
-    return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "mine": store.is_owners(u["id"]), "status": u["status"], "auth": AUTH,
+    return {"uid": u["id"], "name": u["name"], "owner": u["id"] == store.OWNER, "status": u["status"], "auth": AUTH,
             "lang": i18n.of(u["id"]),
             "google": {"configured": google.configured(), "connected": ok, "email": u.get("email"),
                        "error": u["prefs"].get("google_error"), "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1"},
@@ -995,10 +995,9 @@ def logout(request: Request):
 
 
 @app.get("/auth/google/start")
-def google_start(request: Request, mode: str = "connect", write: int = 0, yt: int = 0, src: str = "",
-                 as_: Annotated[str, Query(alias="as", max_length=254)] = ""):
-    """mode=login&as=<email> is a bookmark that goes straight back into that listener's account. mode=join is
-    signing up with Google in one step (no invite), asking only to read YouTube; write=1 adds writing likes back.
+def google_start(request: Request, mode: str = "connect", write: int = 0, yt: int = 0, src: str = ""):
+    """mode=join is signing up with Google in one step (no invite), asking only to read YouTube; write=1 adds writing
+    likes back.
     mode=join&src=163 comes from a NetEase or QQ Music card (/api/card/follow): Google is asked only who they are."""
     if not google.configured():
         raise HTTPException(503, i18n.tr("Google 登录还没配置", i18n.from_request(request)))
@@ -1037,10 +1036,9 @@ def google_start(request: Request, mode: str = "connect", write: int = 0, yt: in
     store.kv_set(f"oauth:{state}", {"v": verifier, "connect": connect, "join": join, "register": register, "uid": uid,
                                     "t": time.time(), "ne": ne if join else None,
                                     "lang": i18n.from_request(request), "write_on": asked_write})
-    named = "" if connect else as_
-    hint = named or ((accounts.get(uid) or {}).get("email") if uid else None)
+    hint = (accounts.get(uid) or {}).get("email") if uid else None
     lang = i18n.of(uid) if uid else i18n.from_request(request)
-    r = RedirectResponse(google.auth_url(state, challenge, connect, hint, pick=not named, write=write, lang=lang), 303)
+    r = RedirectResponse(google.auth_url(state, challenge, connect, hint, write=write, lang=lang), 303)
     r.set_cookie("zy_o", state, max_age=900, httponly=True, samesite="lax", secure=google.public_url().startswith("https"))
     return r
 
@@ -1727,7 +1725,6 @@ def card_follow(b: LinkReq, request: Request):
 
 class InviteReq(BaseModel):
     name: str = ""
-    mine: bool = False   # another account of the owner's own
 
 
 def _owner_only():
@@ -1738,9 +1735,6 @@ def _owner_only():
 @app.post("/api/invite")
 def invite(body: InviteReq):
     _owner_only()
-    if body.mine:   # it runs on your Claude like your main account, so it needs no API key
-        tok = accounts.invite(body.name.strip()[:20] or i18n.tr("我的另一个账号"), mine=True)
-        return {"url": f"{google.public_url()}/i/{tok}", "days": accounts.INVITE_DAYS}
     if not llm.API_KEY:
         raise HTTPException(409, i18n.tr("先在服务器上配置 Claude API key：你的 Claude 订阅只能你自己用"))
     name = body.name.strip()[:20]
@@ -1759,8 +1753,7 @@ def users():
             continue
         with store.as_user(u["id"]):
             lib = store.read_json(store.LIBRARY) or {}
-        out.append({"name": u["name"], "mine": bool(u.get("mine")), "email": u["email"] if u.get("mine") else None,
-                    "status": u["status"], "last_seen": u["last_seen"], "created": u["created"],
+        out.append({"name": u["name"], "status": u["status"], "last_seen": u["last_seen"], "created": u["created"],
                     "songs": sum(1 for t in lib.get("tracks", []) if not t["long"]), "usd7": llm.spent(u["id"])})
     return {"users": out}
 

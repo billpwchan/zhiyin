@@ -59,16 +59,15 @@ def test_the_shared_key_keeps_to_its_pool_and_its_pace(hosted, monkeypatch):
     assert "这个月" in llm.unavailable("u5")
 
 
-def test_another_account_of_the_owners_runs_on_the_owners_claude(hosted):
+def test_only_the_owner_runs_on_the_owners_claude(hosted):
     from zhiyin import accounts
-    mine = accounts.redeem(accounts.invite("", mine=True))
     friend = accounts.redeem(accounts.invite("Ming"))
     hosted(worker=True)
-    assert llm.source(mine) == "worker" and llm.source(friend) is None
+    assert llm.source(store.OWNER) == "worker" and llm.source(friend) is None
     hosted(oauth=True)
-    assert llm.source(mine) == "subscription" and llm.source(friend) is None
+    assert llm.source(store.OWNER) == "subscription" and llm.source(friend) is None
     hosted(oauth=True, key=True)
-    assert llm.source(mine) == "key" and llm.source(friend) == "key"
+    assert llm.source(store.OWNER) == "key" and llm.source(friend) == "key"
 
 
 def test_on_the_mac_it_is_whatever_claude_is_signed_in_with():
@@ -149,11 +148,10 @@ def test_listeners_on_the_key_get_sonnet_where_the_owner_keeps_opus(hosted, monk
     used = []
     monkeypatch.setattr(llm, "run_api", lambda prompt, system, schema, model, *a: used.append(model) or {"data": {}, "usd": 0})
     friend = accounts.redeem(accounts.invite("Ming"))
-    mine = accounts.redeem(accounts.invite("", mine=True))
-    for u in (friend, mine, store.OWNER):
+    for u in (friend, store.OWNER):
         with store.as_user(u):
             llm.call("p", "s", {}, model="opus")
-    assert used == ["sonnet", "opus", "opus"]
+    assert used == ["sonnet", "opus"]
 
 
 def test_a_first_setup_has_its_own_allowance_and_leaves_the_day_alone(hosted, monkeypatch):

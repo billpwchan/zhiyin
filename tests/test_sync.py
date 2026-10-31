@@ -61,23 +61,22 @@ def test_a_sibling_site_cannot_post():
     assert c.post("/auth/logout", headers={"sec-fetch-site": "same-origin"}).status_code == 200
 
 
-def test_your_own_second_account_needs_no_api_key(monkeypatch):
+def test_inviting_anyone_needs_an_api_key(monkeypatch):
     from fastapi import HTTPException
     from zhiyin import llm
     monkeypatch.setattr(llm, "API_KEY", False)
     with store.as_user(store.OWNER):
-        assert "/i/" in server.invite(server.InviteReq(mine=True))["url"]
         with pytest.raises(HTTPException) as e:
             server.invite(server.InviteReq(name="Ming"))
     assert e.value.status_code == 409
 
 
-def test_a_bookmark_signs_in_as_the_named_account_in_one_click(monkeypatch):
+def test_signing_in_asks_which_google_account_and_speaks_the_apps_language(monkeypatch):
     from urllib.parse import parse_qs, urlparse
     from zhiyin import google
     monkeypatch.setattr(google, "client", lambda: {"id": "c"})
-    q = parse_qs(urlparse(google.auth_url("s", "x", False, "me@example.com", pick=False)).query)
-    assert q["login_hint"] == ["me@example.com"] and "prompt" not in q
+    q = parse_qs(urlparse(google.auth_url("s", "x", False, "me@example.com")).query)
+    assert q["login_hint"] == ["me@example.com"] and q["prompt"] == ["select_account"]
     assert parse_qs(urlparse(google.auth_url("s", "x", False)).query)["prompt"] == ["select_account"]
     assert parse_qs(urlparse(google.auth_url("s", "x", True, lang="zh-Hant")).query)["hl"] == ["zh-TW"]
     assert "hl" not in parse_qs(urlparse(google.auth_url("s", "x", True)).query)
@@ -91,8 +90,7 @@ def test_starting_a_sign_in_leaves_the_database_writable(monkeypatch):
     monkeypatch.setattr(google, "client", lambda: {"id": "c"})
     c = TestClient(server.app)
     for _ in range(2):
-        assert c.get("/auth/google/start", params={"mode": "login", "as": "me@example.com"},
-                     follow_redirects=False).status_code == 303
+        assert c.get("/auth/google/start", params={"mode": "login"}, follow_redirects=False).status_code == 303
     raw = sqlite3.connect(store.DB, timeout=1)
     raw.execute("insert or replace into kv values ('probe', '1')")
     raw.commit()
@@ -103,7 +101,7 @@ def test_a_tab_left_open_as_another_account_cannot_write(monkeypatch):
     from zhiyin import accounts
     monkeypatch.setattr(server, "AUTH", True)
     a = accounts.redeem(accounts.invite("A"))
-    b = accounts.redeem(accounts.invite("B", mine=True))
+    b = accounts.redeem(accounts.invite("B"))
     c = TestClient(server.app)
     c.cookies.set(accounts.COOKIE, accounts.new_session(b))
     stale = c.post("/api/feedback", json={"vid": "abc", "action": "like"}, headers={"X-Zhiyin-Uid": a})
@@ -390,12 +388,10 @@ def test_likes_not_read_again_in_30_days_are_deleted_but_the_account_stays(monke
     old, now = time.time() - 29 * 86400, time.time()
     gone = accounts.redeem(accounts.invite("Gone"))
     here = accounts.redeem(accounts.invite("Here"))
-    mine = accounts.redeem(accounts.invite("Mine", mine=True))
-    for u in (gone, here, mine):
+    for u in (gone, here):
         accounts.set_status(u, "ready")
     accounts.set_prefs(gone, synced=old, google_error="revoked", ref="x")
     accounts.set_prefs(here, synced=now - 3 * 86400)
-    accounts.set_prefs(mine, synced=old)
     accounts.set_prefs(store.OWNER, synced=old)
     with store.as_user(gone):
         store.write_json(store.LIBRARY, {"tracks": [{"vid": "a"}]})
@@ -405,7 +401,7 @@ def test_likes_not_read_again_in_30_days_are_deleted_but_the_account_stays(monke
     con.execute("insert into feedback (uid, vid, action, ts) values (?, 'a', 'like', 0)", (gone,))
     con.commit()
     try:
-        users = [accounts.get(u) for u in (store.OWNER, gone, here, mine)]
+        users = [accounts.get(u) for u in (store.OWNER, gone, here)]
         store.kv_set("forget_from", None)
         assert server._forget_stale(users) == set()   # a server that just got this rule waits a few days first
         assert accounts.get(gone)["status"] == "ready"
@@ -416,7 +412,7 @@ def test_likes_not_read_again_in_30_days_are_deleted_but_the_account_stays(monke
         with store.as_user(gone):
             assert not store.LIBRARY.exists() and not store.GLIMPSE.exists() and store.ASKS.exists()
         assert store.db().execute("select count(*) from feedback where uid=?", (gone,)).fetchone()[0] == 1
-        assert accounts.get(here)["status"] == accounts.get(mine)["status"] == "ready"
+        assert accounts.get(here)["status"] == "ready"
         assert server._forget_stale([accounts.get(gone)]) == set()   # nothing left to forget: it is new again
 
         # most listeners unread at once is the connection breaking, not people leaving: nothing is deleted
@@ -591,8 +587,7 @@ def test_only_the_owner_sees_who_else_listens(monkeypatch):
     from zhiyin import accounts
     monkeypatch.setattr(server, "AUTH", True)
     friend = accounts.redeem(accounts.invite("Ming"))
-    second = accounts.redeem(accounts.invite("", mine=True))
-    for uid in (friend, second):   # the owner's own second account is a listener too, not the admin
+    for uid in (friend,):
         c = TestClient(server.app)
         c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
         assert c.get("/api/users").status_code == 403

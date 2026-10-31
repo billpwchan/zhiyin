@@ -76,14 +76,12 @@ def joined() -> int:
     return store.db().execute("select count(*) from users where json_extract(prefs, '$.joined') = 1").fetchone()[0]
 
 
-def invite(name: str, uid: str | None = None, mine: bool = False) -> str:
-    """A new listener (or a sign-in link for an existing one, e.g. the owner on a new server). `mine` is another
-    account of the owner's own, which runs on the owner's Claude."""
+def invite(name: str, uid: str | None = None) -> str:
+    """A new listener (or a sign-in link for an existing one, e.g. the owner on a new server)."""
     con = store.db()
     if uid is None:
         uid = "u" + secrets.token_hex(4)
-        con.execute("insert into users(id, name, created, status, mine) values (?, ?, ?, 'new', ?)",
-                    (uid, name.strip(), time.time(), int(mine)))
+        con.execute("insert into users(id, name, created, status) values (?, ?, ?, 'new')", (uid, name.strip(), time.time()))
     elif name.strip():
         con.execute("update users set name=? where id=? and coalesce(name, '')=''", (name.strip(), uid))
     token = secrets.token_urlsafe(18)

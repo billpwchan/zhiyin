@@ -67,7 +67,7 @@ def test_each_account_keeps_its_own_language_and_reads_its_own_script(monkeypatc
     from zhiyin import accounts, server, store
     monkeypatch.setattr(server, "AUTH", True)
     a = accounts.redeem(accounts.invite("A"))
-    b = accounts.redeem(accounts.invite("B", mine=True))
+    b = accounts.redeem(accounts.invite("B"))
     for uid in (a, b):
         with store.as_user(uid):
             store.write_json(store.PROFILE, {"lang": "zh-Hans", "lanes": [], "portrait": {"headline": "从〈后来〉开始的听感", "paragraphs": []}})

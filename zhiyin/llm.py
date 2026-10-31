@@ -114,7 +114,7 @@ def source(uid: str | None = None) -> str | None:
         return None   # the sample listener never spends anyone's Claude
     if not HOSTED:
         return "here"
-    if store.is_owners(uid):
+    if uid == store.OWNER:
         if API_KEY:
             return "key"
         if OAUTH:
@@ -127,12 +127,12 @@ def unavailable(uid: str | None = None) -> str | None:
     """Why this listener's calls can't run right now, or None."""
     uid = uid or store.uid()
     src = source(uid)
-    mine = store.is_owners(uid)
+    owner = uid == store.OWNER
     if src is None:
-        return i18n.tr("服务器上还没有配置 Claude" if mine else "主人还没有为其他听众配置 Claude API key", i18n.of(uid))
+        return i18n.tr("服务器上还没有配置 Claude" if owner else "主人还没有为其他听众配置 Claude API key", i18n.of(uid))
     if src == "worker" and not worker_online():
         return i18n.tr("Mac 不在线（睡着或关机了）", i18n.of(uid))
-    if src == "key" and not mine:   # the owner's calls are theirs, outside the pool shared with listeners
+    if src == "key" and not owner:   # the owner's calls are theirs, outside the pool shared with listeners
         if pool_spent(30) >= POOL_USD:
             return i18n.tr("这个月大家共用的 Claude 额度用完了，过几天会恢复", i18n.of(uid))
         if _background.get() and pool_spent(1) >= 2 * POOL_USD / 30:
@@ -140,12 +140,12 @@ def unavailable(uid: str | None = None) -> str | None:
         if uid == store.CARDS:
             if spent(uid, days=1) >= CARD_DAILY_USD:
                 return i18n.tr("今天起名字的额度用完了，明天再来起名", i18n.of(uid))
-        elif not mine and (r := _first_run.get()) is not None:
+        elif (r := _first_run.get()) is not None:
             if first_run_left(uid, r["songs"]) <= 0:
                 return i18n.tr("第一次准备用完了它的 Claude 额度；额度按 30 天计算，过些天再试", i18n.of(uid))
-        elif not mine and spent(uid, days=1, source="key") >= DAILY_USD:
+        elif spent(uid, days=1, source="key") >= DAILY_USD:
             return i18n.tr("你今天的 Claude 额度用完了，明天再来", i18n.of(uid))
-    if HOSTED and mine and spent(uid, days=1) >= OWNER_DAILY_USD:
+    if HOSTED and owner and spent(uid, days=1) >= OWNER_DAILY_USD:
         return i18n.tr("今天的 Claude 额度（${cap}）用完了，明天再来", i18n.of(uid), cap=f"{OWNER_DAILY_USD:g}")
     return None
 
@@ -160,7 +160,7 @@ def left(uid: str | None = None) -> float | None:
     """What a listener's calls on the key may still spend now (their day, or their first setup's allowance), in list-price
     dollars: a batch costs half, so it goes twice as far. None when nothing here caps them."""
     uid = uid or store.uid()
-    if source(uid) != "key" or store.is_owners(uid):
+    if source(uid) != "key" or uid == store.OWNER:
         return None
     if (r := _first_run.get()) is not None:
         room = first_run_left(uid, r["songs"])
@@ -172,7 +172,7 @@ def left(uid: str | None = None) -> float | None:
 def view(uid: str) -> dict:
     src = source(uid)
     out = {"source": src, "online": worker_online() if src == "worker" else src is not None, "others": API_KEY}
-    if store.is_owners(uid):   # what their own Claude use came to: they pay for it
+    if uid == store.OWNER:   # what their own Claude use came to: they pay for it
         out["used"] = {k: used(uid, d) for k, d in (("today", 1), ("week", 7))}
     return out
 
@@ -182,11 +182,11 @@ def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout:
     uid = store.uid()
     require(uid)
     src = source(uid)
-    mine = store.is_owners(uid)
-    if src == "key" and not mine:
+    owner = uid == store.OWNER
+    if src == "key" and not owner:
         model = KEY_MODEL[model]
     # the owner asked for the best picks whatever they cost (2026-10-27): more thinking on their own calls
-    effort = effort or ("high" if mine else "medium")
+    effort = effort or ("high" if owner else "medium")
     try:
         if src == "worker":
             req = {"prompt": prompt, "system": system, "schema": schema, "model": model, "timeout": timeout,
@@ -208,7 +208,7 @@ def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout:
 
 
 def _tally(uid: str, src: str) -> str:
-    if src == "key" and store.is_owners(uid):
+    if src == "key" and uid == store.OWNER:
         return "key:owner"   # not the listeners' pool (pool_spent)
     return "key:first" if src == "key" and _first_run.get() is not None else src
 
