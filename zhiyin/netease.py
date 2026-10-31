@@ -205,5 +205,5 @@ def aliases(aid: int) -> list[str]:
     a = (d.get("data") or {}).get("artist") or {}
     out = [x for x in [*(a.get("alias") or []), *(a.get("transNames") or []), a.get("trans") or ""] if x and isinstance(x, str)]
     ALIASES.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(out, ensure_ascii=False))
+    store.write_json(path, out)
     return out

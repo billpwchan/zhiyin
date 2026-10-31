@@ -360,7 +360,7 @@ def _recheck_later(vid: str, title: str, artists: list[str], album: str, dur: fl
             new = resolve(vid, title, artists, album, dur)
             cur = json.loads(_path(vid).read_text())
             out = new if new.get("found") and new.get("words") else {**cur, "rechecked": time.time()}
-            _path(vid).write_text(json.dumps(out, ensure_ascii=False))
+            store.write_json(_path(vid), out)
         except Exception:
             pass
         finally:
@@ -386,7 +386,7 @@ def get(vid: str, title: str, artists: list[str], album: str = "", dur: float = 
         return json.loads(path.read_text()) if path.exists() else {"vid": vid, "found": False}
     try:
         d = resolve(vid, title, artists, album, dur)
-        path.write_text(json.dumps(d, ensure_ascii=False))
+        store.write_json(path, d)
         return d
     finally:
         ev.set()
@@ -450,7 +450,7 @@ def translate_later(vid: str, to: str = "zh") -> bool:
         except Exception:
             d[f"tr_failed_{to}"] = True
         finally:
-            path.write_text(json.dumps(d, ensure_ascii=False))
+            store.write_json(path, d)
             _tr_running.discard(key)
     # the listener who pressed play is the one whose Claude translates
     threading.Thread(target=contextvars.copy_context().run, args=(run,), daemon=True).start()

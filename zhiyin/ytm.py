@@ -66,7 +66,7 @@ def _cached(kind: str, key: str, ttl: float, fn):
                 raise
             time.sleep(2 ** (attempt + 1))
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False))
+    store.write_json(path, data)
     return data
 
 

@@ -346,7 +346,7 @@ def videos(uid: str, vids: list[str]) -> dict[str, dict]:
                     "title": sn.get("title") or "", "channel": sn.get("channelTitle") or "",
                     "live": sn.get("liveBroadcastContent") not in (None, "none")}
             out[it["id"]] = info
-            (cache / f"{it['id']}.json").write_text(json.dumps(info, ensure_ascii=False))
+            store.write_json(cache / f"{it['id']}.json", info)
         for v in chunk:
             if v not in out:
                 (cache / f"{v}.json").unlink(missing_ok=True)   # gone from YouTube

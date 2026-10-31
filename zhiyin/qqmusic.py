@@ -273,5 +273,5 @@ def aliases(mid: str) -> list[str]:
     name = (s.get("basic_info") or {}).get("name") or ""
     out = [x for x in [(s.get("ex_info") or {}).get("foreign_name") or "", *name_parts(name)] if x and x != name]
     ALIASES.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(out, ensure_ascii=False))
+    store.write_json(path, out)
     return out

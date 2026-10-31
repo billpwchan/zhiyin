@@ -871,3 +871,33 @@ def test_old_lyrics_without_word_timing_are_looked_up_once_more_behind_the_scene
     assert kept["source"] == "LRCLIB" and kept["rechecked"]
     monkeypatch.setattr(lyrics, "resolve", lambda *a: pytest.fail("looked up again"))
     lyrics.get("oldlyric002", "t", ["a"])                                  # once is enough
+
+
+def test_a_singer_looked_up_while_their_names_are_being_saved_never_reads_a_half_written_file(monkeypatch):
+    # 2026-10-31: a NetEase first run failed when one thread read the alias file another was still writing
+    import pathlib
+    import threading
+    from zhiyin import netease
+    real = pathlib.Path.write_text
+    midway, go_on = threading.Event(), threading.Event()
+
+    def write_text(self, data, *a, **kw):
+        if self.parent == netease.ALIASES and not midway.is_set():
+            real(self, "", *a, **kw)        # the file as a reader would find it halfway through
+            midway.set()
+            go_on.wait(5)
+        return real(self, data, *a, **kw)
+
+    monkeypatch.setattr(pathlib.Path, "write_text", write_text)
+    monkeypatch.setattr(netease, "_get", lambda c, path, **p: {"code": 200, "data": {"artist": {"alias": [], "transNames": ["Eason Chan"]}}})
+    (netease.ALIASES / "77.json").unlink(missing_ok=True)
+    first = []
+    t = threading.Thread(target=lambda: first.append(netease.aliases(77)))
+    t.start()
+    assert midway.wait(5)
+    try:
+        assert netease.aliases(77) == ["Eason Chan"]
+    finally:
+        go_on.set()
+        t.join()
+    assert first == [["Eason Chan"]] and netease.aliases(77) == ["Eason Chan"]
