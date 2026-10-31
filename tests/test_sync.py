@@ -907,3 +907,27 @@ def test_a_singer_looked_up_while_their_names_are_being_saved_never_reads_a_half
         go_on.set()
         t.join()
     assert first == [["Eason Chan"]] and netease.aliases(77) == ["Eason Chan"]
+
+
+def test_a_korean_singer_qq_music_writes_in_chinese_is_found_under_their_own_name(monkeypatch):
+    from zhiyin import library, qqmusic, ytm
+    monkeypatch.setattr(qqmusic, "aliases", lambda mid: {"TY": ["태연"], "YR": ["이루마"]}.get(mid, []))
+
+    def qq(i, title, artist, mid, dur):
+        return {**_ne(i, title, artist, dur=dur, ar=[mid]), "source": "qq"}
+    hits = {
+        "太妍 Rain": [_hit("taeyeon001", "Rain", "TAEYEON", dur=223)],
+        "太妍 I": [_hit("taeyeonhan", "I", "태연", dur=210)],                      # her Hangul name, from QQ Music
+        "太妍 Fine": [_hit("taeyeonfar", "Fine", "TAEYEON", dur=212)],             # three seconds off: not proven
+        "李闰珉 Loanna": [_hit(f"other0000{i}", f"Song {i}", "Someone") for i in range(3)]
+                       + [_hit("yirumaloan", "Loanna", "Yiruma", dur=262)],       # too far down the search
+        "金范洙 그댄 행복에 살텐데": [_hit("kimbumsoo1", "그댄 행복에 살텐데", "Kim Bum Soo", dur=311)],   # a Korean title
+        "宋冬野 董小姐": [_hit("sunyanzi01", "董小姐", "Sun Yanzi", dur=200)],          # a Chinese singer's song by another
+    }
+    monkeypatch.setattr(ytm, "search", lambda q, kind="songs", limit=10: hits.get(q, []))
+    assert library.match_app(qq(1, "Rain", "太妍", "TY", 222))["vid"] == "taeyeon001"
+    assert library.match_app(qq(2, "I", "太妍", "TY", 210))["vid"] == "taeyeonhan"
+    assert library.match_app(qq(3, "Fine", "太妍", "TY", 209)) is None
+    assert library.match_app(qq(4, "Loanna", "李闰珉", "YR", 262)) is None
+    assert library.match_app(qq(5, "그댄 행복에 살텐데", "金范洙", "KB", 310))["vid"] == "kimbumsoo1"
+    assert library.match_app(qq(6, "董小姐", "宋冬野", "SD", 200)) is None

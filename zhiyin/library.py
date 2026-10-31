@@ -164,9 +164,17 @@ def sync_from_google(log=print, glimpsed=None) -> dict:
             "songs": sum(1 for t in recs if not t["long"]), "first": first}
 
 
-_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 _HAN_NAME = re.compile(r"[\u3400-\u9fff]{2,4}")
 _BRACKETED = re.compile(r"[(（]([^()（）]+)[)）]")
+_KANA_HANGUL = re.compile(r"[\u3040-\u30ff\uac00-\ud7af]")
+
+
+def _script(s: str) -> str:
+    """Hangul, kana, Chinese characters or Latin: 太妍 and 태연 are one singer in two scripts, not a cover."""
+    for name, rx in (("hangul", r"[\uac00-\ud7af]"), ("kana", r"[\u3040-\u30ff]"), ("han", r"[\u3400-\u9fff]")):
+        if re.search(rx, s):
+            return name
+    return "latin"
 
 
 def _bare(s: str) -> str:
@@ -219,7 +227,7 @@ def match_app(t: dict) -> dict | None:
     names = [a["name"] for a in t["artists"]]
     names += [x for n in names for x in qqmusic.name_parts(n)]   # 华莎 (화사): YouTube Music may go by either
     alias = None
-    for h in ytm.search(f"{names[0] if names else ''} {t['title']}", "songs", 6):
+    for pos, h in enumerate(ytm.search(f"{names[0] if names else ''} {t['title']}", "songs", 6)):
         if t["dur"] and h.get("dur") and abs(h["dur"] - t["dur"]) > DUR_TOL:
             continue
         if VERSION.search(h["title"]) and not VERSION.search(t["title"]):
@@ -233,13 +241,18 @@ def match_app(t: dict) -> dict | None:
             continue
         if _artist_sim(names, cand) >= 0.6:
             return h
-        if bool(_CJK.search(cand)) == bool(_CJK.search(" ".join(names))):
+        if _script(cand) == _script(" ".join(names)):
             continue
         if _artist_sim(_pinyin(names), cand) >= 0.9:
             return h
         if alias is None:
             alias = _aliases(t, 2)
         if alias and _artist_sim(alias, cand) >= 0.6:
+            return h
+        # QQ Music writes Korean and Japanese singers in Chinese (太妍 / TAEYEON, 李闰珉 / Yiruma) and knows them by
+        # their Hangul name: near the top of a search that named the song, its title at its length is that recording
+        if pos < 3 and t["dur"] and h.get("dur") and abs(h["dur"] - t["dur"]) <= 1.5 and (
+                _KANA_HANGUL.search(t["title"]) or any(_KANA_HANGUL.search(a) for a in alias)):
             return h
     return None
 
