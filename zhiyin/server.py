@@ -842,7 +842,8 @@ def _own_card() -> dict:
     n = sum(1 for t in library.load() if not t["long"])
     # the portrait's headline sits under the name on the card, as on the page
     prof = store.read_json(store.PROFILE) or {}
-    line = i18n.translated((prof.get("portrait") or {}).get("headline") or None, prof.get("lang", "zh-Hans"), i18n.of())
+    po = prof.get("portrait") or {}
+    line = i18n.translated(po.get("headline") or None, po.get("lang") or prof.get("lang", "zh-Hans"), i18n.of())
     return {"label": rec["label"], "n": n, "since": int(rec["span"][0]), "lang": i18n.of(), "line": line}
 
 
@@ -1247,7 +1248,7 @@ def state():
     # Claude's text in the reader's language (from the translations table when written in the other) and script
     rl, pl = i18n.of(), prof.get("lang", "zh-Hans")
     for k in ("portrait", "lanes", "focus", "set_aside"):
-        out[k] = i18n.convert_tree(out[k], pl, rl)
+        out[k] = i18n.convert_tree(out[k], (out[k] or {}).get("lang") or pl if k == "portrait" else pl, rl)
     out["edition"] = i18n.convert_tree(ed, (ed or {}).get("lang", "zh-Hans"), rl)
     # editions before 10-27 copied the profile's script into a station's name and lines under the reader's label
     for l in (out["edition"] or {}).get("lanes", []) + [x for x in [(out["edition"] or {}).get("focus")] if x]:

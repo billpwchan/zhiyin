@@ -336,11 +336,14 @@ def test_the_portrait_is_its_own_call_and_lands_beside_the_stations(monkeypatch)
     def fake(prompt, system, schema, **kw):
         props = schema["properties"]
         seen.append(next(iter(props)))
-        if "observations" in props:
-            return {"observations": [{"claim": "c", "evidence": "e"}], "eras": []}
-        if "drafts" in props:
-            assert "- c (e)" in prompt
-            return {"drafts": ["a", "b"], "headline": " h "}
+        if "core" in props:   # the reading, in English, which the writer then turns into the page
+            return {"core": "chords", "loves": [{"quality": "jazz chords", "evidence": "e", "ranks": [0]}], "loses": [],
+                    "listener": [], "tension": {"reading": "t", "evidence": "e"}, "constant": "k", "changes": "c",
+                    "eras": [{"from_rank": 0, "to_rank": 0, "years": "2026", "label": "L", "text": "T"}]}
+        if "sound" in props:
+            assert "- jazz chords Evidence: e Their songs that show it: \"玻璃\", Gareth.T" in prompt
+            return {"sound": [{"claim": "s", "detail": "《玻璃》"}], "observations": [{"claim": "c", "evidence": "e"}],
+                    "eras": [{"label": "l", "text": "t"}], "drafts": [], "headline": " h ", "names": [], "name": "和弦派。"}
         if "lanes" in props:
             return {"lanes": [{"key": "a", "name": "A", "english": "A", "blurb": "b", "when": "w", "sound": "s", "langs": ["yue"],
                                "energy": [1, 3], "seeds": [0], "core_artists": [], "explore_artists": [], "avoid": [],
@@ -354,5 +357,38 @@ def test_the_portrait_is_its_own_call_and_lands_beside_the_stations(monkeypatch)
         store.write_json(store.TAGS, {"liked000001": {"kind": "song", "lang": "yue", "scene": "x", "sound": "x", "mood": "x", "energy": 2}})
         prof = profile.build(log=lambda *a: None)
         assert prof["portrait"]["observations"][0]["claim"] == "c" and prof["assign"] == {"liked000001": ["a"]}
-        assert prof["portrait"]["headline"] == "h"
+        assert prof["portrait"]["headline"] == "h" and prof["portrait"]["sound"][0]["claim"] == "s"
+        assert prof["portrait"]["eras"] == [{"from_rank": 0, "to_rank": 0, "years": "2026", "label": "l", "text": "t"}]
+        assert prof["taste"]["core"] == "chords" and store.read_json(store.IDENT)["label"] == "和弦派"
+        assert "name" not in prof["portrait"]
         assert "portrait" not in profile.LANE_SCHEMA["properties"]
+
+
+def test_how_likes_sound_is_read_against_every_other_song_and_needs_enough_of_both():
+    import numpy as np
+    from zhiyin import audio
+    rng = np.random.default_rng(3)
+    jazz = np.zeros(512, dtype=np.float32)
+    jazz[0] = 1
+    con = audio._db()
+    for p in audio.SOUND_TEXTS:
+        v = jazz if p in audio.SOUND["jazz"] else rng.normal(size=512).astype(np.float32)
+        con.execute("insert or replace into textemb (text, emb) values (?, ?)", (p, v.astype(np.float16).tobytes()))
+    con.commit()
+    assert audio.sound(["sndmine0000"]) == []   # words embedded, no song heard yet
+    mine = [f"sndmine{i:04d}" for i in range(audio.SOUND_MIN)]
+    for i, vid in enumerate(mine + [f"sndrest{i:04d}" for i in range(2 * audio.SOUND_MIN)]):
+        v = rng.normal(size=512).astype(np.float32) + (jazz * 12 if vid in mine else 0)
+        con.execute("insert into audio (vid, emb, ts) values (?, ?, 0)", (vid, v.astype(np.float16).tobytes()))
+    con.commit()
+    try:
+        got = audio.sound(mine)
+        assert got[0]["word"] == "jazz" and got[0]["d"] > 1 and set(got[0]["songs"]) <= set(mine)
+        assert audio.sound(mine[:-1]) == []   # too few of theirs to say
+        con.execute("delete from textemb where text=?", (audio.SOUND["jazz"][0],))
+        con.commit()
+        assert audio.sound(mine) == []   # the words aren't embedded yet
+    finally:
+        con.execute("delete from audio where vid like 'snd%'")
+        con.execute(f"delete from textemb where text in ({','.join('?' * len(audio.SOUND_TEXTS))})", audio.SOUND_TEXTS)
+        con.commit()

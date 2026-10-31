@@ -170,10 +170,12 @@ def build() -> dict:
     t0, t1 = min(t_all), max(t_all)
     eras = []
     rank_t = ts
-    for er in (prof.get("portrait") or {}).get("eras", []):
+    po = prof.get("portrait") or {}
+    for er in po.get("eras", []):
         inside = [x for r, x in rank_t.items() if er["to_rank"] >= r >= er["from_rank"]]
         if inside:
-            eras.append({"years": er["years"], "label": i18n.localize(er["label"], pl, rl), "text": i18n.localize(er["text"], pl, rl),
+            el = po.get("lang") or pl
+            eras.append({"years": er["years"], "label": i18n.localize(er["label"], el, rl), "text": i18n.localize(er["text"], el, rl),
                          "t0": round(min(inside), 3), "t1": round(max(inside), 3)})
     eras.sort(key=lambda e: e["t0"])   # the portrait lists them newest first; the page reads them oldest first
     mine = [t for t in tracks if not settings.is_not_me(t, nm)] or tracks

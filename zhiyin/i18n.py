@@ -143,10 +143,10 @@ def convert(text, src: str, dst: str):
     return "".join(p if _TITLE.fullmatch(p) else _t2s.convert(p) for p in _TITLE.split(text))
 
 
-_TEXT_KEYS = {"headline", "paragraphs", "threads", "claim", "evidence", "label", "text", "name", "blurb", "when", "what", "why", "reason",
-              "intent", "sub", "lead", "years"}
+_TEXT_KEYS = {"headline", "paragraphs", "threads", "claim", "evidence", "detail", "label", "text", "name", "blurb", "when", "what", "why",
+              "reason", "intent", "sub", "lead", "years"}
 # names, and the listener's own words, stay as they are
-_NAMES = {"artists", "album", "title", "seeds", "core_artists", "explore_artists", "q", "avoid", "queries", "english"}
+_NAMES = {"artists", "album", "title", "seeds", "core_artists", "explore_artists", "q", "avoid", "queries", "english", "taste"}
 
 
 def _slots(obj, out: list, key: str | None = None) -> list:
@@ -416,7 +416,13 @@ def translated(text, src: str, dst: str):
 def _docs() -> list[dict]:
     """Everything Claude wrote for this listener and keeps: the portrait and stations, the edition, the name for their
     taste and what they asked for. Each says which language it was written for (`lang`)."""
-    out = [d for d in (store.read_json(f) for f in (store.PROFILE, store.EDITION, store.IDENT)) if d]
+    out = []
+    for d in (store.read_json(f) for f in (store.PROFILE, store.EDITION, store.IDENT)):
+        po = (d or {}).get("portrait")
+        if isinstance(po, dict) and po.get("lang"):   # a portrait rewritten since keeps the language it was written in
+            out += [{k: v for k, v in d.items() if k != "portrait"}, po]
+        elif d:
+            out.append(d)
     return out + (store.read_json(store.ASKS) or [])
 
 
@@ -456,8 +462,8 @@ TRANSLATE_SCHEMA = {"type": "object", "properties": {"out": {"type": "array", "i
     "i": {"type": "integer"}, "x": {"type": "string"}}, "required": ["i", "x"]}}}, "required": ["out"]}
 TRANSLATE_SYSTEM = """You put the text of one listener's private music recommender into @LANG@, for that listener.
 Each input line is "index<TAB>kind<TAB>text". The kind says what the text is: headline (a one-line reading of their
-taste, @HEADLINE@), claim (@CLAIM@) and evidence (@EVIDENCE@) under it, paragraphs and threads (the rest of that
-reading), name (a station's name, @NAME@), label (a short name for their taste or for a period of it, @LABEL@),
+taste, @HEADLINE@), claim (@CLAIM@) with evidence or detail (@EVIDENCE@) under it, paragraphs and threads (the rest
+of that reading), name (a station's name, @NAME@), label (a short name for their taste or for a period of it, @LABEL@),
 text (what that period of their listening was like), years (when that period was), blurb and when (what a station holds and when to play it), what
 and why (music kept out of the stations, and why), reason (why one song was picked, @REASON@), intent (what they asked
 for, @INTENT@).

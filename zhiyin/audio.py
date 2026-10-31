@@ -39,6 +39,46 @@ AXES = {
     "vocal": ("song with prominent lead vocals, 人声为主", "instrumental music with no vocals, 纯音乐 没有人声"),
 }
 
+# What a song sounds like, in words the model hears reliably in a 30-second preview (instruments, voice, production,
+# groove, style), each said three ways because one phrasing alone is noisy. Never tempo, key or chords: shared
+# audio-text models can't hear those. Checked on the owner's likes 2026-11-01 against the rest of the songs heard:
+# the songs each word scores highest on are the ones a listener would name; falsetto, chants and idol dance tracks
+# failed that check and were left out.
+SOUND = {
+    "electric piano (Rhodes)": ("electric piano Rhodes chords", "warm Rhodes keyboard", "wurlitzer electric piano"),
+    "jazz": ("jazz harmony", "jazz trio", "jazzy seventh chords"),
+    "gospel": ("gospel chords and choir", "gospel piano", "soulful gospel"),
+    "neo-soul": ("neo soul groove", "neo-soul with lazy drums", "soulful R&B groove"),
+    "laid-back groove": ("laid-back groove", "relaxed mid-tempo groove", "unhurried easy groove"),
+    "lo-fi beat": ("lo-fi hip hop beat", "lofi chill beat with vinyl crackle", "bedroom lofi"),
+    "piano": ("solo piano", "piano-led song", "acoustic piano chords"),
+    "saxophone": ("saxophone solo", "smooth saxophone", "jazz saxophone"),
+    "funk bass": ("slap funky bass line", "groovy bass guitar", "funk bass groove"),
+    "bossa nova": ("bossa nova", "brazilian bossa nova guitar", "samba jazz"),
+    "city pop": ("japanese city pop", "80s city pop with funky guitar", "retro funk pop"),
+    "acoustic guitar": ("acoustic guitar strumming", "fingerpicked acoustic guitar", "acoustic guitar ballad"),
+    "strings": ("string orchestra", "lush strings section", "violins and cellos"),
+    "brass": ("brass section horns", "trumpets and trombones", "big band horns"),
+    "live band": ("live band with real drums", "full band playing together", "live drums and bass"),
+    "soft close-up vocal": ("soft breathy intimate vocal close to the microphone", "quiet whispered singing",
+                            "gentle conversational singing voice"),
+    "belted vocal": ("powerful belting vocals", "big dramatic vocal climax", "singer hitting loud high notes with full power"),
+    "rap": ("rap verses", "hip hop rapping", "fast rapping over a beat"),
+    "808 bass": ("heavy 808 bass", "booming sub bass", "trap 808 kick and bass"),
+    "trap hi-hats": ("trap hi-hats rolling", "trap beat", "fast hi-hat rolls"),
+    "EDM drop": ("EDM drop", "electronic dance drop with big synths", "festival dance music"),
+    "four-on-the-floor": ("four on the floor dance beat", "disco beat", "house beat"),
+    "bright synth-pop": ("bright synth pop", "shiny synthesizers", "80s synth pop"),
+    "distorted rock guitar": ("distorted electric guitars", "rock band", "loud rock song"),
+    "dense, layered production": ("dense layered production", "wall of sound", "busy maximal production"),
+    "sparse arrangement": ("sparse minimal arrangement", "minimal production with few instruments", "stripped back song"),
+    "dark and aggressive": ("dark aggressive song", "intense menacing beat", "hard aggressive energy"),
+    "playful and bouncy": ("playful bouncy song", "cheerful quirky pop", "fun bright upbeat"),
+    "melancholic": ("melancholic slow song", "sad quiet song", "wistful mournful mood"),
+    "big ballad build": ("slow ballad that builds to a big chorus", "emotional power ballad", "dramatic ballad with strings"),
+}
+SOUND_TEXTS = [p for ps in SOUND.values() for p in ps]
+
 
 def _db():
     con = store.db()
@@ -98,7 +138,7 @@ def ensure(tracks: list[dict], log=print, timeout: int = 1800, itunes_budget: in
     """Embed whatever lacks a vector (and any new text prompts), in a child process. Returns its summary."""
     todo = missing(tracks)
     have = set(text_vectors())
-    texts = [x for x in texts if x not in have]
+    texts = [x for x in dict.fromkeys([*texts, *SOUND_TEXTS]) if x not in have]
     if not todo and not texts:
         return {"todo": 0}
     payload = [{"vid": t["vid"], "title": t.get("title") or "", "artists": [a["name"] if isinstance(a, dict) else a for a in t.get("artists") or []],
@@ -196,6 +236,40 @@ def axis_scores(m: np.ndarray) -> dict[str, np.ndarray]:
         if pos in tv and neg in tv:
             out[name] = unit(m) @ unit(tv[pos]) - unit(m) @ unit(tv[neg])
     return out
+
+
+SOUND_MIN = 80    # of their songs with a vector: fewer and the differences are noise
+SOUND_D = 0.15    # an effect this small is real across hundreds of songs but no one would hear it
+
+
+def sound(vids: list[str]) -> list[dict]:
+    """How these songs sound next to every other song the app has heard (mostly songs found for listeners of the same
+    kinds of music, so this is what sets them apart within their genres): for each SOUND word they lean towards or
+    away from, the effect size d (their songs' mean minus the rest's, in standard deviations) and their songs it is
+    strongest in, strongest first. Words whose difference could be chance (under 1.65 standard errors) are left out."""
+    tv = text_vectors()
+    if any(p not in tv for p in SOUND_TEXTS):
+        return []
+    mine = set(vids)
+    rows = _db().execute("select vid, emb from audio where emb is not null").fetchall()
+    if not rows:
+        return []
+    ids = [r["vid"] for r in rows]
+    m = unit(np.stack([np.frombuffer(r["emb"], dtype=np.float16).astype(np.float32) for r in rows])) if rows else None
+    inside = np.array([v in mine for v in ids])
+    n1, n2 = int(inside.sum()), int((~inside).sum())
+    if m is None or n1 < SOUND_MIN or n2 < SOUND_MIN:
+        return []
+    out = []
+    for word, prompts in SOUND.items():
+        s = (m @ unit(np.stack([tv[p] for p in prompts])).T).mean(axis=1)
+        a, b = s[inside], s[~inside]
+        d = float((a.mean() - b.mean()) / (np.sqrt((a.var() + b.var()) / 2) or 1))
+        se = np.sqrt((n1 + n2) / (n1 * n2) + d * d / (2 * (n1 + n2)))
+        if abs(d) >= SOUND_D and abs(d) > 1.65 * se:
+            top = np.argsort(-s[inside])[:6] if d > 0 else []
+            out.append({"word": word, "d": round(d, 2), "songs": [str(np.array(ids)[inside][i]) for i in top]})
+    return sorted(out, key=lambda x: -abs(x["d"]))
 
 
 def pack(v: np.ndarray, basis: np.ndarray, scale: float) -> str:
@@ -442,7 +516,7 @@ def _main():
     drain(map(via_itunes, second[:budget]), None)
 
     have = {r["text"] for r in con.execute("select text from textemb")}
-    texts = [x for x in [x for pair in AXES.values() for x in pair] + list(extra_texts) if x not in have]
+    texts = [x for x in dict.fromkeys([x for pair in AXES.values() for x in pair] + SOUND_TEXTS + list(extra_texts)) if x not in have]
     if texts:
         with torch.no_grad():
             e = unit(model(texts=texts).float().cpu().numpy()).astype(np.float16)

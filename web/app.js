@@ -2915,7 +2915,9 @@ const whenLiked = (y) => (EAR?.real_dates ? monthIn(y) : t('{y} 年前后', { y:
 // a record placed by release date (QQ Music, which shows nobody when a song was liked) says when each came out instead
 const whenPlaced = (y) => (EAR?.dates === 'released' ? t('{when}发行', { when: monthIn(y) }) : whenLiked(y));
 const sinceText = (first) => (EAR?.dates === 'released' ? t('{a}–{b} 年的歌', { a: first, b: yearOf(EAR.span[1]) }) : t('{y} 年至今', { y: first }));
-const songByTitle = (t) => EAR?.list.findLast((s) => s.title === t) || EAR?.list.findLast((s) => s.title.startsWith(t));
+// YouTube writes many Japanese titles as "まつり - Matsuri": either half names the song
+const songByTitle = (t) => EAR?.list.findLast((s) => s.title === t) || EAR?.list.findLast((s) => s.title.startsWith(t))
+  || EAR?.list.findLast((s) => s.title.split(' - ').includes(t));
 // 《title》 (“title” in English) in the portrait and the facts plays that like
 const playable = (text) => (EAR?.pics ? esc(text) : esc(text).replace(/《([^》]+)》|“([^”]+)”/g, (m, a, b) => {
   const s = songByTitle((a ?? b).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
@@ -3214,6 +3216,7 @@ function renderEar() {
   if (typing) MK.link = typing.value;
   const refocus = typing && document.activeElement === typing;
   const po = S.portrait, full = !!(po && S.lanes.length) && !g;
+  const ears = full && po.sound?.length;   // a reading of what they love in the music takes the facts' place
   // The name of their taste heads the page; Claude's portrait sentence follows it. Before the name exists (or
   // without one) the portrait's first sentence heads it, as it always did.
   const name = EAR?.label;
@@ -3248,7 +3251,7 @@ function renderEar() {
         ${lede ? `<p class="lede${g && EAR.roast ? ' roast' : ''}">${g && EAR.roast ? `<span class="rk">${t('Claude 锐评')}</span>` : ''}${esc(lede)}</p>` : ''}
         <div class="meta-row"><p class="meta-line num">${meta}</p>${canShare ? `<button class="tb share" data-k="share">${I.share}<span>${t('分享')}</span></button>` : ''}</div>
       </div>
-      <div class="facts" id="facts">${EAR?.list.length ? factsHTML() : earFailed ? '' : skeleton}</div>
+      ${ears ? soundHTML(po) : `<div class="facts" id="facts">${EAR?.list.length ? factsHTML() : earFailed ? '' : skeleton}</div>`}
       ${earFailed ? '' : `<div class="rec-l">
         <div class="disc ${songs ? '' : 'loading'}" id="disc" aria-label="${t('你的喜欢，按年份一圈一圈往外长，按口味分成扇区')}">
           <canvas></canvas><svg class="disc-svg"></svg><div class="hub" id="hub"></div><div class="tip"></div>
@@ -3283,6 +3286,7 @@ function renderEar() {
 // Claude's reading of the listener: each thing it noticed beside the data that shows it. Profiles built before
 // 2026-11 have prose and threads instead.
 function portraitHTML(po) {
+  if (!po.observations?.length && !po.paragraphs?.length) return '';
   const body = po.observations?.length
     ? `<ol class="reads">${po.observations.map((o) => `<li><p class="claim">${playable(o.claim)}</p><p class="ev">${playable(o.evidence)}</p></li>`).join('')}</ol>`
     : `<div class="portrait">
@@ -3290,7 +3294,12 @@ function portraitHTML(po) {
           ${po.paragraphs.length > 1 ? `<button class="tb readmore" data-k="readmore">${t('读完整段')}</button>` : ''}</div>
         ${po.threads.length ? `<div class="threads"><h3>${t('一直没变的')}</h3><ol class="threads">${po.threads.map((x) => `<li>${playable(x)}</li>`).join('')}</ol></div>` : ''}
       </div>`;
-  return `<section class="sec"><h2>${t('细说你的口味')}</h2>${body}</section>`;
+  return `<section class="sec"><h2>${po.sound?.length ? t('你怎么听歌') : t('细说你的口味')}</h2>${body}</section>`;
+}
+
+// What they love in the music, beside the record: hovering one lights its songs there.
+function soundHTML(po) {
+  return `<ol class="loves" id="loves">${po.sound.map((x) => `<li><p class="claim">${playable(x.claim)}</p><p class="ev">${playable(x.detail)}</p></li>`).join('')}</ol>`;
 }
 
 // the re-roll button rides on the name's last word (or character), so it never wraps onto a line by itself
@@ -3557,6 +3566,12 @@ function bindDisc(box) {
     const vids = EAR.facts[+f.dataset.f].vids;
     f.onmouseenter = () => { $('#facts').classList.add('dim'); f.classList.add('on'); highlight(vids); };
     f.onmouseleave = () => { $('#facts').classList.remove('dim'); f.classList.remove('on'); highlight(null); };
+  });
+  $$('#loves li').forEach((li) => {
+    const vids = $$('[data-play]', li).map((a) => a.dataset.play);
+    if (!vids.length) return;
+    li.onmouseenter = () => { $('#loves').classList.add('dim'); li.classList.add('on'); highlight(vids); };
+    li.onmouseleave = () => { $('#loves').classList.remove('dim'); li.classList.remove('on'); highlight(null); };
   });
   $$('#facts .lg').forEach((s) => {
     const g = EAR.facts[+s.dataset.f].groups[+s.dataset.g];

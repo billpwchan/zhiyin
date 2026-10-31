@@ -1,72 +1,91 @@
 {
  "portrait": {
-  "headline": "你每隔一两年换一种语言听歌，唯一回过头的是日本。",
+  "headline": "你一直在找同一首歌，每次换一种语言。",
+  "sound": [
+   {
+    "claim": "曲风换了好几轮，你认的一直是底下的和弦。",
+    "detail": "这类爵士和弦会多叠几个音，听着悬着不落地。Antonio Carlos Jobim 的《Wave》和 Fujii Kaze 的《死ぬのがいいわ - Shinunoga E-Wa》隔了几十年，用的是同一类和弦。"
+   },
+   {
+    "claim": "你要的歌手贴着麦克风唱，几乎不用力。",
+    "detail": "Chet Baker 的《Almost Blue》差不多是耳语，Frank Ocean 的《Thinkin Bout You》靠假声往上飘。敢放开嗓子的歌手，你只留了 Nina Simone 这样少数几位。"
+   },
+   {
+    "claim": "推着歌往前走的是贝斯，而且从来不赶。",
+    "detail": "鼓和贝斯得是真人弹的，慢一点也没关系。D'Angelo 的《Untitled (How Does It Feel)》和 Men I Trust 的《Tailwhip》，你听进去的是那条贝斯线。"
+   },
+   {
+    "claim": "你留下的歌手，多半自己写歌自己管编曲。",
+    "detail": "听韩语那两年你一首偶像团体的歌都没留。中文这边是陳綺貞 (Cheer Chen) 的《旅行的意義 (Travel is Meaningful)》，日语这边是 Fujii Kaze 的《きらり - Kirari》。"
+   },
+   {
+    "claim": "一喊、一炸、一开始说唱，你就走了。",
+    "detail": "电子舞曲的爆点、体育场摇滚、飙高音，还有以说唱为主的歌，你几乎一首没留。说唱只有在一首唱着的 R&B 里客串一段时，你才放过。"
+   }
+  ],
   "observations": [
    {
-    "claim": "你一次只待在一种语言里，待够了就整个搬走。",
-    "evidence": "2018 年你喜欢的歌全是英文，2020 年全是韩语。换到下一年，前一年的语言就几乎找不到了。"
+    "claim": "你一次只认真听一种语言，听透了才换下一种。",
+    "evidence": "第一年留下的全是日语，后来韩语占了整整两年，再往后是国语和粤语，然后才轮到英语和纯器乐。"
    },
    {
-    "claim": "一个歌手你听透几首就走，不收全集。",
-    "evidence": "Frank Ocean、IU、Eason Chan 都是集中留下 4 首，之后再没出现过。"
+    "claim": "喜欢上一个声音，你会顺着它一路找回源头。",
+    "evidence": "几个月里 Chet Baker、Bill Evans、Norah Jones 接连进来，还有一首 1950 年的录音。差不多一半的歌，你点的时候已经发行十年以上。"
    },
    {
-    "claim": "日本你去了两次，第二次才开始听新歌。",
-    "evidence": "2015 年你收的是 Anri、Tatsuro Yamashita 这些八十年代城市流行。十年后回来，收的是 Gen Hoshino 这些还在出歌的人。"
+    "claim": "一个人你认真听一阵就放手，从来不追全集。",
+    "evidence": "Frank Ocean、IU、Laufey 都是一口气留下 4 首，之后再没添过。没有哪位歌手在你这里超过 4 首。"
    },
    {
-    "claim": "你最近开始喜欢热闹一点的歌了。",
-    "evidence": "你收的歌里节奏快的本来就少，一共 9 首，其中 5 首是近一年的 Fujii Kaze、Gen Hoshino 和 Vaundy。"
-   },
-   {
-    "claim": "中文歌是你绕了一大圈才去的地方。",
-    "evidence": "日语、葡萄牙语、英语、韩语都听过一轮之后，第一首粤语歌到 2021 年才出现，是 Gareth.T 和 Eason Chan。"
+    "claim": "你安静到底以后，转身就想动起来。",
+    "evidence": "2023 到 2024 年你留的是《Peace Piece》这种几乎没声音的钢琴，去年底起换成了《Matsuri》《odoriko》这种能跟着点头的歌。"
    }
   ],
   "eras": [
    {
     "from_rank": 0,
-    "to_rank": 14,
+    "to_rank": 8,
     "years": "2025–2026",
-    "label": "回到日本",
-    "text": "你又回到日语歌，这次听的是现在的人，Gen Hoshino 和 Fujii Kaze 还带你跟着节奏动了起来。"
+    "label": "日本灵歌流行",
+    "text": "藤井风和星野源带着福音钢琴、放克贝斯和假声进来，是你这几年留得最有劲的一批歌。"
    },
    {
-    "from_rank": 15,
-    "to_rank": 50,
-    "years": "2023–2025",
-    "label": "钢琴和老爵士",
-    "text": "你没再固定在哪个国家，开始听没有人声的钢琴和五十年代的爵士，Chet Baker 和 Laufey 前后挨着。"
+    "from_rank": 9,
+    "to_rank": 20,
+    "years": "2024–2025",
+    "label": "朦胧独立乐队",
+    "text": "你从爵士回到轻声唱的乐队，听 Men I Trust，也听接着做城市流行的新一代日本乐队。"
    },
    {
-    "from_rank": 52,
-    "to_rank": 82,
-    "years": "2021–2022",
-    "label": "中文时期",
-    "text": "粤语情歌先来，台湾独立乐团接上，Eason Chan 和 陳綺貞 各占了一阵。"
+    "from_rank": 21,
+    "to_rank": 39,
+    "years": "2023–2024",
+    "label": "爵士标准曲与钢琴",
+    "text": "你最安静的一段，听独奏和三重奏钢琴、Chet Baker 的耳语，最后落在新的爵士流行上。"
    },
    {
-    "from_rank": 83,
+    "from_rank": 40,
+    "to_rank": 67,
+    "years": "2022–2023",
+    "label": "台湾独立到民谣",
+    "text": "陳綺貞和落日飞车之后，你转去听英语民谣和 Nujabes 的爵士采样。"
+   },
+   {
+    "from_rank": 68,
     "to_rank": 107,
-    "years": "2019–2020",
-    "label": "首尔那两年",
-    "text": "你几乎只听韩国人唱歌，先是 Zion.T 他们的 R&B，后来换成 IU 和独立乐团。"
+    "years": "2019–2021",
+    "label": "亚洲 R&B 与情歌",
+    "text": "先是韩语 R&B 的假声和 IU，再到国语 R&B 和陈奕迅那种钢琴伴着的粤语情歌。"
    },
    {
     "from_rank": 109,
-    "to_rank": 135,
-    "years": "2017–2019",
-    "label": "新灵魂乐",
-    "text": "你转进英文 R&B，D'Angelo 和 Frank Ocean 一个接一个听过去。"
-   },
-   {
-    "from_rank": 136,
     "to_rank": 162,
-    "years": "2015–2017",
-    "label": "城市流行和波萨",
-    "text": "最早是八十年代的日本城市流行，然后顺着轻柔的吉他一路听到巴西，Anri 之后是 Joao Gilberto。"
+    "years": "2015–2018",
+    "label": "城市流行、波萨、新灵魂",
+    "text": "起点是山下达郎那代的日本城市流行，接着是波萨诺瓦，再到 D'Angelo 和 Frank Ocean。"
    }
-  ]
+  ],
+  "lang": "zh-Hans"
  },
  "lanes": [
   {
@@ -1583,6 +1602,133 @@
   ],
   "ZS6p32gX_yk": [
    "japan_groove"
+  ]
+ },
+ "taste": {
+  "core": "The songs this person keeps sit on jazz harmony: the major-seventh and ninth chords of 1980s city pop, the guitar chords of bossa nova, the Rhodes of neo-soul, the voicings of Bill Evans, and the gospel piano of Fujii Kaze. Over those chords is a singer who stays close to the mic and rarely pushes: Chet Baker's near-whisper, João and Astrud Gilberto, Frank Ocean's and Zion.T's falsetto, Norah Jones's low smoky voice. The groove is unhurried and usually played by real musicians, with the bass carrying a lot of it. Over eleven years their likes moved from Japanese to Portuguese, English, Korean, Mandarin, Cantonese and back to Japanese, and that sound stayed the same through every change. Almost nothing they kept is loud: no song is at the top energy level, and only 9 of 160 sit one step below it.",
+  "loves": [
+   {
+    "quality": "Jazz-coloured chords under the melody, whatever the genre: the chords carry the feeling more than the beat does.",
+    "evidence": "This links scenes that seem unrelated. Tatsuro Yamashita, Taeko Onuki and Junko Ohashi in the city pop era, Jobim's 'Wave' and 'Insensatez', D'Angelo and Erykah Badu on Rhodes, Bill Evans, and now Fujii Kaze's gospel piano. Even their J-pop picks are the jazziest acts in it (KIRINJI, Suchmos, Gen Hoshino). They have a whole Late-Night Jazz station and a Bossa Nova station.",
+    "ranks": [
+     155,
+     143,
+     129,
+     0
+    ]
+   },
+   {
+    "quality": "A voice that stays close and never shouts: hushed, breathy, or a falsetto that floats instead of belting.",
+    "evidence": "Chet Baker (3 likes, all energy 1), João Gilberto, Astrud Gilberto, Lisa Ono, Lamp, Men I Trust, and the falsetto of Frank Ocean, D'Angelo, Daniel Caesar, Zion.T and Crush. 89 of 160 likes are at energy 1–2. The powerful singers they keep (Nina Simone, Miki Matsubara, LeeHi) are rare exceptions.",
+    "ranks": [
+     34,
+     144,
+     133,
+     115
+    ]
+   },
+   {
+    "quality": "An unhurried groove played by a band, with a melodic bass line pushing the song along.",
+    "evidence": "The funk-soul pocket of D'Angelo's 'Untitled' and 'Brown Sugar', the bass in city pop ('Plastic Love'-type cuts like 'Midnight Pretenders' and 'Mayonaka no Door'), Men I Trust's bass, and Gen Hoshino's 'Week End'. Their Tokyo Groove and Soft Soul stations are built on funk bass and Rhodes.",
+    "ranks": [
+     132,
+     162,
+     16,
+     6
+    ]
+   },
+   {
+    "quality": "Singers who write their own songs and arrange them carefully, not songs made by a factory.",
+    "evidence": "Their K-pop is IU's own songs, not idol groups. Their Mandopop is Khalil Fong and David Tao, both producer-songwriters. They also like Frank Ocean, Laufey, Cheer Chen, Fujii Kaze and Gen Hoshino. Their Taipei Songbook station is described as 'mostly singer-songwriters, sincere and honest'.",
+    "ranks": [
+     91,
+     60,
+     114,
+     1
+    ]
+   }
+  ],
+  "loses": [
+   {
+    "quality": "Loud, crowded or high-energy production: EDM drops, stadium rock, belting.",
+    "evidence": "There is no app data on skips or dislikes, so this comes from what is missing. No like sits at energy 5 and only 9 sit at 4. Almost all of those 9 are groove songs (Sparkle, Matsuri, odoriko), not loud ones. The one heavy guitar song (草東沒有派對 '爛泥') stands alone."
+   },
+   {
+    "quality": "Rap-led tracks and idol-group pop, even inside the scenes they love.",
+    "evidence": "They spent two years deep in Korean music without one idol-group song. When rap appears, it is a guest verse inside a sung R&B song (Zion.T with G-DRAGON, DEAN with Gaeko, Crush with ZICO) or Nujabes's jazz loops. No hip-hop song in their likes is mainly rap over a hard beat."
+   }
+  ],
+  "listener": [
+   {
+    "reading": "They explore in long blocks, one language or scene at a time, settling in for a year or two before moving on.",
+    "evidence": "The year-by-year language counts show this: 2015 is 100% Japanese, 2018 100% English, 2019–2020 88–100% Korean, 2021–2022 mostly Mandarin and Cantonese, 2023–2024 English and instrumental, 2025–2026 Japanese again."
+   },
+   {
+    "reading": "They follow a sound back to its roots and are happy to like music decades after it came out.",
+    "evidence": "The median song is 9.3 years old when liked, and 47% are 10 or more years old. Japanese likes average 25 years old because of the city pop. Within months they went from Chet Baker to Bill Evans to Norah Jones to Laufey. Other likes include Ella Fitzgerald from 1950 and João Gilberto from 1959. Only 6% were liked within a year of release."
+   },
+   {
+    "reading": "They take an artist in small, intense bursts and then move on, rather than collecting whole catalogues.",
+    "evidence": "Eight artists each got exactly 4 likes in one run and none after: Frank Ocean, IU, Khalil Fong, Eason Chan, Sunset Rollercoaster, Laufey, Gen Hoshino and Fujii Kaze. No artist in the data has more than 4."
+   },
+   {
+    "reading": "They like steadily and sparingly, about 15 songs a year, so each like is a real choice.",
+    "evidence": "Every year from 2016 to 2025 has between 11 and 18 likes. Only 3 likes are covers and 1 is live. They nearly always keep the original recording."
+   },
+   {
+    "reading": "They return to where they started: the Japanese groove-and-chords sound of their first likes came back ten years later in modern form.",
+    "evidence": "In 2015–2016 they liked Tatsuro Yamashita, Anri and Miki Matsubara. In 2025–2026 they liked KIRINJI, Suchmos, Gen Hoshino and Fujii Kaze, and Japanese made up 80–100% of their likes again."
+   }
+  ],
+  "tension": {
+   "reading": "Their likes swing between near-silence and groove. Through 2023–2024 they went deep into stillness, and their newest likes are some of the most energetic they have ever kept.",
+   "evidence": "In 2023–2024 they liked Peace Piece, Aqua, Almost Blue, Come Away With Me and Says, many of them at energy 1. Since late 2025 the likes include Matsuri, Nan-Nan, odoriko, Koi and Week End, all at energy 4. Their stations split the same way, with Quiet Piano on one side and Tokyo Groove on the other."
+  },
+  "constant": "Jazz-coloured chords and a close, unforced voice over a relaxed, band-played groove. This holds whether the song is 1980s Tokyo city pop, 1960s bossa nova, 1990s neo-soul, Korean R&B, Taiwanese indie or Fujii Kaze.",
+  "changes": "The language and scene changed every year or two. Japanese city pop gave way to bossa nova, then American neo-soul and alt R&B. That led to Korean R&B and IU, then Mandopop R&B and Cantonese ballads, then Taiwanese indie and Western indie folk. Instrumental piano and old jazz standards took over in 2023–2024. Modern Japanese soul-pop has now taken their place, and the energy has risen from piano stillness to piano-led groove.",
+  "eras": [
+   {
+    "from_rank": 0,
+    "to_rank": 8,
+    "years": "2025–2026",
+    "label": "Japanese soul-pop",
+    "text": "Modern J-pop built on gospel piano, funk bass and falsetto, the most energetic run of likes in years (Fujii Kaze, Gen Hoshino)."
+   },
+   {
+    "from_rank": 9,
+    "to_rank": 20,
+    "years": "2024–2025",
+    "label": "Hazy indie and city pop revival",
+    "text": "From jazz back to soft-voiced band pop: Montreal dream pop, bedroom pop, and the newer Japanese bands carrying on city pop (Men I Trust, KIRINJI)."
+   },
+   {
+    "from_rank": 21,
+    "to_rank": 39,
+    "years": "2023–2024",
+    "label": "Jazz standards and quiet piano",
+    "text": "The calmest period: solo and trio piano, whispered jazz vocals and film-score piano, ending with modern jazz-pop (Bill Evans, Chet Baker)."
+   },
+   {
+    "from_rank": 40,
+    "to_rank": 67,
+    "years": "2022–2023",
+    "label": "Taiwanese indie to indie folk",
+    "text": "Mandarin singer-songwriters and Taipei dream pop, then English indie folk and Nujabes's jazz loops (Cheer Chen, Sunset Rollercoaster)."
+   },
+   {
+    "from_rank": 68,
+    "to_rank": 107,
+    "years": "2019–2021",
+    "label": "Asian R&B and ballads",
+    "text": "Korean R&B falsetto and IU's own songs, then Mandopop R&B and Cantonese piano ballads (Zion.T, Eason Chan)."
+   },
+   {
+    "from_rank": 109,
+    "to_rank": 162,
+    "years": "2015–2018",
+    "label": "City pop, bossa, neo-soul",
+    "text": "The roots: 1980s Japanese city pop, then bossa nova, then American neo-soul and Frank Ocean-era alt R&B (Tatsuro Yamashita, D'Angelo)."
+   }
   ]
  }
 }

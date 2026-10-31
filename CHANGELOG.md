@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The portrait on Your Ear reads you instead of counting you. It now starts with what you love in the music itself,
+  such as the chords, the kind of voice and what makes you leave a song, each with the songs that show it (hover one
+  to light them on the disc, click to play). Where enough of your likes have been heard, this comes from comparing
+  how they sound with every other song the app knows. Below that are a few observations on how you live with music,
+  each saying what a habit shows about you, with the counts beside it. The name of your taste now comes from that
+  reading, not from who you play most.
 - Switching between Chinese and English turns the whole page over at once. What Claude wrote (the portrait, station
   names and descriptions, reasons, asks and the name for your taste) is put into the new language first, and the page
   waits for it instead of mixing the two. What Claude wrote is kept as written, so switching

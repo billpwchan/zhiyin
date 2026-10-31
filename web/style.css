@@ -473,13 +473,13 @@ img.lb { transform: scale(1.34); }
 /* the record sits beside the words on a wide page; on a narrow one it comes straight after the name, before the facts */
 .ear-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); grid-template-rows: auto 1fr; gap: 0 56px; align-items: start; }
 .ear-hero .rec-l { grid-column: 2; grid-row: 1 / span 2; }
-.ear-hero .facts { grid-column: 1; grid-row: 2; min-width: 0; }
+.ear-hero .facts, .ear-hero .loves { grid-column: 1; grid-row: 2; min-width: 0; }
 /* the disc gives way first, so the portrait always keeps a column it can be read in */
 @container (max-width: 1100px) { .ear-hero { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); column-gap: 40px; } }
 @container (max-width: 800px) {
   .ear-hero { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; gap: 28px; }
   .ear-hero .rec-l { grid-column: 1; grid-row: 2; }
-  .ear-hero .facts { grid-row: 3; margin-top: 0; }
+  .ear-hero .facts, .ear-hero .loves { grid-row: 3; margin-top: 0; }
   .ear-hero .disc { max-width: 520px; }
 }
 /* Chinese breaks between any two characters (punctuation never starts a line); keep-all would make each clause one unbreakable word */
@@ -510,6 +510,11 @@ img.lb { transform: scale(1.34); }
 .facts.dim .fact:not(.on) { opacity: .35; }
 .fact.sk .lead, .fact.sk p { width: fit-content; color: transparent; border-radius: 6px;
   background: linear-gradient(100deg, rgba(255, 255, 255, .04) 30%, rgba(255, 255, 255, .085) 50%, rgba(255, 255, 255, .04) 70%) 0 0 / 300% 100%; animation: sheen 1.6s linear infinite; }
+.loves { margin: 36px 0 0; padding: 0; list-style: none; }
+.loves li { padding: 18px 0; border-top: 1px solid var(--line); transition: opacity var(--fast) var(--ease); }
+.loves .claim { margin: 0; font-size: 17px; line-height: 1.55; font-weight: 500; color: var(--fg); text-wrap: balance; }
+.loves .ev { margin: 6px 0 0; font-size: 14px; line-height: 1.75; color: var(--fg-2); text-wrap: pretty; }
+.loves.dim li:not(.on) { opacity: .35; }
 .fact .lg { white-space: nowrap; transition: color var(--fast) var(--ease); }
 .fact .lg:hover { color: var(--fg); }
 .fact .sep { margin: 0 7px; color: var(--fg-3); }
@@ -940,6 +945,8 @@ a.m-acct:hover { background: var(--hover); }
   .ear .meta-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
   .facts { margin-top: 24px; }
   .fact .lead { font-size: 22px; }
+  .loves { margin-top: 24px; }
+  .loves .claim { font-size: 16px; }
   .sec { margin-top: 48px; }
   .lanes, .lv-list { grid-template-columns: minmax(0, 1fr); }
   .hist { grid-template-columns: minmax(0, 1fr); gap: 12px; }
