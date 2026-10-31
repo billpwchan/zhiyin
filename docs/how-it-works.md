@@ -53,7 +53,13 @@ These songs seed their station like likes do (the station they were played from,
 under), count as positive examples of your sound, and make their artists known rather than new. They are listed on
 **Your Ear** under "Played often, never liked", where ♥ adds one to your likes and "Not me" drops it. A Google
 Takeout export of your YouTube Music history fills the list on day one: the page reads the file in the browser and
-sends only the songs played at least twice, with how many times, on how many days, and when.
+sends only the songs played at least twice, with how many times, on how many days, and when. The portrait reads
+the same counts, so a song you play on many days speaks for you even unliked.
+
+Lists you kept in another app years before your likes here can tell the portrait where your taste comes from.
+`zhiyin archive <QQ Music profile link>` reads the profile's 我喜欢 and its public playlists. The portrait sees them
+by artist (how many songs, from which years, a few titles). Their songs count as ones you have and their artists as
+ones you know, but they never seed or join a station.
 
 With the same read-only access as the likes, Zhiyin also reads, at most once a day, the music you gave a thumbs-down
 on YouTube, the music channels you subscribe to, and the songs in playlists you made. The thumbs-down songs are
