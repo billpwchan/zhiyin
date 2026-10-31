@@ -637,8 +637,8 @@ PORTRAIT_MIXES = 30
 
 
 def read(prof: dict, model: str = "opus", tracks: list[dict] | None = None, own: bool = True) -> dict:
-    """What a perceptive friend would work out about the listener's ears, in English: for their page and for the
-    editor that chooses their songs. `tracks` narrows the likes it reads (an eval window's older likes), and without
+    """What a perceptive friend would work out about the listener's ears, in English, for their page (the screen read
+    it worse than without, eval-screen's taste arm, so the stations don't). `tracks` narrows the likes it reads (an eval window's older likes), and without
     `own` it reads the likes alone: nothing from the app, their plays or their lists, which may postdate them."""
     from . import settings
     nm = settings.not_me()
@@ -692,8 +692,8 @@ def write(rd: dict, songs: list[dict], model: str = "opus") -> dict:
 
 
 def portrait(prof: dict, model: str = "opus") -> tuple[dict, dict]:
-    """The page's reading of the listener and, in English, what it stands on (prof["taste"], which the editor reads
-    too). Written apart from the stations so it gets the model's whole attention."""
+    """The page's reading of the listener and, in English, what it stands on (prof["taste"]). Written apart from the
+    stations so it gets the model's whole attention."""
     from . import settings
     nm = settings.not_me()
     aside = {r for s in prof.get("set_aside", []) for r in s["ranks"]}

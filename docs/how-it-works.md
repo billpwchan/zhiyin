@@ -138,7 +138,9 @@ alone 46, while the two taken in turn kept 56 to 59 over three separate reads. R
 merging the reads kept no more than one read, so Claude reads it once. Listeners on the shared key get Sonnet's read
 taken in turn with the graph the same way (54 against 45; Sonnet's read alone did no better than the graph, 41),
 whenever what is left of their day's Claude allowance covers it. When it doesn't, as when all eight stations are
-rebuilt by hand at once, they get the graph score's top 64.
+rebuilt by hand at once, they get the graph score's top 64. Telling the read what the portrait found your ears need
+(each window's reading made from its older likes alone) kept fewer of the 51 held-out likes over four windows, not
+more (14 against 17 for one read), so the screen doesn't see the portrait.
 
 ## 5. Sound vetoes, it doesn't choose
 
