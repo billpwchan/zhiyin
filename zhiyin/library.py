@@ -207,6 +207,17 @@ def app_likes(link: str) -> dict:
     return APPS[app_of(link)].likes(link)
 
 
+def app_lists(link: str) -> dict:
+    """The other lists on the profile an app listener's likes come from: their own, and the ones they keep (`lists` of
+    either app). Read only from their own page, never from whoever made a playlist they pasted."""
+    if app_of(link) == "qq":
+        return qqmusic.lists(link, likes=False)
+    user = ((store.read_json(store.LIBRARY) or {}).get("netease") or {}).get("user")
+    if not user:
+        raise netease.Unreadable("link")
+    return netease.lists(user, likes=False)
+
+
 def app_link(key: str) -> str:
     """The link to read again for a list read before (`key` from either app's likes)."""
     return APPS[key.split(":", 1)[0]].link_of(key)
@@ -315,7 +326,7 @@ def sync_from_app(link: str, log=print, glimpsed=None, got: dict | None = None) 
     for t in recs:
         t["ne_score"] = scores.get(t.get("ne"))
     store.write_json(store.LIBRARY, {**lib, "synced": store.now(), "source": app, "tracks": recs, "unmatched": unmatched,
-                                     "netease": {"key": got["key"], "total": got["total"]}})
+                                     "netease": {"key": got["key"], "total": got["total"], "user": got.get("user")}})
     store.GLIMPSE.unlink(missing_ok=True)
     return {"videos": got["total"], "added": len(added), "removed": len(removed), "unmatched": len(unmatched),
             "songs": sum(1 for t in recs if not t["long"]), "first": first, "key": got["key"]}

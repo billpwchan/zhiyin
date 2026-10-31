@@ -1,8 +1,9 @@
 """A QQ Music (QQ 音乐) listener's public likes, read for a record and a name without signing in.
 
 Only what anyone can see on their profile is read: their 我喜欢 (or a public playlist they link), each song's title,
-singers, album, cover, length and release date; for a listener keeping their old lists (`folders`), every list there. QQ Music shows nobody when a song was liked, so those dates are
-estimated (`_estimate`). Nothing about a listener is written to disk here; the other names of singers are cached."""
+singers, album, cover, length and release date; and every other list there (`lists`): their own, and the playlists
+and albums they keep. QQ Music shows nobody when a song was liked, so those dates are estimated (`_estimate`).
+Nothing about a listener is written to disk here; the other names of singers are cached."""
 import heapq
 import json
 import re
@@ -101,8 +102,8 @@ def _call(c: httpx.Client, module: str, method: str, param: dict) -> dict:
     return d.get("data") or {}
 
 
-def _diss(c: httpx.Client, which: dict, begin: int) -> dict:
-    return _call(c, "music.srfDissInfo.DissInfo", "CgiGetDiss", {**which, "song_begin": begin, "song_num": PAGE})
+def _diss(c: httpx.Client, which: dict, begin: int, num: int = PAGE) -> dict:
+    return _call(c, "music.srfDissInfo.DissInfo", "CgiGetDiss", {**which, "song_begin": begin, "song_num": num})
 
 
 def _day(ts) -> str | None:
@@ -177,52 +178,101 @@ def likes(text: str) -> dict:
 
 FOLDER_GAP = 5   # a profile's own lists are numbered from 1; this many missing in a row is past the last
 LAST_FOLDER = 199   # from 200 the numbers are QQ Music's: 201 is 我喜欢, 202 and up the lists it makes for them
+MAX_KEPT = 50   # playlists by others, and albums, that a profile keeps: the newest, one request each
+KEPT_SONGS = 500   # read from a playlist someone else made: enough to say what it is
+_BACKING = re.compile(r"伴奏|伴唱|off ?vocal", re.I)   # a song again without its voice, for singing along
 
 
-def folders(text: str) -> dict:
-    """Every public list on a QQ Music profile, 我喜欢 included but not the lists QQ Music makes for them (今日私享,
-    新发风向): {"key", "lists": [{"title", "n"}], "songs": [{"title", "artists", "aka", "album", "released", "lists"}]},
-    each song once, with the lists it is in (indices) and the other names of its singers (YouTube Music often uses
-    those: 太妍 is TAEYEON there)."""
-    with _client() as c:
-        kind, ref = parse(text, c)
-        if kind != "user":
-            raise Unreadable("link", app="qq")
-        lists, songs, missed, dirid = [], {}, 0, 0
-        for dirid in [LIKES, *range(1, LAST_FOLDER + 1)]:
-            if dirid != LIKES and missed >= FOLDER_GAP:
-                break
-            which = {"disstid": 0, "dirid": dirid, "enc_host_uin": ref}
-            try:
-                d = _diss(c, which, 0)
-            except Unreadable:
-                missed += dirid != LIKES
+def _kept(c: httpx.Client, module: str, method: str, param: dict) -> list[dict]:
+    out = []
+    while len(out) < MAX_KEPT:
+        d = _call(c, module, method, {**param, "offset": len(out), "size": 30})
+        if d.get("hide"):
+            return []
+        got = [x for x in d.get("v_list") or [] if x not in out]
+        out += got
+        if not got or not d.get("hasmore"):   # nothing new: a page that ignores the offset ends it too
+            break
+    return out[:MAX_KEPT]
+
+
+def lists(text: str, likes: bool = True) -> dict:
+    """Every list anyone can see on a QQ Music profile, with its songs: their own (我喜欢 too unless `likes` is
+    False, but not the lists QQ Music makes for them: 今日私享, 新发风向), playlists by others they keep, and albums
+    they keep. {"key", "lists": [{"title", "kind", "by", "at", "changed", "n"}], "songs": [{"title", "artists", "aka",
+    "album", "released", "lists"}]}: kind is "likes", "own", "saved" (someone else's playlist) or "album"; `at` is when
+    they made or kept it. Each song is listed once, with the lists it is in (indices) and the other names of its singers
+    (YouTube Music often uses those: 太妍 is TAEYEON there)."""
+    if not _gate.acquire(timeout=60):
+        raise Unreadable("upstream", app="qq")
+    lists, songs = [], {}
+
+    def add(meta: dict, got: list[dict], released: str | None = None) -> None:
+        i, n = len(lists), 0
+        for s in got:
+            name = s.get("title") or s.get("name")
+            if not name or not s.get("mid") or _BACKING.search(name):
                 continue
-            info, total = d.get("dirinfo") or {}, d.get("total_song_num") or 0
-            if not info.get("id") or "隐私" in (info.get("title") or ""):
-                missed += dirid != LIKES
-                continue
-            missed = 0
-            got, begin = list(d.get("songlist") or []), PAGE
-            while d.get("hasmore") and begin < min(total, MAX_SONGS):
-                d = _diss(c, which, begin)
-                got += d.get("songlist") or []
-                begin += PAGE
-            if not got:
-                continue
-            i = len(lists)
-            lists.append({"title": "我喜欢" if dirid == LIKES else info.get("title") or "", "n": len(got)})
-            for s in got:
-                name = s.get("title") or s.get("name")
-                if not name or not s.get("mid"):
-                    continue
-                pub = (s.get("time_public") or "")[:10]
-                rec = songs.setdefault(s["mid"], {
-                    "title": name, "artists": [a["name"] for a in s.get("singer") or [] if a.get("name")],
-                    "ar": [a["mid"] for a in s.get("singer") or [] if a.get("mid")],
-                    "album": (s.get("album") or {}).get("name") or "", "released": pub if pub[:4].isdigit() and pub[:4] > "1900" else None,
-                    "lists": []})
+            pub = (s.get("time_public") or released or "")[:10]
+            rec = songs.setdefault(s["mid"], {
+                "title": name, "artists": [a["name"] for a in s.get("singer") or [] if a.get("name")],
+                "ar": [a["mid"] for a in s.get("singer") or [] if a.get("mid")],
+                "album": (s.get("album") or {}).get("name") or "", "released": pub if pub[:4].isdigit() and pub[:4] > "1900" else None,
+                "lists": []})
+            if i not in rec["lists"]:
                 rec["lists"].append(i)
+                n += 1
+        if n:
+            lists.append({**meta, "n": n})
+    try:
+        with _client() as c:
+            kind, ref = parse(text, c)
+            if kind != "user":
+                raise Unreadable("link", app="qq")
+            missed = 0
+            for dirid in ([LIKES] if likes else []) + list(range(1, LAST_FOLDER + 1)):
+                if missed >= FOLDER_GAP:
+                    break
+                which = {"disstid": 0, "dirid": dirid, "enc_host_uin": ref}
+                try:
+                    d = _diss(c, which, 0)
+                except Unreadable:
+                    missed += dirid != LIKES
+                    continue
+                info, total = d.get("dirinfo") or {}, d.get("total_song_num") or 0
+                if not info.get("id") or "隐私" in (info.get("title") or ""):
+                    missed += dirid != LIKES
+                    continue
+                missed = 0
+                got, begin = list(d.get("songlist") or []), PAGE
+                while d.get("hasmore") and begin < min(total, MAX_SONGS):
+                    d = _diss(c, which, begin)
+                    got += d.get("songlist") or []
+                    begin += PAGE
+                add({"title": "我喜欢" if dirid == LIKES else info.get("title") or "", "kind": "likes" if dirid == LIKES else "own",
+                     "by": None, "at": _day(info.get("ctime")), "changed": _day(info.get("mtime"))}, got)
+            for p in _kept(c, "music.musicasset.PlaylistFavRead", "CgiGetPlaylistFavInfo", {"uin": ref}):
+                if not p.get("tid") or not p.get("name"):
+                    continue   # taken down by whoever made it
+                try:
+                    d = _diss(c, {"disstid": p["tid"]}, 0, KEPT_SONGS)
+                except Unreadable:
+                    continue
+                add({"title": p["name"], "kind": "saved", "by": p.get("nickname") or None, "at": _day(p.get("orderTime")),
+                     "changed": _day(p.get("updateTime"))}, (d.get("songlist") or [])[:KEPT_SONGS])
+            for al in _kept(c, "music.musicasset.AlbumFavRead", "CgiGetAlbumFavInfo", {"euin": ref}):
+                if not al.get("mid") or not al.get("name"):
+                    continue
+                try:
+                    d = _call(c, "music.musichallAlbum.AlbumSongList", "GetAlbumSongList",
+                              {"albumMid": al["mid"], "begin": 0, "num": 100, "order": 2})
+                except Unreadable:
+                    continue
+                add({"title": al["name"], "kind": "album", "by": " / ".join(x["name"] for x in al.get("v_singer") or [] if x.get("name")) or None,
+                     "at": _day(al.get("ordertime")), "changed": None},
+                    [x.get("songInfo") or {} for x in d.get("songList") or []], _day(al.get("pubtime")))
+    finally:
+        _gate.release()
     mids = list({m for s in songs.values() for m in s["ar"]})
     with store.Pool(3) as ex:   # _gate lets three through at a time
         aka = dict(zip(mids, ex.map(aliases, mids)))

@@ -305,6 +305,7 @@ def _read_likes(log, glimpsed=None, got: dict | None = None) -> dict:
         r = library.sync_from_app(ne, log=log, glimpsed=glimpsed, got=got)
         # the list itself from now on, not the share text or short link it was found through
         accounts.set_prefs(store.uid(), netease={"link": library.app_link(r["key"]), "n": r["videos"], "unmatched": r["unmatched"]})
+        signals.read_lists(ne, log=log, force=r["first"])
         return r
     return library.sync_from_google(log=log, glimpsed=glimpsed) if glimpsed else library.sync_from_google(log=log)
 

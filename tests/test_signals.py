@@ -218,8 +218,53 @@ def test_the_profile_reads_what_they_play_and_what_they_kept_elsewhere_years_ago
     prompt, system = sent[0]
     assert "PLAYED ON YOUTUBE MUSIC (2025-11 to 2026-10" in prompt and "\n0|12|30|2026-10|玻璃|Gareth.T" in prompt
     assert "\n-|6|9|2026-10|夜阑人静|moon tang" in prompt   # played often, never liked; names in the reader's script
-    assert "EARLIER LIKES, kept in QQ Music" in prompt and "0=2016前我喜欢" in prompt and "\n周杰伦|2|2003-2008|0|说好的幸福呢 / 晴天" in prompt and "One song each: K.will" in prompt
-    assert "never seed from them" in system
+    assert "EARLIER LISTS, kept in QQ Music before their likes here begin" in prompt and "\n0|own|2016前我喜欢|-|-|-|1|周杰伦 2, K.will 1" in prompt
+    assert "\n周杰伦|2|2003-2008|0|说好的幸福呢 / 晴天" in prompt and "One song each: K.will" in prompt
+    assert "Never seed from them" in system
+
+
+def test_an_app_listeners_other_lists_are_read_as_the_rest_of_their_page(monkeypatch):
+    from zhiyin import library, llm, profile
+    sent = []
+    monkeypatch.setattr(llm, "call", lambda prompt, system, schema, **kw: sent.append(prompt) or {"lanes": []})
+    with store.as_user("lists1"):
+        store.write_json(store.LIBRARY, {"source": "qq", "tracks": [
+            {"rank": i, "vid": f"liked{i:06d}", "title": f"歌 {i}", "artists": [{"name": "そらる" if i < 12 else f"Singer {i}"}],
+             "long": False, "type": "ATV", "dur": 200, "liked_est": "2021-06-01", "source": "qq"} for i in range(24)]})
+        signals.save_archive({"key": "qq:u:x", "lists": [
+            {"title": "请给我一打洞爷湖", "kind": "own", "by": None, "at": "2021-11-26", "changed": "2021-11-26", "n": 2},
+            {"title": "唱见の治愈歌声", "kind": "saved", "by": "凌舟", "at": "2020-07-10", "changed": "2021-07-29", "n": 2}],
+            "songs": [{"title": "現状ディストラクション", "artists": ["SPYAIR"], "aka": [], "album": "", "released": "2013-01-01", "lists": [0]},
+                      {"title": "サクラミツツキ", "artists": ["SPYAIR"], "aka": [], "album": "", "released": "2013-01-01", "lists": [0, 1]},
+                      {"title": "夕溜まりのしおり", "artists": ["そらる"], "aka": [], "album": "", "released": "2016-01-01", "lists": [1]}]})
+        profile.synthesize("opus")
+        ev = profile.evidence(library.load(), {})
+    prompt = sent[0]
+    assert "THEIR OTHER LISTS in QQ Music, on the same page as the likes above" in prompt
+    assert "\n0|own|请给我一打洞爷湖|-|2021-11|2021-11|2|SPYAIR 2" in prompt and "\n1|saved|唱见の治愈歌声|凌舟|2020-07|2021-07|2|" in prompt
+    assert "SONGS IN THEIR OWN LISTS by artist (2 songs;" in prompt and "\nSPYAIR|2|2013|0|" in prompt   # not the saved list's
+    assert "LISTS AND LIKES (artist: songs in their own other lists, songs liked" in ev and "SPYAIR 2, 0" in ev
+    assert "そらる" in ev.split("MOST LIKED AND ABSENT FROM THEIR OWN OTHER LISTS: ")[1]
+
+
+def test_an_app_listeners_lists_are_read_once_a_week_and_a_failure_keeps_the_last(monkeypatch):
+    from zhiyin import library
+    reads = []
+
+    def lists(link):
+        reads.append(link)
+        if len(reads) == 2:
+            raise RuntimeError("QQ Music not answering")
+        return {"key": "qq:u:x", "lists": [{"title": "霓虹", "kind": "own", "n": 1}], "songs": [
+            {"title": "優しい人", "artists": ["米津玄師"], "aka": [], "album": "", "released": None, "lists": [0]}]}
+    monkeypatch.setattr(library, "app_lists", lists)
+    said = []
+    with store.as_user("lists2"):
+        assert signals.read_lists("L", log=said.append)["songs"][0]["title"] == "優しい人"
+        assert signals.read_lists("L")["lists"][0]["title"] == "霓虹" and len(reads) == 1   # not again within the week
+        assert signals.read_lists("L", force=True)["songs"] and len(reads) == 2           # the failed read kept the last
+        assert signals.read_lists("L") and len(reads) == 2                                 # and waits before trying again
+    assert said == ["读到你在 QQ 音乐的 1 个歌单和专辑，共 1 首歌"]
 
 
 def test_the_portrait_reads_counts_made_from_the_likes_not_its_own_counting():

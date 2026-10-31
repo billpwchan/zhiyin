@@ -59,6 +59,9 @@ On the machine running Zhiyin:
 - read from YouTube with the same read-only access, at most once a day along with the likes: the music you gave a
   thumbs-down, the music channels you subscribe to, and the songs in playlists you made (not the ones saved from
   Zhiyin's stations);
+- if your likes come from a NetEase Cloud Music or QQ Music profile: the other lists anyone can see there, read at
+  most once a week (the playlists you made, the ones by others you keep, and on QQ Music the albums you keep), as each
+  list's name, maker and dates, and each song's title, artists, album and release date;
 - what you did in Zhiyin: plays, skips, likes, refusals, songs you asked for. Each play records how it started (you
   chose the song, or it played on), how far it got and how long it was, how long since the page was last touched,
   whether the page was in front, and what the page showed with it (the editor's confidence, its place in the
@@ -143,11 +146,11 @@ says so.
 |---|---|---|
 | YouTube Music (unauthenticated) | song and artist ids | radio, related songs, artist pages, playlists, cover art |
 | YouTube Data API, with your Google token | your likes, thumbs-down music, subscriptions and own playlists; song IDs and ratings when syncing likes; a title, description and song IDs when saving a station | read likes and the other signals, synchronize ratings, create a private playlist at your request |
-| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
+| Anthropic (Claude), under the account that runs your calls ([whose Claude](self-hosting.md#whose-claude)) | song titles and artists from your likes (with the month you liked them), from the songs you play often or keep in your own playlists without a like, the names, makers, dates and most frequent artists of the lists you keep in NetEase or QQ Music with the artists and a few titles of your own lists there, and the candidates, station descriptions, songs you refused and why (including up to eight thumbs-down titles from YouTube), whether a candidate's artist is a channel you subscribe to, what you typed into "ask", the description set with `zhiyin about`, lyrics that need translating, and, when you switch between English and Chinese, the portrait and reasons it wrote earlier | tags, stations, picks, a short name for your taste, lyric translations and rewritten text |
 | Deezer, Apple iTunes Search | song title and artist | find a 30-second preview to listen to |
 | NetEase Cloud Music, LRCLIB, YouTube Music | song title, artist, length | lyrics |
-| NetEase Cloud Music | the playlist or profile id someone pasted to make a record without signing in, or to start stations from; the ids of the artists in it | read that public playlist and 听歌排行; other names of an artist (Eason Chan for 陈奕迅) to find its songs on YouTube Music |
-| QQ Music | the encrypted profile id or playlist id someone pasted, for the same; the ids of the singers in it; the album ids of its covers | read that public 我喜欢 or playlist; other names of a singer; the covers, passed through to the page for its colours |
+| NetEase Cloud Music | the playlist or profile id someone pasted to make a record without signing in, or to start stations from; the ids of the artists in it | read that public playlist and 听歌排行, and for a listener whose stations start from a profile, the other public playlists there once a week; other names of an artist (Eason Chan for 陈奕迅) to find its songs on YouTube Music |
+| QQ Music | the encrypted profile id or playlist id someone pasted, for the same; the ids of the singers in it; the album ids of its covers | read that public 我喜欢 or playlist, and for a listener whose stations start from a profile, the other public lists and albums kept there once a week; other names of a singer; the covers, passed through to the page for its colours |
 | YouTube Music (unauthenticated) | the artist and title of each NetEase or QQ Music like | find the same song to play |
 | The YouTube embedded player, in your browser | the video being played | playback, under YouTube's own terms |
 

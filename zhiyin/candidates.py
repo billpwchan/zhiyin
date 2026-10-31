@@ -92,7 +92,7 @@ class Known:
             self.songs[song_key(r["title"])] |= {fold(a["name"]) for a in r["artists"]}
             self.played_artists |= {a.get("id") or fold(a["name"]) for a in r["artists"]} | {fold(a["name"]) for a in r["artists"]}
         self.earlier_artists = set()
-        for s in signals.archive().get("songs", []):   # saved in another app years ago: heard, by artists they know
+        for s in signals.archive().get("songs", []):   # in a list they keep in another app: heard, by artists they know
             names = {fold(a) for a in s["artists"] + s.get("aka", [])} | {fold(x) for a in s["artists"] for x in qqmusic.name_parts(a)}
             self.songs[song_key(s["title"])] |= names
             self.earlier_artists |= names

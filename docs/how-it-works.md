@@ -56,10 +56,13 @@ Takeout export of your YouTube Music history fills the list on day one: the page
 sends only the songs played at least twice, with how many times, on how many days, and when. The portrait reads
 the same counts, so a song you play on many days speaks for you even unliked.
 
-Lists you kept in another app years before your likes here can tell the portrait where your taste comes from.
-`zhiyin archive <QQ Music profile link>` reads the profile's 我喜欢 and its public playlists. The portrait sees them
-by artist (how many songs, from which years, a few titles). Their songs count as ones you have and their artists as
-ones you know, but they never seed or join a station.
+A like is only part of what a music app shows about you. When your likes come from a NetEase or QQ Music profile,
+every other list anyone can see there is read too, once a week (`qqmusic.lists`, `netease.lists`): the playlists you
+made, the playlists by others you keep, and on QQ Music the albums you keep. Lists you kept in another app before
+your likes here begin tell the same story from further back: `zhiyin archive <QQ Music profile link>` reads them for
+a listener whose likes come from YouTube. The profile sees each list (what kind, its name, when it was made or kept,
+its most frequent artists) and the songs of your own lists by artist (how many, from which years, a few titles). Their
+songs count as ones you have and their artists as ones you know, but they never seed or join a station.
 
 The portrait at the top of **Your Ear** is written in a call of its own, apart from the stations. Code first counts
 what it may stand on: which language led your likes each year, runs on one artist, artists who came back after years

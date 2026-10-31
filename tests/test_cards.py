@@ -336,25 +336,74 @@ def test_qq_covers_pass_through_only_as_covers_and_on_each_visitors_own_allowanc
     assert server._sample_fetched["img"] == shared                       # nor anyone's YouTube covers
 
 
-def test_a_profiles_own_lists_are_read_until_the_numbers_run_out(monkeypatch):
+def _qq_profile(monkeypatch):
     lists = {201: ("我喜欢", ["a"]), 1: ("2016前我喜欢", ["a", "b"]), 2: ("新建歌单", []), 3: ("always", ["c"]),
              202: ("的今日私享", ["z"])}
     asked = []
 
-    def diss(c, which, begin):
+    def song(m, title=None):
+        return {"mid": m, "title": title or m.upper(), "singer": [{"name": "S", "mid": "sm0001"}], "time_public": "2015-01-02"}
+
+    def diss(c, which, begin, num=qqmusic.PAGE):
+        if which["disstid"]:   # a playlist someone else made, kept on the profile
+            return {"dirinfo": {"id": which["disstid"]}, "total_song_num": 3, "songlist": [song("c"), song("d"), song("e")][:num]}
         asked.append(which["dirid"])
         title, mids = lists.get(which["dirid"], ("", []))
-        return {"dirinfo": {"id": 1, "title": title} if title else {}, "total_song_num": len(mids), "hasmore": 0,
-                "songlist": [{"mid": m, "title": m.upper(), "singer": [{"name": "S", "mid": "sm0001"}], "time_public": "2015-01-02"}
-                             for m in mids]}
+        return {"dirinfo": {"id": 1, "title": title, "ctime": 1450000000, "mtime": 1460000000} if title else {},
+                "total_song_num": len(mids), "hasmore": 0, "songlist": [song(m) for m in mids]}
+
+    def call(c, module, method, param):
+        if method == "CgiGetPlaylistFavInfo":
+            assert param["uin"] == "euin**"
+            return {"hasmore": 0, "v_list": [{"tid": 9, "name": "唱见の治愈歌声", "nickname": "凌舟", "orderTime": 1594339200},
+                                             {"tid": 8, "name": "", "songnum": 0}]}   # taken down by its maker
+        if method == "CgiGetAlbumFavInfo":
+            return {"hasmore": 0, "v_list": [{"mid": "al1", "name": "那么骄傲", "v_singer": [{"name": "伯远"}],
+                                              "pubtime": 1638201600, "ordertime": 1638203481}]}
+        assert method == "GetAlbumSongList" and param["albumMid"] == "al1"
+        return {"songList": [{"songInfo": {"mid": "f", "title": "那么骄傲", "singer": [{"name": "伯远", "mid": "by01"}]}},
+                             {"songInfo": {"mid": "g", "title": "那么骄傲 (伴奏)", "singer": [{"name": "伯远", "mid": "by01"}]}}]}
     monkeypatch.setattr(qqmusic, "parse", lambda text, c=None: ("user", "euin**"))
     monkeypatch.setattr(qqmusic, "_diss", diss)
-    monkeypatch.setattr(qqmusic, "aliases", lambda mid: ["에스"])
-    got = qqmusic.folders("https://c6.y.qq.com/base/fcgi-bin/u?__=x")
-    assert [x["title"] for x in got["lists"]] == ["我喜欢", "2016前我喜欢", "always"]   # empty lists left out
-    assert {s["title"]: s["lists"] for s in got["songs"]} == {"A": [0, 1], "B": [1], "C": [2]}
+    monkeypatch.setattr(qqmusic, "_call", call)
+    monkeypatch.setattr(qqmusic, "aliases", lambda mid: ["에스"] if mid == "sm0001" else [])
+    return asked
+
+
+def test_every_list_on_a_qq_profile_is_read_their_own_until_the_numbers_run_out(monkeypatch):
+    asked = _qq_profile(monkeypatch)
+    got = qqmusic.lists("https://c6.y.qq.com/base/fcgi-bin/u?__=x")
+    assert [(x["title"], x["kind"], x["n"]) for x in got["lists"]] == [
+        ("我喜欢", "likes", 1), ("2016前我喜欢", "own", 2), ("always", "own", 1), ("唱见の治愈歌声", "saved", 3), ("那么骄傲", "album", 1)]
+    assert got["lists"][1]["at"] < got["lists"][1]["changed"] and got["lists"][3]["by"] == "凌舟" and got["lists"][4]["by"] == "伯远"
+    assert {s["title"]: s["lists"] for s in got["songs"]} == {"A": [0, 1], "B": [1], "C": [2, 3], "D": [3], "E": [3], "那么骄傲": [4]}
     assert got["songs"][0]["aka"] == ["에스"] and got["songs"][0]["released"] == "2015-01-02"
+    assert got["songs"][-1]["released"] == "2021-11-30"   # an album's songs come out with it; its karaoke track is left out
     assert 202 not in asked and max(asked[1:]) == 3 + qqmusic.FOLDER_GAP   # QQ Music's own lists are never read
+    asked.clear()
+    rest = qqmusic.lists("https://c6.y.qq.com/base/fcgi-bin/u?__=x", likes=False)   # their likes are read on their own
+    assert 201 not in asked and [x["title"] for x in rest["lists"]][0] == "2016前我喜欢"
+
+
+def test_every_playlist_on_a_netease_profile_is_read_theirs_and_the_ones_they_keep(monkeypatch):
+    def get(c, path, **params):
+        if path == "/api/user/playlist":
+            assert params["uid"] == 5
+            return {"code": 200, "playlist": [
+                {"id": 77, "specialType": 5, "trackCount": 2, "creator": {"userId": 5}, "name": "Lin喜欢的音乐"},
+                {"id": 78, "specialType": 0, "trackCount": 2, "creator": {"userId": 5}, "name": "写作业", "createTime": 1450000000000},
+                {"id": 79, "specialType": 0, "trackCount": 0, "creator": {"userId": 5}, "name": "新建歌单"},
+                {"id": 80, "specialType": 0, "trackCount": 1, "creator": {"userId": 6, "nickname": "小秘书"}, "name": "华语私藏"}]}
+        ids = {77: [1, 2], 78: [2, 3, 3], 80: [4]}[params["id"]]
+        return {"code": 200, "playlist": {"trackIds": [{"id": i} for i in ids]}}
+    monkeypatch.setattr(netease, "_get", get)
+    monkeypatch.setattr(netease, "_songs", lambda c, ids: {i: _song(i) for i in ids})
+    monkeypatch.setattr(netease, "aliases", lambda aid: [])
+    got = netease.lists(5, likes=False)
+    assert got["key"] == "163:u:5"
+    assert [(x["title"], x["kind"], x["by"], x["n"]) for x in got["lists"]] == [("写作业", "own", None, 2), ("华语私藏", "saved", "小秘书", 1)]
+    assert {s["title"]: s["lists"] for s in got["songs"]} == {"Song 2": [0], "Song 3": [0], "Song 4": [1]}
+    assert got["lists"][0]["at"].startswith("2015-12") and got["lists"][1]["at"] is None
 
 
 def test_a_listeners_own_card_page_opens_with_the_portraits_headline():

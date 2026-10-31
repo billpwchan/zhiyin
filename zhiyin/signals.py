@@ -242,12 +242,35 @@ def history_scores() -> dict[str, dict]:
     return {v: {"w": W_HISTORY_DAY * s["rw"] * fade, "days": s["days"], "plays": s["n"]} for v, s in h.get("songs", {}).items()}
 
 
-# ---------- lists kept in another app (QQ Music) ----------
+# ---------- lists kept in a music app ----------
+
+LISTS_EVERY_D = 7
+
 
 def archive() -> dict:
-    """Songs the listener saved in another app long ago, kept as their past taste: never recommended as new, read by
-    the profile as where their taste came from, and not part of the likes the stations play (qqmusic.folders)."""
+    """Lists the listener keeps in NetEase or QQ Music (`qqmusic.lists`): for one whose likes come from YouTube, what
+    they saved there long ago (`zhiyin archive`); for one whose likes come from that app, everything else on their page.
+    Their songs are never recommended as new, the profile reads them, and the stations never play them as likes."""
     return store.read_json(store.ARCHIVE) or {}
+
+
+def read_lists(link: str, log=print, force: bool = False) -> dict:
+    """The other lists on the page an app listener's likes come from (library.app_lists), re-read once a week at most.
+    A failure keeps what was read before; nothing here may stop the likes from being read."""
+    old = archive()
+    if not force and time.time() - max(old.get("at", 0), old.get("tried", 0)) < LISTS_EVERY_D * 86400:
+        return old
+    try:
+        got = library.app_lists(link)
+    except Exception:   # noqa: BLE001 - a playlist link rather than a page, lists kept private, or the app not answering
+        store.write_json(store.ARCHIVE, {**old, "tried": time.time()})
+        return old
+    out = save_archive(got)
+    if got["key"].startswith("qq:"):
+        log(i18n.tr("读到你在 QQ 音乐的 {n} 个歌单和专辑，共 {s} 首歌", n=len(got["lists"]), s=len(got["songs"])))
+    else:
+        log(i18n.tr("读到你在网易云的 {n} 个歌单，共 {s} 首歌", n=len(got["lists"]), s=len(got["songs"])))
+    return out
 
 
 def save_archive(got: dict) -> dict:

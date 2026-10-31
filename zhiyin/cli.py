@@ -169,7 +169,7 @@ def main():
         print(accounts.prefs(store.OWNER).get("about") or "(not set: the editor infers it from your likes)")
     elif a.cmd == "archive":
         from . import qqmusic, signals
-        got = signals.save_archive(qqmusic.folders(a.link))
+        got = signals.save_archive(qqmusic.lists(a.link))
         print(f"{len(got['lists'])} lists, {len(got['songs'])} songs kept for {store.uid()}")
     elif a.cmd == "worker":
         from . import worker

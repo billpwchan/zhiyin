@@ -126,7 +126,7 @@ LANE_SCHEMA = {
 LANE_SYSTEM = """You are a world-class music editor, writing the taste model behind one person's private recommender.
 @LISTENER@
 You get every liked song with tags, newest first, plus a summary of the long focus mixes they save; when known, also
-what they play most and what they liked in another app before.
+what they play most and the other lists they keep in a music app.
 
 Think like a listener and an editor, not a statistician:
 - Find the real listening modes ("lanes"): what they reach for and when. A lane is defined by sound and use,
@@ -134,8 +134,10 @@ Think like a listener and an editor, not a statistician:
   several languages). Language-specific lanes are right where the language is the point.
 - PLAYED, when given, is how often they actually play each song: weigh it with recency when ordering lanes and
   choosing seeds. A song played on many days without a like still speaks for their taste; only liked ranks can be seeds.
-- EARLIER LIKES, when given, are what they saved in another app years before their likes here, by artist (the list
-  names say when). They are where their taste comes from: never seed from them, and give them a lane only where recent
+- EARLIER LISTS, when given, are what they kept in another app before their likes here begin: where their taste comes
+  from. THEIR OTHER LISTS, when given, are the rest of the page their likes come from: their own lists are songs they
+  chose one by one, sorted the way they think about music (the names are their own words); playlists by others and
+  albums they keep are what they went looking for. Never seed from them, and give what they hold a lane only where the
   likes or plays carry it on.
 - 6 to 8 lanes for songs, ordered by how central they are NOW (weight recent likes and repeat-liked songs far more
   than their oldest likes). Do not make a lane for long focus mixes; they are handled separately.
@@ -188,18 +190,37 @@ def _played(songs: list[dict]) -> str:
                         f"{i18n.script(s['title'], lang)}|{i18n.script(s['artist'], lang)}" for v, s in top))
 
 
-def _earlier() -> str:
+LIST_ARTISTS = 4
+
+
+def _kept(a: dict) -> tuple[bool, set[int]]:
+    """Whether the lists in `a` (signals.archive) are on the same page as the likes, and which of them are their own."""
+    same = (store.read_json(store.LIBRARY) or {}).get("source") == a.get("key", "").split(":")[0]
+    return same, {i for i, x in enumerate(a.get("lists", [])) if x.get("kind", "own") in ("own", "likes")}
+
+
+def _lists() -> str:
+    from collections import Counter
+
     from . import signals
     a = signals.archive()
     if not a.get("songs"):
         return ""
     lang = i18n.of()
     app = {"qq": "QQ Music", "163": "NetEase Cloud Music"}.get(a.get("key", "").split(":")[0], "another app")
-    legend = " / ".join(f"{i}={l['title']}" for i, l in enumerate(a["lists"]))
+    same, own = _kept(a)
+    tops = {}
+    for s in a["songs"]:
+        for i in s["lists"]:
+            tops.setdefault(i, Counter())[s["artists"][0] if s["artists"] else "?"] += 1
+    lists = [f"{i}|{x.get('kind', 'own')}|{x['title']}|{x.get('by') or '-'}|{(x.get('at') or '-')[:7]}|{(x.get('changed') or '-')[:7]}|"
+             f"{x['n']}|" + ", ".join(f"{i18n.script(n, lang)} {c}" for n, c in tops.get(i, Counter()).most_common(LIST_ARTISTS))
+             for i, x in enumerate(a["lists"])]
     # by artist, not song by song: a long archive listed in full crowded out the likes and the room to think
     by = {}
     for s in a["songs"]:
-        by.setdefault(s["artists"][0] if s["artists"] else "?", []).append(s)
+        if own & set(s["lists"]):
+            by.setdefault(s["artists"][0] if s["artists"] else "?", []).append(s)
     rows, once = [], []
     for name, ss in sorted(by.items(), key=lambda kv: -len(kv[1])):
         if len(ss) == 1:
@@ -208,10 +229,14 @@ def _earlier() -> str:
         ys = sorted(s["released"][:4] for s in ss if (s.get("released") or "")[:4].isdigit())
         years = (ys[0] if ys[0] == ys[-1] else f"{ys[0]}-{ys[-1]}") if ys else "?"
         titles = " / ".join(i18n.script(s["title"], lang) for s in sorted(ss, key=lambda s: -len(s["lists"]))[:3])
-        rows.append(f"{i18n.script(name, lang)}|{len(ss)}|{years}|{','.join(map(str, sorted({i for s in ss for i in s['lists']})))}|"
+        rows.append(f"{i18n.script(name, lang)}|{len(ss)}|{years}|{','.join(map(str, sorted(own & {i for s in ss for i in s['lists']})))}|"
                     f"{titles}")
-    return (f"\n\nEARLIER LIKES, kept in {app} before their likes here begin: {len(a['songs'])} songs by artist "
-            f"(artist|songs|released|lists|a few titles; lists: {legend}):\n" + "\n".join(rows)
+    head = (f"THEIR OTHER LISTS in {app}, on the same page as the likes above" if same
+            else f"EARLIER LISTS, kept in {app} before their likes here begin")
+    return (f"\n\n{head} (i|kind: own, saved = a playlist someone else made, album = an album they keep|title|by|made or "
+            "kept|last changed|songs|most frequent artists):\n" + "\n".join(lists)
+            + (f"\n\nSONGS IN THEIR OWN LISTS by artist ({sum(len(v) for v in by.values())} songs; "
+               "artist|songs|released|lists|a few titles):\n" + "\n".join(rows) if by else "")
             + (f"\nOne song each: {', '.join(once)}" if once else ""))
 
 
@@ -363,15 +388,18 @@ def evidence(songs: list[dict], tags: dict) -> str:
                        + ", ".join(f"{y} {p} of {n}" for y, (n, p) in sorted(yrs.items())))
 
     a = signals.archive()
-    if a.get("songs"):
-        then = Counter(fold(s["artists"][0]) for s in a["songs"] if s["artists"])
-        was = {fold(s["artists"][0]): i18n.script(s["artists"][0], lang) for s in a["songs"] if s["artists"]}
+    same, own = _kept(a)
+    kept = [s for s in a.get("songs", []) if s["artists"] and own & set(s["lists"])]
+    if kept:
+        then = Counter(fold(s["artists"][0]) for s in kept)
+        was = {fold(s["artists"][0]): i18n.script(s["artists"][0], lang) for s in kept}
         place = {k: i + 1 for i, k in enumerate(sorted(ranks, key=lambda k: -len(ranks[k])))}
-        out.append("THEN AND NOW (artist: songs in the earlier lists, songs liked here, place among the most liked here): "
-                   + "; ".join(f"{was[k]} {n}, {len(ranks.get(k, []))}" + (f", #{place[k]}" if k in place else "")
-                               for k, n in then.most_common(15)))
+        lists, where = ("their own other lists", "liked") if same else ("the earlier lists", "liked here")
+        out.append(f"{'LISTS AND LIKES' if same else 'THEN AND NOW'} (artist: songs in {lists}, songs {where}, place among "
+                   f"the most {where}): " + "; ".join(f"{was[k]} {n}, {len(ranks.get(k, []))}" + (f", #{place[k]}" if k in place else "")
+                                                     for k, n in then.most_common(15)))
         new = sorted(((len(rs), k) for k, rs in ranks.items() if k not in then), reverse=True)[:10]
-        out.append("MOST LIKED HERE AND ABSENT FROM THE EARLIER LISTS: " + ", ".join(f"{shown[k]} {n}" for n, k in new))
+        out.append(f"MOST {where.upper()} AND ABSENT FROM {lists.upper()}: " + ", ".join(f"{shown[k]} {n}" for n, k in new))
     return "\n".join(f"- {x}" for x in out)
 
 
@@ -398,7 +426,7 @@ everyone else has moved on, and not minding.
 
 You get every liked song with tags, newest first (songs that don't speak for them are already left out); EVIDENCE,
 counted by code from the same data, whose numbers you trust over your own counting; and, when known, what they played
-this past year and what they kept in another app years before.
+this past year and the other lists they keep in a music app.
 
 Finding what to say:
 - First work out for yourself what kind of listener this is: how they find music, how they keep it, what they come
@@ -412,6 +440,8 @@ Finding what to say:
 - Where two things in the data pull against each other, say so: one real tension is worth three agreements.
 - The earlier lists, when given, are where they come from: what survived into the likes here, and what didn't. When
   something they used to keep is gone, look for what took its place before calling it lost.
+- Their other lists, when given, show how they keep music beyond a like: what they sort into lists of their own and
+  what the names say, and what they went looking for in other people's playlists and in albums.
 - Never guess what the data can't show: their feelings, love life, mood, life events, the time of day, who with,
   their job or age.
 
@@ -503,7 +533,7 @@ def portrait(prof: dict, model: str = "opus") -> dict:
         + (f"\n\nEVIDENCE, counted from the same data (trust these numbers over your own counting):\n{ev}" if ev else "")
         + (f"\n\nLONG FOCUS MIXES SAVED: {len(mixes)} (some titles): "
            + " / ".join(m["title"][:60] for m in mixes[:PORTRAIT_MIXES]) if mixes else "")
-        + _played(songs) + _earlier()
+        + _played(songs) + _lists()
         + (f"\n\nTHEIR STATIONS, already described elsewhere on the page:\n{lanes}" if lanes else ""))
     po = llm.call(prompt, _sys(PORTRAIT_SYSTEM), PORTRAIT_SCHEMA, model=model, timeout=900)
     return {"headline": headline(po, model, ev), **po}
@@ -527,7 +557,7 @@ def synthesize(model: str = "opus") -> dict:
         + "\n\nREPEAT-LIKED (rank of newest x times liked): " + ", ".join(rep)
         + f"\n\nLONG FOCUS MIXES SAVED: {len(mixes)} (titles): "
         + " / ".join(m["title"][:60] for m in mixes[:60])
-        + _played(songs) + _earlier()
+        + _played(songs) + _lists()
     )
     res = llm.call(prompt, _sys(LANE_SYSTEM), LANE_SCHEMA, model=model, timeout=1200)
     res["built"] = time.time()

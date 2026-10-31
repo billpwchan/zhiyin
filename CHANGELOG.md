@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Likes from a NetEase or QQ Music profile bring the rest of the page with them: the playlists you made, the ones by
+  others you keep and, on QQ Music, the albums you keep, read once a week. The stations and the portrait read them,
+  and their songs are never recommended back to you.
 - Top picks, the first station: the surest songs from every station, taking turns, and where a visit starts.
 - A song heard in one station no longer comes round again in another during the same edition.
 - On a phone, YouTube's window stays on the player card while the page scrolls and the toolbar folds away, and the cover no longer grows mid-scroll.

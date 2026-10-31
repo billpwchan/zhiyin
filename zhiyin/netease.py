@@ -1,8 +1,9 @@
 """A NetEase Cloud Music (网易云音乐) listener's public likes, read for a record and a name without signing in.
 
 Only what anyone can see on their page is read: the playlist of liked songs (or a public playlist they link), when each
-song went into it, each song's title, artists, album, cover and release date, and their 听歌排行. Nothing about a
-listener is written to disk here; the other names of artists are cached."""
+song went into it, each song's title, artists, album, cover and release date, their 听歌排行, and every other playlist
+there (`lists`): their own and the ones they keep. Nothing about a listener is written to disk here; the other names of
+artists are cached."""
 import json
 import re
 import threading
@@ -134,6 +135,8 @@ def likes(text: str) -> dict:
             if d.get("code") != 200:
                 raise Unreadable("upstream")
             owner = (d["playlist"].get("creator") or {}).get("userId") or (n if kind == "user" else None)
+            # whose page the rest of their lists are on: theirs, or whoever's liked songs they chose to go by
+            user = n if kind == "user" else owner if d["playlist"].get("specialType") == 5 else None
             refs = [x for x in d["playlist"].get("trackIds") or [] if x.get("id")]
             refs.sort(key=lambda x: -(x.get("at") or 0))
             total = len(refs)
@@ -158,7 +161,61 @@ def likes(text: str) -> dict:
                        "ne": s["id"], "ne_ar": [a["id"] for a in s.get("ar") or [] if a.get("id")]})
     if len(tracks) < MIN_SONGS:
         raise Unreadable("few", len(tracks))
-    return {"key": f"163:{pid}", "owner": owner, "tracks": tracks, "total": total}
+    return {"key": f"163:{pid}", "owner": owner, "user": user, "tracks": tracks, "total": total}
+
+
+MAX_LISTS = 100   # playlists on a profile, in the order NetEase shows them: their own first
+KEPT_SONGS = 500   # read from a playlist someone else made: enough to say what it is
+
+
+def lists(uid: int, likes: bool = True) -> dict:
+    """Every playlist anyone can see on a NetEase profile, with its songs, in qqmusic.lists' shape: their own (their
+    liked songs too unless `likes` is False) and the ones by others they keep (kind "saved")."""
+    if not _gate.acquire(timeout=60):
+        raise Unreadable("upstream")
+    try:
+        with _client() as c:
+            d = _get(c, "/api/user/playlist", uid=uid, limit=MAX_LISTS, offset=0)
+            if d.get("code") != 200:
+                raise Unreadable("link" if d.get("code") == 404 else "upstream")
+            found = []
+            for p in d.get("playlist") or []:
+                creator = p.get("creator") or {}
+                mine = creator.get("userId") == uid
+                liked = mine and p.get("specialType") == 5
+                if (liked and not likes) or not p.get("trackCount"):
+                    continue
+                try:
+                    x = _get(c, "/api/v6/playlist/detail", id=p["id"], n=0)
+                except Unreadable:
+                    continue
+                ids = list(dict.fromkeys(t["id"] for t in (x.get("playlist") or {}).get("trackIds") or [] if t.get("id")))
+                if ids:
+                    found.append(({"title": "我喜欢的音乐" if liked else p.get("name") or "",
+                                   "kind": "likes" if liked else "own" if mine else "saved",
+                                   "by": None if mine else creator.get("nickname"),
+                                   "at": _date(p.get("createTime")) if mine else None, "changed": _date(p.get("updateTime"))},
+                                  ids[:MAX_SONGS if mine else KEPT_SONGS]))
+            info = _songs(c, list(dict.fromkeys(i for _, ids in found for i in ids))[:3 * MAX_SONGS])
+    finally:
+        _gate.release()
+    out, songs = [], {}
+    for meta, ids in found:
+        got = [info[i] for i in ids if info.get(i, {}).get("name")]
+        if not got:
+            continue
+        for s in got:
+            pub = _date(s.get("publishTime"))
+            songs.setdefault(s["id"], {"title": s["name"], "artists": [a["name"] for a in s.get("ar") or [] if a.get("name")],
+                                       "ar": [a["id"] for a in s.get("ar") or [] if a.get("id")],
+                                       "album": (s.get("al") or {}).get("name") or "", "released": pub, "lists": []})["lists"].append(len(out))
+        out.append({**meta, "n": len(got)})
+    ids = list({a for s in songs.values() for a in s["ar"]})
+    with store.Pool(3) as ex:   # _gate lets three through at a time
+        aka = dict(zip(ids, ex.map(aliases, ids)))
+    for s in songs.values():
+        s["aka"] = list(dict.fromkeys(x for a in s.pop("ar") for x in aka.get(a, []) if x not in s["artists"]))
+    return {"key": f"163:u:{uid}", "lists": out, "songs": list(songs.values())}
 
 
 def link_of(key: str) -> str:
