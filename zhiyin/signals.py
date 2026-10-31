@@ -245,31 +245,61 @@ def history_scores() -> dict[str, dict]:
 # ---------- lists kept in a music app ----------
 
 LISTS_EVERY_D = 7
+LISTS_RETRY_H = 24
 
 
 def archive() -> dict:
-    """Lists the listener keeps in NetEase or QQ Music (`qqmusic.lists`): for one whose likes come from YouTube, what
-    they saved there long ago (`zhiyin archive`); for one whose likes come from that app, everything else on their page.
-    Their songs are never recommended as new, the profile reads them, and the stations never play them as likes."""
+    """Lists the listener keeps in NetEase or QQ Music (`qqmusic.lists`), from each page in "pages": the rest of the
+    page their likes come from ("same"), and the pages they added, such as the app they used before YouTube or an old
+    account. Their songs are never recommended as new, the profile reads them, and the stations never play them."""
     return store.read_json(store.ARCHIVE) or {}
 
 
-def read_lists(link: str, log=print, force: bool = False) -> dict:
-    """The other lists on the page an app listener's likes come from (library.app_lists), re-read once a week at most.
-    A failure keeps what was read before; nothing here may stop the likes from being read."""
+def _merged(reads: list[tuple[str, dict, bool]]) -> dict:
+    lists, songs, pages = [], {}, []
+    for link, got, same in reads:
+        if any(p["key"] == got["key"] for p in pages):
+            continue
+        base = len(lists)
+        pages.append({"key": got["key"], "link": link, "same": same, "lists": len(got["lists"])})
+        lists += [{**x, "page": len(pages) - 1} for x in got["lists"]]
+        for s in got["songs"]:
+            k = (song_key(s["title"]), fold(s["artists"][0]) if s["artists"] else "")
+            rec = songs.setdefault(k, {**s, "lists": []})
+            rec["lists"] += [base + i for i in s["lists"]]
+            rec["aka"] = list(dict.fromkeys(rec["aka"] + s["aka"]))
+    return {"key": pages[0]["key"] if pages else "", "pages": pages, "lists": lists, "songs": list(songs.values())}
+
+
+def read_lists(log=print, force: bool = False, strict: bool = False) -> dict:
+    """The lists the listener keeps in NetEase or QQ Music, re-read once a week at most: the rest of the page their likes
+    come from (library.app_page) and the pages they added (prefs "pages"). A failure keeps what was read before and is
+    tried again a day later, or raised when `strict`; nothing here may stop the likes from being read."""
+    from . import accounts
+    pages = accounts.prefs().get("pages") or []
+    own = library.app_page()
     old = archive()
-    if not force and time.time() - max(old.get("at", 0), old.get("tried", 0)) < LISTS_EVERY_D * 86400:
+    if not own and not pages:
+        if old.get("pages") is not None:   # the pages they added are gone; a list kept before pages existed stays
+            store.ARCHIVE.unlink(missing_ok=True)
+            return {}
+        return old
+    if not force and "pages" in old and (time.time() - old.get("at", 0) < LISTS_EVERY_D * 86400
+                                         or time.time() - old.get("tried", 0) < LISTS_RETRY_H * 3600):
         return old
     try:
-        got = library.app_lists(link)
-    except Exception:   # noqa: BLE001 - a playlist link rather than a page, lists kept private, or the app not answering
+        reads = ([(own, library.page_lists(own, likes=False), True)] if own else []) + [(p, library.page_lists(p), False) for p in pages]
+    except Exception:   # noqa: BLE001 - lists kept private, or the app not answering
+        if strict:
+            raise
         store.write_json(store.ARCHIVE, {**old, "tried": time.time()})
         return old
-    out = save_archive(got)
-    if got["key"].startswith("qq:"):
-        log(i18n.tr("读到你在 QQ 音乐的 {n} 个歌单和专辑，共 {s} 首歌", n=len(got["lists"]), s=len(got["songs"])))
-    else:
-        log(i18n.tr("读到你在网易云的 {n} 个歌单，共 {s} 首歌", n=len(got["lists"]), s=len(got["songs"])))
+    out = save_archive(_merged(reads))
+    for link, got, _ in reads:
+        if got["key"].startswith("qq:"):
+            log(i18n.tr("读到 QQ 音乐上的 {n} 个歌单和专辑，共 {s} 首歌", n=len(got["lists"]), s=len(got["songs"])))
+        else:
+            log(i18n.tr("读到网易云上的 {n} 个歌单，共 {s} 首歌", n=len(got["lists"]), s=len(got["songs"])))
     return out
 
 

@@ -207,15 +207,36 @@ def app_likes(link: str) -> dict:
     return APPS[app_of(link)].likes(link)
 
 
-def app_lists(link: str) -> dict:
-    """The other lists on the profile an app listener's likes come from: their own, and the ones they keep (`lists` of
-    either app). Read only from their own page, never from whoever made a playlist they pasted."""
+def page_of(link: str) -> str:
+    """The NetEase or QQ Music profile a pasted link points to, as the link `page_lists` reads."""
     if app_of(link) == "qq":
-        return qqmusic.lists(link, likes=False)
-    user = ((store.read_json(store.LIBRARY) or {}).get("netease") or {}).get("user")
-    if not user:
-        raise netease.Unreadable("link")
-    return netease.lists(user, likes=False)
+        kind, ref = qqmusic.parse(link)
+        if kind != "user":
+            raise netease.Unreadable("page", app="qq")
+        return qqmusic.link_of(f"qq:u:{ref}")
+    kind, uid = netease.parse(link)
+    if kind != "user":
+        raise netease.Unreadable("page")
+    return f"https://music.163.com/user/home?id={uid}"
+
+
+def page_lists(page: str, likes: bool = True) -> dict:
+    """Every list on a profile (`page_of`): their own, and the ones they keep (`lists` of either app)."""
+    if app_of(page) == "qq":
+        return qqmusic.lists(page, likes)
+    return netease.lists(netease.parse(page)[1], likes)
+
+
+def app_page() -> str | None:
+    """The profile an app listener's likes come from, as `page_of` gives it. None for likes from YouTube or from a
+    playlist: the other lists of whoever made a playlist say nothing about the listener."""
+    lib = store.read_json(store.LIBRARY) or {}
+    ne = lib.get("netease") or {}
+    if lib.get("source") == "qq" and (ne.get("key") or "").startswith("qq:u:"):
+        return app_link(ne["key"])
+    if lib.get("source") == "163" and ne.get("user"):
+        return f"https://music.163.com/user/home?id={ne['user']}"
+    return None
 
 
 def app_link(key: str) -> str:

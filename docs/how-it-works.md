@@ -58,9 +58,10 @@ the same counts, so a song you play on many days speaks for you even unliked.
 
 A like is only part of what a music app shows about you. When your likes come from a NetEase or QQ Music profile,
 every other list anyone can see there is read too, once a week (`qqmusic.lists`, `netease.lists`): the playlists you
-made, the playlists by others you keep, and on QQ Music the albums you keep. Lists you kept in another app before
-your likes here begin tell the same story from further back: `zhiyin archive <QQ Music profile link>` reads them for
-a listener whose likes come from YouTube. The profile sees each list (what kind, its name, when it was made or kept,
+made, the playlists by others you keep, and on QQ Music the albums you keep. **Your Ear** takes up to three more
+profile links on either app, such as an older account or the app you used before your likes here begin, and reads
+them the same way (`zhiyin archive <link>` does it from the command line). A link that isn't a profile, or a profile
+that shows no lists, is refused; a profile that fails a later read keeps its last lists. The profile sees each list (what kind, its name, when it was made or kept,
 its most frequent artists) and the songs of your own lists by artist (how many, from which years, a few titles). Their
 songs count as ones you have and their artists as ones you know, but they never seed or join a station.
 

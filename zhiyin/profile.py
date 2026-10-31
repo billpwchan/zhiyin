@@ -134,11 +134,12 @@ Think like a listener and an editor, not a statistician:
   several languages). Language-specific lanes are right where the language is the point.
 - PLAYED, when given, is how often they actually play each song: weigh it with recency when ordering lanes and
   choosing seeds. A song played on many days without a like still speaks for their taste; only liked ranks can be seeds.
-- EARLIER LISTS, when given, are what they kept in another app before their likes here begin: where their taste comes
-  from. THEIR OTHER LISTS, when given, are the rest of the page their likes come from: their own lists are songs they
-  chose one by one, sorted the way they think about music (the names are their own words); playlists by others and
-  albums they keep are what they went looking for. Never seed from them, and give what they hold a lane only where the
-  likes or plays carry it on.
+- LISTS THEY KEEP IN MUSIC APPS, when given: THEIR OTHER LISTS are the rest of the page their likes come from; LISTS
+  ON ANOTHER PAGE OF THEIRS come from an app they use besides or an account they used before (the dates say which);
+  EARLIER LISTS were kept before their likes here begin. Lists from before their likes are where their taste comes
+  from. Their own lists are songs they chose one by one, sorted the way they think about music (the names are their own
+  words); playlists by others and albums they keep are what they went looking for. Never seed from them, and give what
+  they hold a lane only where the likes or plays carry it on.
 - 6 to 8 lanes for songs, ordered by how central they are NOW (weight recent likes and repeat-liked songs far more
   than their oldest likes). Do not make a lane for long focus mixes; they are handled separately.
 - Old likes that no longer reflect the person (meme songs, practice or cover clips, one-off party
@@ -193,10 +194,18 @@ def _played(songs: list[dict]) -> str:
 LIST_ARTISTS = 4
 
 
-def _kept(a: dict) -> tuple[bool, set[int]]:
-    """Whether the lists in `a` (signals.archive) are on the same page as the likes, and which of them are their own."""
-    same = (store.read_json(store.LIBRARY) or {}).get("source") == a.get("key", "").split(":")[0]
+def _kept(a: dict) -> tuple[list[bool], set[int]]:
+    """For each list in `a` (signals.archive), whether it is on the page the likes come from; and which are their own."""
+    pages = a.get("pages")
+    if pages is None:   # read before pages: one page, the likes' own when it is in the app they come from
+        one = (store.read_json(store.LIBRARY) or {}).get("source") == a.get("key", "").split(":")[0]
+        same = [one] * len(a.get("lists", []))
+    else:
+        same = [bool(pages[x.get("page", 0)].get("same")) for x in a.get("lists", [])]
     return same, {i for i, x in enumerate(a.get("lists", [])) if x.get("kind", "own") in ("own", "likes")}
+
+
+APPS = {"qq": "QQ Music", "163": "NetEase Cloud Music"}
 
 
 def _lists() -> str:
@@ -207,15 +216,25 @@ def _lists() -> str:
     if not a.get("songs"):
         return ""
     lang = i18n.of()
-    app = {"qq": "QQ Music", "163": "NetEase Cloud Music"}.get(a.get("key", "").split(":")[0], "another app")
     same, own = _kept(a)
+    pages = a.get("pages") or [{"key": a.get("key", "")}]
+
+    def app(x):
+        return APPS.get(pages[x.get("page", 0)]["key"].split(":")[0], "another app")
     tops = {}
     for s in a["songs"]:
         for i in s["lists"]:
             tops.setdefault(i, Counter())[s["artists"][0] if s["artists"] else "?"] += 1
-    lists = [f"{i}|{x.get('kind', 'own')}|{x['title']}|{x.get('by') or '-'}|{(x.get('at') or '-')[:7]}|{(x.get('changed') or '-')[:7]}|"
-             f"{x['n']}|" + ", ".join(f"{i18n.script(n, lang)} {c}" for n, c in tops.get(i, Counter()).most_common(LIST_ARTISTS))
-             for i, x in enumerate(a["lists"])]
+
+    def row(i, x):
+        return (f"{i}|{x.get('kind', 'own')}|{x['title']}|{x.get('by') or '-'}|{(x.get('at') or '-')[:7]}|{(x.get('changed') or '-')[:7]}|"
+                f"{x['n']}|" + ", ".join(f"{i18n.script(n, lang)} {c}" for n, c in tops.get(i, Counter()).most_common(LIST_ARTISTS)))
+    lists = list(enumerate(a["lists"]))
+    here = [row(i, x) for i, x in lists if same[i]]
+    there = [row(i, x) for i, x in lists if not same[i]]
+    there_head = (f"EARLIER LISTS, kept in {app(lists[0][1])} before their likes here begin" if "pages" not in a else
+                  "LISTS ON ANOTHER PAGE OF THEIRS, in " + " and ".join(dict.fromkeys(app(x) for i, x in lists if not same[i]))
+                  + " (an app they use besides, or an account they used before: the dates say which)")
     # by artist, not song by song: a long archive listed in full crowded out the likes and the room to think
     by = {}
     for s in a["songs"]:
@@ -231,10 +250,11 @@ def _lists() -> str:
         titles = " / ".join(i18n.script(s["title"], lang) for s in sorted(ss, key=lambda s: -len(s["lists"]))[:3])
         rows.append(f"{i18n.script(name, lang)}|{len(ss)}|{years}|{','.join(map(str, sorted(own & {i for s in ss for i in s['lists']})))}|"
                     f"{titles}")
-    head = (f"THEIR OTHER LISTS in {app}, on the same page as the likes above" if same
-            else f"EARLIER LISTS, kept in {app} before their likes here begin")
-    return (f"\n\n{head} (i|kind: own, saved = a playlist someone else made, album = an album they keep|title|by|made or "
-            "kept|last changed|songs|most frequent artists):\n" + "\n".join(lists)
+    return ("\n\nLISTS THEY KEEP IN MUSIC APPS (i|kind: likes, own, saved = a playlist someone else made, album = an album they "
+            "keep|title|by|made or kept|last changed|songs|most frequent artists)"
+            + (f"\n{('THEIR OTHER LISTS in ' + app(lists[[i for i, _ in lists if same[i]][0]][1]) + ', on the same page as the likes above')}:\n"
+               + "\n".join(here) if here else "")
+            + (f"\n{there_head}:\n" + "\n".join(there) if there else "")
             + (f"\n\nSONGS IN THEIR OWN LISTS by artist ({sum(len(v) for v in by.values())} songs; "
                "artist|songs|released|lists|a few titles):\n" + "\n".join(rows) if by else "")
             + (f"\nOne song each: {', '.join(once)}" if once else ""))
@@ -389,13 +409,14 @@ def evidence(songs: list[dict], tags: dict) -> str:
 
     a = signals.archive()
     same, own = _kept(a)
+    before = "pages" not in a and not any(same)   # kept before their likes here, as `zhiyin archive` once read it
     kept = [s for s in a.get("songs", []) if s["artists"] and own & set(s["lists"])]
     if kept:
         then = Counter(fold(s["artists"][0]) for s in kept)
         was = {fold(s["artists"][0]): i18n.script(s["artists"][0], lang) for s in kept}
         place = {k: i + 1 for i, k in enumerate(sorted(ranks, key=lambda k: -len(ranks[k])))}
-        lists, where = ("their own other lists", "liked") if same else ("the earlier lists", "liked here")
-        out.append(f"{'LISTS AND LIKES' if same else 'THEN AND NOW'} (artist: songs in {lists}, songs {where}, place among "
+        lists, where = ("the earlier lists", "liked here") if before else ("their own lists", "liked")
+        out.append(f"{'THEN AND NOW' if before else 'LISTS AND LIKES'} (artist: songs in {lists}, songs {where}, place among "
                    f"the most {where}): " + "; ".join(f"{was[k]} {n}, {len(ranks.get(k, []))}" + (f", #{place[k]}" if k in place else "")
                                                      for k, n in then.most_common(15)))
         new = sorted(((len(rs), k) for k, rs in ranks.items() if k not in then), reverse=True)[:10]
@@ -438,7 +459,7 @@ Finding what to say:
   songs; the studio cut, the live take or a cover; liking what they play, or playing what they never like; how their
   languages changed; who came back after years away; what they left behind; what doesn't fit the rest.
 - Where two things in the data pull against each other, say so: one real tension is worth three agreements.
-- The earlier lists, when given, are where they come from: what survived into the likes here, and what didn't. When
+- Lists from before their likes, when given, are where they come from: what survived into the likes here, and what didn't. When
   something they used to keep is gone, look for what took its place before calling it lost.
 - Their other lists, when given, show how they keep music beyond a like: what they sort into lists of their own and
   what the names say, and what they went looking for in other people's playlists and in albums.

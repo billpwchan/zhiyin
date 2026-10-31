@@ -139,9 +139,9 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .prep { margin: 4px 0 8px; padding: 12px 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, .045); }
 .prep b { display: block; font-size: 13px; font-weight: 600; }
 .prep p { margin: 4px 0 0; font-size: 13px; line-height: 1.55; color: var(--fg-2); }
-.prep .tb { margin: 8px 0 0 -10px; color: var(--fg); }
-.prep-acts { display: flex; flex-wrap: wrap; }
-.prep-acts .tb + .tb { margin-left: 0; }
+.prep .tb { height: auto; min-height: 32px; margin: 8px 0 0 -10px; color: var(--fg); white-space: normal; text-align: left; }
+.prep-acts { display: flex; flex-wrap: wrap; margin-left: -10px; }
+.prep-acts .tb { margin-left: 0; }
 .prep-swap input { display: block; width: 100%; height: 40px; margin: 10px 0 0; padding: 0 12px; border: 0; border-radius: 10px; outline: none;
   background: rgba(0, 0, 0, .32); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); color: var(--fg); font: inherit; font-size: 14px; }
 .prep-swap input:focus { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .34); }
@@ -402,7 +402,7 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .tr .acts .ib.like.mine svg { fill: currentColor; }
 .tr:has(.like.on) .acts { display: flex; }
 .tr:has(.like.on) .acts .ib:not(.like), .tr:has(.like.on) .d { display: none; }
-@media (hover: hover) { .tr:hover .acts, .tr:hover .acts .ib:not(.like) { display: flex; } .tr:hover .d { display: none; } }
+@media (hover: hover) { .tr:hover .acts { display: flex; } .tr:hover .acts .ib:not(.like) { display: grid; } .tr:hover .d { display: none; } }
 .eq { position: absolute; inset: 0; display: none; align-items: flex-end; justify-content: center; gap: 2px; padding-bottom: 12px; background: rgba(0, 0, 0, .45); }
 .tr.cur .eq { display: flex; }
 .eq i { width: 3px; height: 14px; border-radius: 1px; background: #fff; transform-origin: bottom; transform: scaleY(.3); }
@@ -661,6 +661,12 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 .hist .busy { color: var(--fg-2); }
 .hist-acts { display: flex; gap: 4px; margin-right: -10px; }
 .hist-acts label.tb { cursor: pointer; }
+.hist-add { display: flex; gap: 4px; align-items: center; max-width: 34em; margin-top: 10px; }
+.hist-add input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 0; border-radius: 10px; outline: none;
+  background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); color: var(--fg); font: inherit; font-size: 14px; }
+.hist-add input:focus { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .34); }
+.hist-add input::placeholder { color: var(--fg-3); }
+.hist .mk-err { margin-top: 8px; font-size: 12px; }
 .fold-h { margin: 6px 0 2px; font-size: 12px; font-weight: 600; color: var(--fg-3); }
 details.fold .fold-h + .plain li:first-child { border-top: 0; }
 
@@ -967,7 +973,7 @@ a.m-acct:hover { background: var(--hover); }
   .chip { height: 36px; }
   .sheet { inset: auto 0 0 0; width: 100vw; height: 92dvh; border-radius: 16px 16px 0 0; }
   .sheet[open] { animation: up 420ms var(--drawer); }
-  .link input, .invite input, .mk-row input { font-size: 16px; }
+  .link input, .invite input, .mk-row input, .hist-add input, .prep-swap input { font-size: 16px; }
   .maker { margin: 0 0 28px; padding: 18px 16px 16px; border-radius: 16px; }
   .maker h2 { font-size: 18px; }
   .welcome { padding: 32px 16px 120px; }

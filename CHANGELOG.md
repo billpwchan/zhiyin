@@ -4,7 +4,11 @@
 
 - Likes from a NetEase or QQ Music profile bring the rest of the page with them: the playlists you made, the ones by
   others you keep and, on QQ Music, the albums you keep, read once a week. The stations and the portrait read them,
-  and their songs are never recommended back to you.
+  and their songs are never recommended back to you. Your Ear takes up to three more profile links, such as an older
+  account or the app you used before, read the same way.
+- A listener whose YouTube likes are too few to start from can switch to their QQ Music or NetEase likes.
+- In immersive, switching between the cover and the words no longer leaves YouTube's window where the cover was.
+- The ✕ on a song row sits in the middle of its button again.
 - Top picks, the first station: the surest songs from every station, taking turns, and where a visit starts.
 - A song heard in one station no longer comes round again in another during the same edition.
 - On a phone, YouTube's window stays on the player card while the page scrolls and the toolbar folds away, and the cover no longer grows mid-scroll.

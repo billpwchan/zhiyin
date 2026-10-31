@@ -433,11 +433,11 @@ function prepHTML() {
     const j = S.jobs?.setup, step = Math.max(1, j?.step || (me.status === 'building' ? 2 : 1));
     return `<div class="prep"><b>${t('正在准备你的电台 · {n}/3', { n: step })}</b><p>${esc(STEPS()[step - 1])}${t('。')}${step === 1 ? t('要几分钟，可以先听着，好了会告诉你。') : t('大约一刻钟，可以先听着，好了会告诉你。')}</p></div>`;
   }
-  if (me.status === 'thin' && me.netease && thinSwap) return `<form class="prep prep-swap" id="neForm" autocomplete="off"><b>${t('换一份歌单')}</b><p>${t('贴一份更长的公开歌单，自己建的也行。电台会改从这份歌单出发。')}</p>
+  if (me.status === 'thin' && thinSwap) return `<form class="prep prep-swap" id="neForm" autocomplete="off"><b>${me.netease ? t('换一份歌单') : t('改用 QQ 音乐或网易云的喜欢')}</b><p>${me.netease ? t('贴一份更长的公开歌单，自己建的也行。电台会改从这份歌单出发。') : t('贴你的 QQ 音乐主页链接，或网易云「我喜欢的音乐」的链接。电台会改从那里的喜欢出发。')}</p>
     <input name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false" placeholder="${t('粘贴网易云或 QQ 音乐的链接')}" aria-label="${t('网易云或 QQ 音乐的链接')}">
     <p class="mk-err" role="alert"></p>
-    <div class="prep-acts"><button class="tb" type="submit">${t('从这份歌单开始')}</button><button class="tb" type="button" data-k="thinswap">${t('取消')}</button></div></form>`;
-  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${me.netease ? t('你的{app}喜欢里有 {n} 首在 YouTube Music 上找得到，至少要 20 首才分得出口味。先听「先听着」；在{app}多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0, app: appShort(me.netease.app) }) : t('你在 YouTube Music 有 {n} 首喜欢，至少要 20 首才分得出口味。先听「先听着」；多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0 })}</p><div class="prep-acts"><button class="tb" data-k="setup">${t('现在就看一次')}</button>${me.netease ? `<button class="tb" data-k="thinswap">${t('换一份歌单')}</button>` : ''}</div></div>`;
+    <div class="prep-acts"><button class="tb" type="submit">${me.netease ? t('从这份歌单开始') : t('从这里开始')}</button><button class="tb" type="button" data-k="thinswap">${t('取消')}</button></div></form>`;
+  if (me.status === 'thin') return `<div class="prep"><b>${t('还不够认识你')}</b><p>${me.netease ? t('你的{app}喜欢里有 {n} 首在 YouTube Music 上找得到，至少要 20 首才分得出口味。先听「先听着」；在{app}多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0, app: appShort(me.netease.app) }) : t('你在 YouTube Music 有 {n} 首喜欢，至少要 20 首才分得出口味。先听「先听着」；多点几首喜欢，够了会自动开始。', { n: me.last_sync?.songs ?? 0 })}</p><div class="prep-acts"><button class="tb" data-k="setup">${t('现在就看一次')}</button><button class="tb" data-k="thinswap">${me.netease ? t('换一份歌单') : t('改用 QQ 音乐或网易云')}</button></div></div>`;
   if (me.status === 'error' && me.setup_issue === 'nochannel') return `<div class="prep"><b>${t('这个 Google 账号还没有 YouTube 频道')}</b><p>${t('没有频道，YouTube 不让别的应用读你点过的喜欢。建一个频道只要一分钟，不用发视频；建好回来点「再试一次」。')}</p><div class="prep-acts"><a class="tb" href="https://www.youtube.com/create_channel" target="_blank" rel="noopener">${t('去建频道')}</a><button class="tb" data-k="setup">${t('再试一次')}</button></div></div>`;
   if (me.status === 'error') return `<div class="prep"><b>${t('准备电台时出了问题')}</b><p>${esc((S.jobs?.setup?.error || '').slice(0, 80))}</p><button class="tb" data-k="setup">${t('再试一次')}</button></div>`;
   return '';
@@ -1556,6 +1556,9 @@ function placeHost() {
   const docked = !onHero();
   const target = docked ? $('#pcFrame') : $('#frame');
   if (!target || !cur() || !target.offsetParent) { host.hidden = true; hostAt = null; return; }
+  // Measured mid-flight, the target's box includes the flight's transform: the window would be left where it took off.
+  const fly = target.getAnimations().find((a) => a.id === 'fly');
+  if (fly) { fly.finished.then(placeHost, () => {}); return; }
   const was = host.hidden ? null : host.getBoundingClientRect();
   host.hidden = false;
   host.classList.toggle('off', !Player.shown);
@@ -1581,7 +1584,7 @@ function flyFrom(el, was) {
   el.animate([
     { transformOrigin: '0 0', transform: `translate(${was.left - r.left}px, ${was.top - r.top}px) scale(${was.width / r.width}, ${was.height / r.height})` },
     { transformOrigin: '0 0', transform: 'none' },
-  ], { duration: 420, easing: 'cubic-bezier(.32, .72, 0, 1)' });
+  ], { id: 'fly', duration: 420, easing: 'cubic-bezier(.32, .72, 0, 1)' });
 }
 const ro = new ResizeObserver(() => placeHost());
 // the player card rises into place; measure it again once it has landed
@@ -2839,7 +2842,7 @@ function quotaReset() {
 
 /* ---------- what the listening says: songs played often without a like, a YouTube Music history, how picks fare ---------- */
 const LOVES_SHOWN = 8;
-let lovesAll = false, histBusy = '', QUAL = null, qualAt = 0;
+let lovesAll = false, histBusy = '', listsAdd = false, QUAL = null, qualAt = 0;
 
 function listenedHTML() {
   const loves = EAR?.loves || [];
@@ -2881,9 +2884,19 @@ function historyHTML(h) {
     <div class="hist-acts">${pick}<a class="tb" href="https://takeout.google.com/settings/takeout/custom/youtube" target="_blank" rel="noopener">${t('打开 Google Takeout')}</a></div></div>`;
 }
 
+// Lists kept in NetEase or QQ Music: the rest of the page an app listener's likes come from, and any profile pasted here.
 function archiveHTML(a) {
-  if (SAMPLE() || !a) return '';
-  return `<div class="hist"><div><b>${t('早年的歌单')}</b><p>${t('{app}上的 {l} 个歌单，共 {n} 首。口味描述会参考它们；这些歌不会当新歌推给你，也不放进电台。', { app: appName(a.app), l: a.lists, n: a.songs.toLocaleString(LANG) })}</p></div></div>`;
+  if (SAMPLE()) return '';
+  const form = `<form class="hist-add" id="listsForm" autocomplete="off">
+      <input name="link" type="text" inputmode="url" enterkeyhint="go" spellcheck="false" placeholder="${t('QQ 音乐或网易云的主页链接')}" aria-label="${t('QQ 音乐或网易云的主页链接')}">
+      <button class="tb" type="submit">${t('读取')}</button></form><p class="mk-err" role="alert"></p>`;
+  if (S.jobs?.lists?.running) return `<div class="hist"><div><b>${t('QQ 音乐和网易云的歌单')}</b><p class="busy">${esc(S.jobs.lists.msg || t('正在读歌单'))}</p></div></div>`;
+  if (!a) return `<div class="hist"><div><b>${t('加上 QQ 音乐或网易云的歌单')}</b><p>${t('贴你的主页链接。你建的歌单、收藏的歌单和专辑都会读进来，口味描述会参考它们，里面的歌也不会当新歌推给你。')}</p>${form}</div></div>`;
+  const apps = a.apps.map(appName).join(t('和'));
+  const said = t(a.albums ? '{n} 个歌单和专辑，共 {s} 首，每周重读一次。口味描述会参考它们；里面的歌不会当新歌推给你。' : '{n} 个歌单，共 {s} 首，每周重读一次。口味描述会参考它们；里面的歌不会当新歌推给你。', { n: a.lists, s: a.songs.toLocaleString(LANG) });
+  const acts = [a.added < (EAR?.pages_max ?? 3) && !listsAdd ? `<button class="tb" data-k="listsadd">${t('再加一个主页')}</button>` : '',
+    a.added ? `<button class="tb" data-k="listsdel">${a.own ? t('删掉加上的主页') : t('删除')}</button>` : ''].join('');
+  return `<div class="hist"><div><b>${t('{app}上的歌单', { app: apps })}</b><p>${said}</p>${listsAdd ? form : ''}</div>${acts ? `<div class="hist-acts">${acts}</div>` : ''}</div>`;
 }
 
 function playLove(i) {
@@ -3684,6 +3697,10 @@ async function act(k, btn) {
   else if (k === 'follow' && GUEST) follow(btn);
   else if (k === 'tomaker') { $('#join').close(); toMaker(); }
   else if (k === 'lovesmore') { lovesAll = !lovesAll; renderEar(); }
+  else if (k === 'listsadd') { listsAdd = true; renderEar(); $('#listsForm input')?.focus(); }
+  else if (k === 'listsdel') {
+    try { const r = await api('/api/lists/delete', {}); S.jobs = r.jobs; renderEar(); poll(); } catch (err) { toast(err.message); }
+  }
   else if (k === 'histdel') {
     try { const r = await api('/api/history/delete', {}); S.jobs = r.jobs; EAR.history = null; renderEar(); poll(); toast(t('播放记录删掉了')); } catch (err) { toast(err.message); }
   }
@@ -3814,6 +3831,24 @@ document.addEventListener('submit', async (e) => {
     else if (!MK.busy) makeCard(link);
     return;
   }
+  if (e.target.id === 'listsForm') {
+    e.preventDefault();
+    const f = e.target, link = f.link.value.trim(), b = f.querySelector('button'), err = f.nextElementSibling;
+    if (!link) { f.link.focus(); return; }
+    b.disabled = true;
+    err.textContent = '';
+    try {
+      const r = await api('/api/lists', { link });
+      S.jobs = r.jobs;
+      listsAdd = false;
+      renderEar();
+      poll();
+    } catch (x) {
+      err.textContent = x.message;
+      b.disabled = false;
+    }
+    return;
+  }
   if (e.target.id === 'neForm') {
     e.preventDefault();
     const f = e.target, link = f.link.value.trim(), b = f.querySelector('button'), err = f.querySelector('.mk-err');
@@ -3930,6 +3965,12 @@ async function finished(done) {
       continue;
     }
     if (k === 'sync' && !j.error) { if (view === 'ear') renderEar(); continue; }
+    if (k === 'lists') {
+      if (j.error) toast(t('没读到歌单：{e}', { e: j.error.slice(0, 120) }), [], 9000);
+      else toast(t('歌单读好了'));
+      loadEar();
+      continue;
+    }
     if (k === 'history') {
       if (j.error) toast(t('没读完播放记录：{e}', { e: j.error.slice(0, 60) }));
       else toast(j.result?.loves ? t('找到 {n} 首你常听、没点喜欢的歌', { n: j.result.loves }) : t('播放记录里没有特别常听、又没点喜欢的歌'), [], 6000);

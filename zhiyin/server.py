@@ -305,9 +305,10 @@ def _read_likes(log, glimpsed=None, got: dict | None = None) -> dict:
         r = library.sync_from_app(ne, log=log, glimpsed=glimpsed, got=got)
         # the list itself from now on, not the share text or short link it was found through
         accounts.set_prefs(store.uid(), netease={"link": library.app_link(r["key"]), "n": r["videos"], "unmatched": r["unmatched"]})
-        signals.read_lists(ne, log=log, force=r["first"])
-        return r
-    return library.sync_from_google(log=log, glimpsed=glimpsed) if glimpsed else library.sync_from_google(log=log)
+    else:
+        r = library.sync_from_google(log=log, glimpsed=glimpsed) if glimpsed else library.sync_from_google(log=log)
+    signals.read_lists(log=log, force=r.get("first", False))
+    return r
 
 
 def _sync_likes(log):
@@ -776,6 +777,8 @@ CARD_WHY = {
     "few": "这份歌单只有 {n} 首，至少要 20 首才画得出来",
     ("upstream", "163"): "网易云那边没有回应，过一会儿再试",
     ("upstream", "qq"): "QQ 音乐那边没有回应，过一会儿再试",
+    ("page", "163"): "要的是主页链接：在网易云点「我的」，点头像进主页，右上角「···」点分享，复制链接贴过来",
+    ("page", "qq"): "要的是主页链接：在 QQ 音乐点头像进主页，右上角「···」点分享，复制链接贴过来",
 }
 
 
@@ -1321,7 +1324,11 @@ def ear_view():
     h = signals.history()
     out["history"] = {"at": h["at"], "span": h.get("span"), "entries": h.get("entries"), "songs": len(h.get("songs", {}))} if h else None
     a = signals.archive()
-    out["archive"] = {"app": a["key"].split(":")[0], "lists": len(a["lists"]), "songs": len(a["songs"])} if a.get("songs") else None
+    pages = a.get("pages") or [{"key": a.get("key", ""), "same": False}]
+    out["archive"] = {"apps": list(dict.fromkeys(p["key"].split(":")[0] for p in pages)), "lists": len(a["lists"]),
+                      "albums": sum(x.get("kind") == "album" for x in a["lists"]), "songs": len(a["songs"]),
+                      "added": len(accounts.prefs().get("pages") or []), "own": any(p.get("same") for p in pages)} if a.get("songs") else None
+    out["pages_max"] = MAX_PAGES
     return _for_reader(out)
 
 
@@ -1342,7 +1349,7 @@ def ear_relabel():
 
 @app.get("/api/jobs")
 def jobs():
-    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell", "label", "history")}
+    return {k: _job_view(k) for k in ("refresh", "ask", "sync", "setup", "retell", "label", "history", "lists")}
 
 
 class RefreshReq(BaseModel):
@@ -1478,6 +1485,62 @@ def history_import(h: HistoryReq):
         except HTTPException:
             pass
     return {"ok": True, "songs": len(out["songs"]), "jobs": jobs()}
+
+
+MAX_PAGES = 3
+
+
+class PageReq(BaseModel):
+    link: Annotated[str, Field(max_length=2000)]
+
+
+@app.post("/api/lists")
+def lists_add(b: PageReq):
+    """A NetEase or QQ Music profile of theirs, for the lists they keep there: the profile reads them, and their songs
+    are never recommended as new (signals.read_lists)."""
+    if store.is_sample():
+        raise HTTPException(403)
+    try:
+        page = library.page_of(b.link)
+    except netease.Unreadable as e:
+        raise HTTPException(422, _why(e, i18n.of())) from None
+    if page == library.app_page():
+        raise HTTPException(409, i18n.tr("这是你的喜欢来自的主页，上面的歌单已经读进来了"))
+    uid = store.uid()
+    accounts.set_prefs(uid, pages=[*[p for p in accounts.prefs(uid).get("pages") or [] if p != page], page][-MAX_PAGES:])
+    _start("lists", lambda log: _read_pages(log, page))
+    return {"jobs": jobs()}
+
+
+@app.post("/api/lists/delete")
+def lists_delete():
+    """The pages they added are forgotten, with their lists; the rest of the page their likes come from stays."""
+    accounts.set_prefs(store.uid(), pages=[])
+    _start("lists", _read_pages)
+    return {"jobs": jobs()}
+
+
+def _read_pages(log, added: str | None = None) -> dict:
+    """Every page they keep lists on, read again, then the portrait written again with them. A page just added that
+    can't be read, or shows nobody any list, is taken off again."""
+    uid = store.uid()
+    try:
+        got = signals.read_lists(log, force=True, strict=True)
+        if added and not next((p["lists"] for p in got.get("pages", []) if p["link"] == added), 0):
+            raise ValueError(i18n.tr("这个主页上没有别人看得到的歌单"))
+    except Exception as e:
+        if added:
+            accounts.set_prefs(uid, pages=[p for p in accounts.prefs(uid).get("pages") or [] if p != added])
+        if isinstance(e, netease.Unreadable):
+            raise ValueError(_why(e, i18n.of())) from None
+        raise
+    if store.read_json(store.PROFILE) and not llm.unavailable():
+        log(i18n.tr("按这些歌单重写口味描述"))
+        try:
+            profile.rewrite_portrait()
+        except Exception:   # noqa: BLE001 - the lists count from now on; the portrait catches up at the next rebuild
+            traceback.print_exc()
+    return {"lists": len(got.get("lists", [])), "songs": len(got.get("songs", []))}
 
 
 @app.post("/api/history/delete")
@@ -1705,7 +1768,8 @@ def app_use(b: LinkReq):
     u = accounts.get()
     if store.is_sample() or not u:
         raise HTTPException(403)
-    if google.connected(u["id"]) or u["status"] not in ("new", "thin", "error"):
+    # too few YouTube likes is nothing to lose; likes still to be read from YouTube are
+    if u["status"] not in ("new", "thin", "error") or (google.connected(u["id"]) and u["status"] != "thin"):
         raise HTTPException(409, i18n.tr("这个账号已经在用别的喜欢了"))
     got = _read_app(b.link, i18n.of())
     _use_app(u["id"], library.app_link(got["key"]), got)

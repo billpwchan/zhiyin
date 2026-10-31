@@ -1,3 +1,4 @@
+import pytest
 import random
 import time
 
@@ -243,28 +244,66 @@ def test_an_app_listeners_other_lists_are_read_as_the_rest_of_their_page(monkeyp
     assert "THEIR OTHER LISTS in QQ Music, on the same page as the likes above" in prompt
     assert "\n0|own|请给我一打洞爷湖|-|2021-11|2021-11|2|SPYAIR 2" in prompt and "\n1|saved|唱见の治愈歌声|凌舟|2020-07|2021-07|2|" in prompt
     assert "SONGS IN THEIR OWN LISTS by artist (2 songs;" in prompt and "\nSPYAIR|2|2013|0|" in prompt   # not the saved list's
-    assert "LISTS AND LIKES (artist: songs in their own other lists, songs liked" in ev and "SPYAIR 2, 0" in ev
-    assert "そらる" in ev.split("MOST LIKED AND ABSENT FROM THEIR OWN OTHER LISTS: ")[1]
+    assert "LISTS AND LIKES (artist: songs in their own lists, songs liked" in ev and "SPYAIR 2, 0" in ev
+    assert "そらる" in ev.split("MOST LIKED AND ABSENT FROM THEIR OWN LISTS: ")[1]
 
 
-def test_an_app_listeners_lists_are_read_once_a_week_and_a_failure_keeps_the_last(monkeypatch):
-    from zhiyin import library
+def test_lists_are_read_from_every_page_once_a_week_and_a_failure_keeps_the_last(monkeypatch):
+    from zhiyin import accounts, library
     reads = []
 
-    def lists(link):
-        reads.append(link)
-        if len(reads) == 2:
+    def lists(page, likes=True):
+        reads.append((page, likes))
+        if page == "OLD" and len(reads) > 2:
             raise RuntimeError("QQ Music not answering")
-        return {"key": "qq:u:x", "lists": [{"title": "霓虹", "kind": "own", "n": 1}], "songs": [
-            {"title": "優しい人", "artists": ["米津玄師"], "aka": [], "album": "", "released": None, "lists": [0]}]}
-    monkeypatch.setattr(library, "app_lists", lists)
+        song = {"title": "優しい人", "artists": ["米津玄師"], "aka": [], "album": "", "released": None, "lists": [0]}
+        return {"key": f"qq:u:{page}", "lists": [{"title": f"霓虹 {page}", "kind": "own", "n": 1}], "songs": [song]}
+    monkeypatch.setattr(library, "page_lists", lists)
+    monkeypatch.setattr(library, "app_page", lambda: "OWN")
     said = []
-    with store.as_user("lists2"):
-        assert signals.read_lists("L", log=said.append)["songs"][0]["title"] == "優しい人"
-        assert signals.read_lists("L")["lists"][0]["title"] == "霓虹" and len(reads) == 1   # not again within the week
-        assert signals.read_lists("L", force=True)["songs"] and len(reads) == 2           # the failed read kept the last
-        assert signals.read_lists("L") and len(reads) == 2                                 # and waits before trying again
-    assert said == ["读到你在 QQ 音乐的 1 个歌单和专辑，共 1 首歌"]
+    uid = accounts.redeem(accounts.invite("Lists"))
+    with store.as_user(uid):
+        accounts.set_prefs(uid, pages=["OLD"])
+        got = signals.read_lists(log=said.append)
+        assert reads == [("OWN", False), ("OLD", True)]   # their likes are read on their own; an added page in full
+        assert [(p["key"], p["same"], p["lists"]) for p in got["pages"]] == [("qq:u:OWN", True, 1), ("qq:u:OLD", False, 1)]
+        assert [x["page"] for x in got["lists"]] == [0, 1] and got["songs"][0]["lists"] == [0, 1]   # one song, in both
+        assert signals.read_lists()["songs"] and len(reads) == 2   # not again within the week
+        assert signals.read_lists(force=True)["pages"] and len(reads) == 4   # a failed read keeps the last
+        assert signals.read_lists() and len(reads) == 4                       # and is tried again a day later
+        with pytest.raises(RuntimeError):
+            signals.read_lists(force=True, strict=True)
+        monkeypatch.setattr(library, "app_page", lambda: None)
+        accounts.set_prefs(uid, pages=[])
+        assert signals.read_lists() == {} and signals.archive() == {}   # pages taken off: their lists go
+        signals.save_archive({"key": "qq:u:x", "lists": [], "songs": []})
+        assert signals.read_lists()["key"] == "qq:u:x"   # a list kept by `zhiyin archive` before pages stays
+    assert said == ["读到 QQ 音乐上的 1 个歌单和专辑，共 1 首歌"] * 2
+
+
+def test_a_profile_added_for_its_lists_must_be_a_profile_and_one_that_shows_some(monkeypatch):
+    from fastapi import HTTPException
+    from zhiyin import accounts, library, qqmusic, server
+    uid = accounts.redeem(accounts.invite("Ling"))
+    jobs = []
+    monkeypatch.setattr(server, "_start", lambda kind, fn: jobs.append((kind, fn)))
+    monkeypatch.setattr(qqmusic, "parse", lambda text, c=None: ("playlist", 7) if "playlist" in text else ("user", "eu**"))
+    monkeypatch.setattr(library, "app_page", lambda: None)
+    with store.as_user(uid):
+        with pytest.raises(HTTPException) as e:
+            server.lists_add(server.PageReq(link="https://y.qq.com/n/ryqq/playlist/7"))
+        assert e.value.status_code == 422 and "主页" in e.value.detail
+        server.lists_add(server.PageReq(link="https://c6.y.qq.com/base/fcgi-bin/u?__=x"))
+        page = qqmusic.link_of("qq:u:eu**")
+        assert accounts.prefs(uid)["pages"] == [page] and jobs[-1][0] == "lists"
+        monkeypatch.setattr(library, "page_lists", lambda p, likes=True: {"key": "qq:u:eu**", "lists": [], "songs": []})
+        with pytest.raises(ValueError):   # nothing anyone else can see there: the page comes off again
+            jobs[-1][1](lambda *a, **k: None)
+        assert accounts.prefs(uid)["pages"] == []
+        monkeypatch.setattr(library, "app_page", lambda: page)
+        with pytest.raises(HTTPException) as e:   # the page their likes come from is read already
+            server.lists_add(server.PageReq(link="https://c6.y.qq.com/base/fcgi-bin/u?__=x"))
+        assert e.value.status_code == 409
 
 
 def test_the_portrait_reads_counts_made_from_the_likes_not_its_own_counting():
