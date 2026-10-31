@@ -9,7 +9,7 @@ import json
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, quote, urlsplit
 
 import httpx
@@ -106,8 +106,11 @@ def _diss(c: httpx.Client, which: dict, begin: int, num: int = PAGE) -> dict:
     return _call(c, "music.srfDissInfo.DissInfo", "CgiGetDiss", {**which, "song_begin": begin, "song_num": num})
 
 
+BEIJING = timezone(timedelta(hours=8))   # QQ Music dates a release from midnight there
+
+
 def _day(ts) -> str | None:
-    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d") if ts and ts > 0 else None
+    return datetime.fromtimestamp(ts, BEIJING).strftime("%Y-%m-%d") if ts and ts > 0 else None
 
 
 def _estimate(tracks: list[dict], since: str | None, until: str | None) -> None:

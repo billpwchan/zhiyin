@@ -8,7 +8,7 @@ import json
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -115,8 +115,11 @@ def _songs(c: httpx.Client, ids: list[int]) -> dict[int, dict]:
     return out
 
 
+BEIJING = timezone(timedelta(hours=8))   # NetEase dates a release from midnight there
+
+
 def _date(ms) -> str | None:
-    return datetime.fromtimestamp(ms / 1000).strftime("%Y-%m-%d") if ms and ms > 0 else None
+    return datetime.fromtimestamp(ms / 1000, BEIJING).strftime("%Y-%m-%d") if ms and ms > 0 else None
 
 
 def likes(text: str) -> dict:
