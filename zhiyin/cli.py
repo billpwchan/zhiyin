@@ -17,6 +17,7 @@ def main():
     p.add_argument("--model", default="opus")
     p = sub.add_parser("portrait", help="rewrite only the portrait (headline, observations, eras), keeping the stations")
     p.add_argument("--model", default="opus")
+    p.add_argument("--headline", action="store_true", help="only the line under the taste's name")
     sub.add_parser("listen", help="fetch a preview of every liked song and learn what it sounds like (once, ~1 hour)")
     sub.add_parser("refresh", help="build a new edition of recommendations")
     sub.add_parser("setup", help="first run: sync, profile, listen and refresh in one go (about an hour)")
@@ -95,7 +96,7 @@ def main():
         print(f"{len(prof['lanes'])} lanes: " + ", ".join(l["name"] for l in prof["lanes"]))
     elif a.cmd == "portrait":
         from . import profile
-        po = profile.rewrite_portrait(a.model)
+        po = profile.rewrite_portrait(a.model, only_headline=a.headline)
         print(po["headline"])
         for o in po["observations"]:
             print(f"- {o['claim']} {o['evidence']}")

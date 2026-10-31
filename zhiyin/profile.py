@@ -443,8 +443,11 @@ The gap between a report and a reading, from other listeners (theirs, not yours;
   everyone else has moved on."
 - Report: "Only 9 of your 160 likes are above medium energy." Reading: "Nothing you like is in a hurry.\""""
 
-HEADLINE_SCHEMA = {"type": "object", "properties": {"drafts": {"type": "array", "items": {"type": "string"}},
-                                                    "headline": {"type": "string"}}, "required": ["drafts", "headline"]}
+HEADLINE_SCHEMA = {"type": "object", "properties": {
+    "drafts": {"type": "array", "items": {"type": "object", "properties": {
+        "text": {"type": "string"}, "post": {"type": "integer"}, "stranger": {"type": "integer"}, "unsaid": {"type": "integer"}},
+        "required": ["text", "post", "stranger", "unsaid"]}},
+    "headline": {"type": "string"}}, "required": ["drafts", "headline"]}
 HEADLINE_SYSTEM = """You write the one line under the name of a person's taste in music, on their own page and on the
 card they may post. @LISTENER@
 You get what a careful reader of their listening noticed, each reading with the facts behind it, the periods of their
@@ -462,7 +465,10 @@ listening, and the name their taste was given.
 - Never: two mirrored clauses that sound like one (对仗); "not X but Y" (不是…而是); "from X to Y" (从…到…); rhetorical
   questions; colons, dashes or exclamation marks; metaphors or similes; the words soul, journey, story, vibe, warm,
   灵魂, 旅程, 故事, 仿佛, 底色, 质感, 氛围, 温柔, 温暖, 骨子里.
-Write five drafts, each from a different reading, then headline: the best one, tightened."""
+Write five drafts, each from a different reading, and score each from 1 to 5: post (how much they would want it on
+their card), stranger (how well someone who doesn't know them gets it in one read) and unsaid (how much it says what
+they hadn't put into words; a fact they plainly know about themselves scores 1). headline: the draft with the highest
+total, tightened, never one that restates a reading that is already shown on the page."""
 
 
 def headline(po: dict, model: str = "opus", overall: str = "") -> str:
@@ -657,14 +663,22 @@ def name_taste(rows: list[tuple[str, str, str]], lang: str, lines: int = LABEL_L
     return i18n.zh_punct(i18n.convert(out, "zh-Hant" if lang == "zh-Hans" else "zh-Hans", lang))
 
 
-def rewrite_portrait(model: str = "opus") -> dict:
+def rewrite_portrait(model: str = "opus", only_headline: bool = False) -> dict:
     """A new reading of the listener on the stations they have, as when an imported history or earlier lists add to
     what is known about them."""
     llm.require()
     prof = store.read_json(store.PROFILE)
     if not prof or i18n.family(prof.get("lang", "zh-Hans")) != i18n.family(i18n.of()):
         raise ValueError("no profile in this language: rebuild it")
-    prof["portrait"] = portrait(prof, model)
+    if only_headline:
+        from . import settings
+        nm = settings.not_me()
+        aside = {r for s in prof.get("set_aside", []) for r in s["ranks"]}
+        songs = [t for t in library.load() if not t["long"] and not settings.is_not_me(t, nm) and t["rank"] not in aside]
+        po = i18n.convert_tree(prof["portrait"], prof.get("lang", "zh-Hans"), i18n.of())
+        prof["portrait"] = {**po, "headline": headline(po, model, evidence(songs, store.read_json(store.TAGS) or {}))}
+    else:
+        prof["portrait"] = portrait(prof, model)
     if prof.get("lang") != i18n.of():   # written in the reader's script now: the rest follows on serve
         prof["portrait"] = i18n.convert_tree(prof["portrait"], i18n.of(), prof.get("lang", "zh-Hans"))
     store.write_json(store.PROFILE, prof)
