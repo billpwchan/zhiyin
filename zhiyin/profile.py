@@ -372,21 +372,20 @@ def evidence(songs: list[dict], tags: dict) -> str:
                                for k, n in then.most_common(15)))
         new = sorted(((len(rs), k) for k, rs in ranks.items() if k not in then), reverse=True)[:10]
         out.append("MOST LIKED HERE AND ABSENT FROM THE EARLIER LISTS: " + ", ".join(f"{shown[k]} {n}" for n, k in new))
-    return "\n\nEVIDENCE, counted from the same data (trust these numbers over your own counting):\n- " + "\n- ".join(out)
+    return "\n".join(f"- {x}" for x in out)
 
 
 PORTRAIT_SCHEMA = {
     "type": "object",
-    "properties": {   # in the order written: the headline comes out of the observations
+    "properties": {
         "observations": {"type": "array", "items": {"type": "object", "properties": {
             "claim": {"type": "string"}, "evidence": {"type": "string"}}, "required": ["claim", "evidence"]}},
-        "headline": {"type": "string"},
         "eras": {"type": "array", "items": {"type": "object", "properties": {
             "from_rank": {"type": "integer"}, "to_rank": {"type": "integer"},
             "years": {"type": "string"}, "label": {"type": "string"}, "text": {"type": "string"}},
             "required": ["from_rank", "to_rank", "years", "label", "text"]}},
     },
-    "required": ["headline", "observations", "eras"],
+    "required": ["observations", "eras"],
 }
 
 PORTRAIT_SYSTEM = """You write the part of one person's music page that reads them, from their own listening data.
@@ -421,11 +420,6 @@ What to write (@LANG@; keep song titles and artist names exactly as given; @TITL
   reading of how they listen, one plain sentence of @CLAIM@ with no numbers. evidence: one or two sentences of
   @EVIDENCE@ with the facts from their data that show it, at most two numbers and three names, counted the way a
   person counts (years, months, songs, plays; never ranks or likes in between). Give the facts and stop.
-- headline, written last: what the observations add up to about the kind of listener they are, one sentence of
-  @HEADLINE@, not any one observation restated. Prefer what they may not have noticed about themselves over what they
-  plainly know (which languages or genres they play). It sits under the name of their taste and on the card they
-  share, so a stranger must get it without any data: no numbers, years or counts, at most one name. Draft five, then
-  keep the one they would most want to post: it should make them smile or nod, never read like a report or a slogan.
 - eras: 4-6 periods by rank range, newest first, with years from the "liked around" dates (never from release
   years) written like 2019–2021 or 2026, a short label and one sentence each on what changed, naming at most two
   artists.
@@ -449,6 +443,40 @@ The gap between a report and a reading, from other listeners (theirs, not yours;
   everyone else has moved on."
 - Report: "Only 9 of your 160 likes are above medium energy." Reading: "Nothing you like is in a hurry.\""""
 
+HEADLINE_SCHEMA = {"type": "object", "properties": {"drafts": {"type": "array", "items": {"type": "string"}},
+                                                    "headline": {"type": "string"}}, "required": ["drafts", "headline"]}
+HEADLINE_SYSTEM = """You write the one line under the name of a person's taste in music, on their own page and on the
+card they may post. @LISTENER@
+You get what a careful reader of their listening noticed, each reading with the facts behind it, the periods of their
+listening, and the name their taste was given.
+- Say what the readings add up to about the kind of listener they are: one sentence of @HEADLINE@ in @LANG@. Not one
+  reading restated, and not the name said again.
+- Prefer what they may not have noticed about themselves over what they plainly know, such as which languages or
+  genres they play. A surprise or a tension is worth more than a habit anyone would admit to.
+- Keep each reading's scope. What one artist or one song shows is not a habit: check it against the overall facts
+  given before you widen it.
+- A stranger who sees only the card must get it in one read: everyday words, one idea, no numbers, years or counts,
+  at most one name.
+- It should make them smile or nod and want to post it: a friend talking to them ("you"), never a report, a slogan
+  or a compliment, never a guess at their feelings or life.
+- Never: two mirrored clauses that sound like one (对仗); "not X but Y" (不是…而是); "from X to Y" (从…到…); rhetorical
+  questions; colons, dashes or exclamation marks; metaphors or similes; the words soul, journey, story, vibe, warm,
+  灵魂, 旅程, 故事, 仿佛, 底色, 质感, 氛围, 温柔, 温暖, 骨子里.
+Write five drafts, each from a different reading, then headline: the best one, tightened."""
+
+
+def headline(po: dict, model: str = "opus", overall: str = "") -> str:
+    """The line under the taste's name, written on its own from the readings, which make it steadier than a line
+    squeezed in beside them. `overall`: the evidence lines that say how far a reading reaches."""
+    from . import ear
+    name = ear.label()
+    prompt = ("READINGS:\n" + "\n".join(f"- {o['claim']} ({o['evidence']})" for o in po["observations"])
+              + (f"\n\nOVERALL FACTS:\n{overall}" if overall else "")
+              + "\n\nPERIODS, newest first:\n" + "\n".join(f"- {e['years']}: {e['label']}. {e['text']}" for e in po["eras"])
+              + (f"\n\nTHE NAME OF THEIR TASTE: {name}" if name else ""))
+    return llm.call(prompt, _sys(HEADLINE_SYSTEM), HEADLINE_SCHEMA, model=model, timeout=300)["headline"].strip()
+
+
 PORTRAIT_MIXES = 30
 
 
@@ -462,15 +490,17 @@ def portrait(prof: dict, model: str = "opus") -> dict:
     songs = [t for t in tracks if not t["long"] and not settings.is_not_me(t, nm) and t["rank"] not in aside]
     mixes = [t for t in tracks if t["long"]]
     lanes = "\n".join(f"- {ln['name']}: {ln['blurb']}" for ln in prof.get("lanes", []))
+    ev = evidence(songs, tags)
     prompt = (
         "LIKED SONGS (rank|liked around|title|artists|kind|lang|scene|sound|mood|energy):\n"
         + "\n".join(_summary_lines(songs, tags))
-        + evidence(songs, tags)
+        + (f"\n\nEVIDENCE, counted from the same data (trust these numbers over your own counting):\n{ev}" if ev else "")
         + (f"\n\nLONG FOCUS MIXES SAVED: {len(mixes)} (some titles): "
            + " / ".join(m["title"][:60] for m in mixes[:PORTRAIT_MIXES]) if mixes else "")
         + _played(songs) + _earlier()
         + (f"\n\nTHEIR STATIONS, already described elsewhere on the page:\n{lanes}" if lanes else ""))
-    return llm.call(prompt, _sys(PORTRAIT_SYSTEM), PORTRAIT_SCHEMA, model=model, timeout=900)
+    po = llm.call(prompt, _sys(PORTRAIT_SYSTEM), PORTRAIT_SCHEMA, model=model, timeout=900)
+    return {"headline": headline(po, model, ev), **po}
 
 
 def synthesize(model: str = "opus") -> dict:

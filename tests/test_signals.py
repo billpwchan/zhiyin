@@ -253,7 +253,10 @@ def test_the_portrait_is_its_own_call_and_lands_beside_the_stations(monkeypatch)
         props = schema["properties"]
         seen.append(next(iter(props)))
         if "observations" in props:
-            return {"headline": "h", "observations": [{"claim": "c", "evidence": "e"}], "eras": []}
+            return {"observations": [{"claim": "c", "evidence": "e"}], "eras": []}
+        if "drafts" in props:
+            assert "- c (e)" in prompt
+            return {"drafts": ["a", "b"], "headline": " h "}
         if "lanes" in props:
             return {"lanes": [{"key": "a", "name": "A", "english": "A", "blurb": "b", "when": "w", "sound": "s", "langs": ["yue"],
                                "energy": [1, 3], "seeds": [0], "core_artists": [], "explore_artists": [], "avoid": [],
@@ -267,4 +270,5 @@ def test_the_portrait_is_its_own_call_and_lands_beside_the_stations(monkeypatch)
         store.write_json(store.TAGS, {"liked000001": {"kind": "song", "lang": "yue", "scene": "x", "sound": "x", "mood": "x", "energy": 2}})
         prof = profile.build(log=lambda *a: None)
         assert prof["portrait"]["observations"][0]["claim"] == "c" and prof["assign"] == {"liked000001": ["a"]}
+        assert prof["portrait"]["headline"] == "h"
         assert "portrait" not in profile.LANE_SCHEMA["properties"]
