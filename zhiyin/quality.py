@@ -87,7 +87,8 @@ def report(days: int = 14, uid: str | None = None) -> dict:
         add("arm", "probe:" + x["probe"] if x["probe"] else "editor" if x["slot"] is not None and x["slot"] >= 0 else None, x)
         add("start", "chosen" if x["src"] in signals.CHOSEN else "played on" if x["src"] else None, x)
     for x in signals.listens(uid, since):
-        if x["kind"] and x["src"] not in ("compare", "find"):   # (a like they looked up is not one woven in)
+        # (a like they looked up is not one woven in, and a round of a repeat isn't the station playing it)
+        if x["kind"] and x["src"] not in ("compare", "find", "loop"):
             add("mine", x["kind"], {**x, "out": outcome(x, False), "like": False, "nope": False})
     return {"days": days, "since": since, "groups": {d: dict(v) for d, v in groups.items()}}
 

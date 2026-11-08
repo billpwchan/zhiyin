@@ -280,8 +280,42 @@ kbd { font: 500 11px var(--font); color: var(--fg-3); border: 1px solid var(--li
 .ctl { margin-top: 12px; display: flex; align-items: center; gap: 6px; margin-left: -6px; }
 .ctl .gap { width: 10px; }
 .ctl .push { flex: 1; }
-@container (max-width: 439px) {   /* .meta: with its label the control row needs about 420px */
+/* a row narrower than the sizes below expect: the round buttons give way rather than spill past the edge */
+.ctl .ib:not(.play) { flex: 0 1 40px; width: auto; height: auto; aspect-ratio: 1; min-width: 28px; }
+/* repeat one or shuffle: lit, with a dot under it, so a song on repeat is never a mystery */
+.ib.mode { position: relative; }
+.ib.mode.on { color: var(--fg); }
+.ib.mode.on::after { content: ""; position: absolute; bottom: 3px; left: calc(50% - 2px); width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+/* The container is .meta; in immersive on a phone, where .meta is no box, the same steps go by the window's width
+   standing upright, and by the landscape rules on its side. With its label the row needs about 470px. */
+@container (max-width: 479px) {
   .ctl .tb .lbl { display: none; }
+}
+/* a phone's row holds eight controls: the round buttons a little smaller and closer */
+@container (max-width: 399px) {
+  .ctl { gap: 2px; }
+  .ctl .gap { width: 6px; }
+  .ctl .ib:not(.play) { flex-basis: 36px; }
+}
+/* the smallest phones (320px) */
+@container (max-width: 319px) {
+  .ctl { gap: 1px; }
+  .ctl .gap { width: 0; }
+  .ctl .ib:not(.play) { flex-basis: 32px; }
+  .ctl .ib.play { width: 44px; height: 44px; }
+  .ctl .tb { padding: 0 8px; }
+}
+@media (max-width: 439px) {
+  .imm .ctl { gap: 2px; }
+  .imm .ctl .gap { width: 6px; }
+  .imm .ctl .ib:not(.play) { flex-basis: 36px; }
+}
+@media (max-width: 339px) {
+  .imm .ctl { gap: 1px; }
+  .imm .ctl .gap { width: 0; }
+  .imm .ctl .ib:not(.play) { flex-basis: 32px; }
+  .imm .ctl .ib.play { width: 44px; height: 44px; }
+  .imm .ctl .tb { padding: 0 8px; }
 }
 /* short rooms: the secondary lines go before the cover shrinks or anything is cut off */
 @container (max-height: 680px) { .t-fine { display: none; } .now { --mh: 310px; } }
@@ -1117,7 +1151,11 @@ a.m-acct:hover { background: var(--hover); }
   .imm .t-artist, .imm .room.no-lyr .t-artist { grid-area: 2 / 2; text-align: left; }
   .imm .room.lyr-on .lyr { grid-area: 3 / 2; margin-top: 4px; }
   .imm .prog { grid-area: 4 / 2; }
-  .imm .ctl { grid-area: 5 / 2; }
+  .imm .ctl { grid-area: 5 / 2; gap: 2px; }
+  .imm .ctl .gap { width: 6px; }
+  .imm .ctl .ib:not(.play) { flex-basis: 36px; }
+  .imm .ctl .ib.play { width: 44px; height: 44px; }
+  .imm .ctl .tb { padding: 0 6px; }
 }
 
 /* picture-in-picture window */

@@ -38,6 +38,9 @@ const I = {
   go: '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   close: '<svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
   swap: '<svg viewBox="0 0 24 24"><path d="M7 8h12M15.5 4.5 19 8l-3.5 3.5M17 16H5M8.5 12.5 5 16l3.5 3.5"/></svg>',
+  order: '<svg viewBox="0 0 24 24"><path d="M4.5 6.5h15M4.5 11.5h15M4.5 16.5h7"/><path d="M14.5 13.8v6.4l5-3.2z" fill="currentColor"/></svg>',
+  one: '<svg viewBox="0 0 24 24"><path d="M4.5 12v-1.5a3.5 3.5 0 0 1 3.5-3.5h11.5M16.5 4l3 3-3 3M19.5 12v1.5a3.5 3.5 0 0 1-3.5 3.5H4.5M7.5 20l-3-3 3-3M10.8 10.4l1.7-1v5.2"/></svg>',
+  shuffle: '<svg viewBox="0 0 24 24"><path d="M4.5 7.5h2.2c1.5 0 2.4.6 3.2 1.8l4.2 5.4c.8 1.2 1.7 1.8 3.2 1.8h2.2M4.5 16.5h2.2c1.5 0 2.4-.6 3.2-1.8l.9-1.2M13.2 10.5l.9-1.2c.8-1.2 1.7-1.8 3.2-1.8h2.2M17 5l2.5 2.5L17 10M17 14l2.5 2.5L17 19"/></svg>',
   share: '<svg viewBox="0 0 24 24"><path d="M12 14.5V4.5M8 8.5l4-4 4 4"/><path d="M7 11H5.5v8.5h13V11H17"/></svg>',
   save: '<svg viewBox="0 0 24 24"><path d="M12 4.5v10M8 10.5l4 4 4-4"/><path d="M5.5 15.5v4h13v-4"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5v-1h-11v11h1"/></svg>',
@@ -59,6 +62,10 @@ const NEEDS_ACCOUNT = new Set(['like', 'nope', 'refresh', 'setup', 'synclikes', 
   'settings', 'save', 'stmenu', 'logout', 'relabel']);
 const fb = new Map();
 const prefs = { lyr: store.get('lyr') ?? true, lyrNarrow: true, imm: false, stage: store.get('stage') ?? false };
+// How a queue plays on: in its own order (a station's never runs out), one song over and over, or the songs ahead
+// shuffled. This browser remembers the choice, as music apps do.
+const MODES = ['order', 'one', 'shuffle'];
+let MODE = MODES.includes(store.get('mode')) ? store.get('mode') : 'order';
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)');
 
 async function api(path, body) {
@@ -472,7 +479,8 @@ function markHeard(vid) {
   store.set(acct('heard'), { ed: S.edition.id, vids: [...h] });
 }
 
-function queueOf(st) {
+// `at`: the song a reload left off on, played first, with only the songs after it shuffled
+function queueOf(st, at = null) {
   const id = `${S.edition?.id}|${st.key}`;
   const h = st.group === 'lane' ? heard() : new Set();
   let q = queues.get(id);
@@ -482,6 +490,8 @@ function queueOf(st) {
     q = { key: st.key, st, tracks: fresh.length ? fresh : tracks, reserve: (st.reserve || []).filter((p) => !h.has(p.vid)), i: 0, played: new Set() };
     blendQueue(q, 0);
     queues.set(id, q);
+    const k = at ? q.tracks.findIndex((p) => p.vid === at) : -1;
+    if (k >= 0) { q.i = k; fromSong(q); } else arrange(q, 0);
   } else if (h.size || famHeard.size) {
     // (songs heard in another station since: a new one is never recommended again, a like waits for the next visit)
     const ahead = q.tracks.slice(q.i + 1).filter((p) => !(p.kind ? famHeard : h).has(p.vid) || q.played.has(p.vid));
@@ -490,6 +500,7 @@ function queueOf(st) {
   }
   q.st = st;
   blendQueue(q);
+  arrange(q);
   return q;
 }
 
@@ -568,7 +579,7 @@ function startListen(p) {
   const shown = p.kind ? { kind: p.kind } : p.mine || Q?.key === 'ear' ? {} : {
     fit: typeof p.fit === 'number' ? p.fit : null, slot: Number.isInteger(p.slot) ? p.slot : null,
     fam: p.familiar == null ? null : p.familiar ? 1 : p.knows ? 2 : 0, probe: p.probe || null };
-  L = { p, ended: false };
+  L = { p, ended: false, loop: startSrc === 'loop' };
   if (p.kind) famHeard.add(p.vid);
   logPlay(p, 'start', 0, { src: p.mine ? 'compare' : startSrc, dur: Player.time()[1] || p.dur || null, vis: document.visibilityState, ...shown });
   startSrc = 'auto';
@@ -582,11 +593,13 @@ function endListen(ev, send = api) {
 
 // A song left after the first half minute (or half of a short one) was heard: it is never recommended again. One
 // left before then with Next is a skip; left that early any other way (another station, a song from the list, a
-// comparison, the page closing) it is only stopped, and stays new.
+// comparison, the page closing) it is only stopped, and stays new. So is a song on repeat left early in a later round:
+// it was heard through already.
 const heardAt = (d) => Math.min(30, (d || 60) / 2);
+const looping = (p) => !!(L?.loop && L.p.vid === p?.vid);
 function leaving(send = api, skip = false) {
   const [t, d] = Player.time();
-  if (L && !L.ended) endListen(t >= heardAt(d) ? 'left' : skip ? 'skip' : 'stop', send);
+  if (L && !L.ended) endListen(t >= heardAt(d) ? 'left' : skip && !L.loop ? 'skip' : 'stop', send);
 }
 
 async function next(play = true, by = 'next') {
@@ -598,7 +611,7 @@ async function next(play = true, by = 'next') {
     // Leaving within the first half is the strongest "not now" signal a listener gives without saying anything.
     // (one of your own likes, played to compare with a pick or between new songs, says nothing about the station when
     // you leave it: the server rests it a fortnight)
-    if (Player.playing && t < heardAt(d) && !p.mine && !p.kind) { blendShift(p, 1); adapt('neg', p); }
+    if (Player.playing && t < heardAt(d) && !p.mine && !p.kind && !looping(p)) { blendShift(p, 1); adapt('neg', p); }
     leaving(api, by === 'next');
   }
   if (Q.i >= Q.tracks.length - 1) await extend(true);
@@ -620,13 +633,14 @@ async function extend(silent) {
   if (!Q) return;
   const n = Q.tracks.length;
   let failed = false;
-  if (Q.reserve.length) Q.tracks.push(...Q.reserve.splice(0, Q.gap ? 2 : 4).filter((p) => fb.get(p.vid) !== 'dislike'));
+  if (Q.reserve.length) Q.tracks.push(...(Q.shuf ? shuffled(Q.reserve) : Q.reserve).splice(0, Q.gap ? 2 : 4).filter((p) => fb.get(p.vid) !== 'dislike'));
   else {
     const seed = cur() || Q.tracks[Q.tracks.length - 1];
     if (!seed) return;
     try {
       const r = await api(`/api/more?vid=${seed.vid}&exclude=${Q.tracks.map((p) => p.vid).join(',')}`);
-      Q.tracks.push(...r.tracks.slice(0, 8));
+      const add = r.tracks.slice(0, 8);
+      Q.tracks.push(...(Q.shuf ? shuffled(add) : add));
     } catch { failed = true; }
   }
   weave(Q);
@@ -648,6 +662,54 @@ async function continueFrom(btn) {
     toast(add.length ? t('接下来沿着〈{s}〉放 {n} 首', { s: p.title, n: add.length }) : t('这首的电台里没有新的了'));
   } catch { toast(t('没取到，稍后再试')); }
   btn && (btn.disabled = false);
+}
+
+/* ---------- play mode ---------- */
+function shuffled(a) {
+  for (let j = a.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [a[j], a[k]] = [a[k], a[j]]; }
+  return a;
+}
+// Shuffle mixes the songs ahead, from `from` on; in a woven station only the new ones, and their likes are laid in
+// again around them, so each new song still follows the like it was found from.
+function arrange(q, from = q.i + 1) {
+  const on = MODE === 'shuffle';
+  if (!!q.shuf === on) return;
+  q.shuf = on;
+  const tail = q.tracks.slice(from), news = q.pk ? tail.filter((p) => !p.kind) : tail;
+  if (on) return weave(q, { news: shuffled(news), from });
+  // back in order: the station's own, and a song added along the way stays after the one it came in behind
+  const rank = new Map([...q.st.tracks, ...(q.st.reserve || [])].map((p, k) => [p.vid, k]));
+  q.reserve.sort((a, b) => (rank.get(a.vid) ?? Infinity) - (rank.get(b.vid) ?? Infinity));   // (extend drew from it at random)
+  let last = -1;
+  const ranked = news.map((p) => { last = rank.get(p.vid) ?? last; return [last, p]; });
+  weave(q, { news: ranked.sort((a, b) => a[0] - b[0]).map((x) => x[1]), from });
+}
+const MODE_NAME = () => ({ order: t('顺序播放'), one: t('单曲循环'), shuffle: t('随机播放') });
+function modeAttrs() {
+  const label = t('播放模式：{m}', { m: MODE_NAME()[MODE] });
+  return `class="ib mode ${MODE === 'order' ? '' : 'on'}" data-k="mode" title="${esc(label)}" aria-label="${esc(label)}"`;
+}
+function paintMode() {
+  const label = t('播放模式：{m}', { m: MODE_NAME()[MODE] });
+  for (const b of $$('[data-k="mode"]')) {
+    b.innerHTML = I[MODE];
+    b.classList.toggle('on', MODE !== 'order');
+    b.title = label;
+    b.setAttribute('aria-label', label);
+  }
+}
+function setMode(m = MODES[(MODES.indexOf(MODE) + 1) % MODES.length]) {
+  MODE = m;
+  store.set('mode', m);
+  if (Q) {
+    arrange(Q);
+    const s = Q.sess;
+    if (m === 'order' && s && (s.steer || s.fresh || s.pos.length || s.neg.length)) adapt();   // what they steered towards comes first again
+    renderQueue();
+    Lyr.prefetch();
+  }
+  paintMode();
+  toast({ order: t('顺序播放：接下来的歌回到原来的顺序'), one: t('单曲循环：这首放完再放一遍'), shuffle: t('随机播放：接下来的歌打乱了顺序') }[m]);
 }
 
 /* ---------- listening session: the queue leans towards what you keep and away from what you skip ---------- */
@@ -854,12 +916,20 @@ const Player = {
       this.logged = p.vid; startListen(p); Lyr.prefetch();
     }
     if (s === 0 && p) {
+      // a song heard through steers the songs ahead once, not on every round of a repeat
+      const first = !looping(p) && !p.kind;
       endListen('done');
       Q.played.add(p.vid);
+      if (MODE === 'one' && !p.mine) {   // (one of their likes, played to compare with a pick, goes back to the pick)
+        if (first) { blendShift(p, -1); adapt('pos', p); }
+        startSrc = 'loop';
+        return this.again();
+      }
       // only after the next song is fixed, or the queue could move under it
-      next(true, 'auto').then(() => { if (!p.kind) { blendShift(p, -1); adapt('pos', p); } });
+      next(true, 'auto').then(() => { if (first) { blendShift(p, -1); adapt('pos', p); } });
     }
   },
+  again() { this.steady(); this.clock.raw = -1; this.yt.seekTo(0, true); this.yt.playVideo(); },
   toggle() {
     if (!cur()) return;
     MS.arm();
@@ -1913,6 +1983,7 @@ function renderListen() {
           <p class="t-bc" id="nBc"></p>
           <div class="prog"><span class="num" id="tCur">0:00</span><div class="bar" id="bar"><i></i></div><span class="num" id="tDur"></span></div>
           <div class="ctl">
+            <button ${modeAttrs()}>${I[MODE]}</button>
             <button class="ib" data-k="prev" title="${t('上一首（P）')}">${I.prev}</button>
             <button class="ib play" data-k="toggle" title="${t('播放 / 暂停（空格）')}">${I.play}${I.pause}</button>
             <button class="ib" data-k="next" title="${t('下一首（N）')}">${I.next}</button>
@@ -2705,7 +2776,7 @@ function playFound(x) {
   $('#composer').close();
   if (!Q) {
     const st = { key: 'ear', group: 'ear', name: t('你的喜欢'), sub: t('你自己的喜欢'), when: '', tracks: [p], reserve: [] };
-    Q = { key: 'ear', st, tracks: [p], reserve: [], i: 0, played: new Set() };
+    Q = fromSong({ key: 'ear', st, tracks: [p], reserve: [], i: 0, played: new Set() });
   } else {
     leaving();
     if (cur()) Q.played.add(cur().vid);
@@ -2993,13 +3064,21 @@ function archiveHTML(a) {
   return `<div class="hist"><div><b>${t('{app}上的歌单', { app: apps })}</b><p>${said}</p>${listsAdd ? form : ''}</div>${acts ? `<div class="hist-acts">${acts}</div>` : ''}</div>`;
 }
 
+// A list started from one song in it plays that song first; in shuffle the rest follows at random, the songs above
+// it included.
+function fromSong(q) {
+  if (MODE === 'shuffle' && q.i) { q.tracks = [q.tracks[q.i], ...q.tracks.filter((_, k) => k !== q.i)]; q.i = 0; }
+  arrange(q);
+  return q;
+}
+
 function playLove(i) {
   const loves = EAR?.loves || [];
   if (!loves[i]) return;
   leaving();
   const tracks = loves.map((r) => ({ ...r }));
   const st = { key: 'ear', group: 'ear', name: t('常听，但没点喜欢'), sub: t('从你的播放里读出来的'), when: '', tracks, reserve: [] };
-  Q = { key: 'ear', st, tracks, reserve: [], i, played: new Set() };
+  Q = fromSong({ key: 'ear', st, tracks, reserve: [], i, played: new Set() });
   startSrc = 'ear';
   placeHost();
   loadTrack(true);
@@ -3632,7 +3711,7 @@ function playFromDisc(p) {
   leaving();
   const sec = EAR.sectors.find((s) => s.key === p.s.lane);
   const st = { key: 'ear', group: 'ear', name: t('{lane} · 从〈{s}〉放起', { lane: sec?.name || t('你的喜欢'), s: p.s.title }), sub: t('你自己的喜欢'), when: t('在「你的耳朵」里点的，接着放它附近的喜欢'), tracks, reserve: [] };
-  Q = { key: 'ear', st, tracks, reserve: [], i: 0, played: new Set() };
+  Q = fromSong({ key: 'ear', st, tracks, reserve: [], i: 0, played: new Set() });
   startSrc = 'ear';
   placeHost();
   loadTrack(true);
@@ -3742,6 +3821,7 @@ async function act(k, btn) {
   if (k === 'toggle') Player.toggle();
   else if (k === 'next') next();
   else if (k === 'prev') prev();
+  else if (k === 'mode') setMode();
   else if (k === 'like' && p) like(p);
   else if (k === 'nope' && p) nope(p);
   else if (k === 'hearmine' && p) hearMine(p);
@@ -4167,9 +4247,9 @@ async function boot() {
   const last = store.get(acct('last'));
   const first = ST.find((s) => s.key === last && !s.pending && s.tracks.length) || defaultStation();
   if (first) {
-    Q = queueOf(first);
-    const pos = store.get(acct('pos'));
-    if (pos?.ed === S.edition?.id && pos.key === Q.key) { Q.i = Math.max(0, Q.tracks.findIndex((p) => p.vid === pos.vid)); startSrc = 'resume'; }
+    const pos = store.get(acct('pos')), back = pos?.ed === S.edition?.id && pos.key === first.key;
+    Q = queueOf(first, back ? pos.vid : null);
+    if (back) startSrc = 'resume';
   }
   Player.init();
   // a listener who just joined lands on their record, which is drawn within seconds; stations take a while

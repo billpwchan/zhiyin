@@ -1458,8 +1458,9 @@ class Play(BaseModel):
     ev: Literal["start", "skip", "stop", "left", "done", "error", "replay", "away"] = "start"
     pos: float = Field(0, ge=0, le=86400)
     dur: float | None = Field(None, ge=0, le=86400)
-    # who chose the song: auto (the one before ended), next, prev, pick (from the list), station, ask, ear, compare
-    src: Literal["auto", "next", "prev", "pick", "station", "ask", "ear", "compare", "resume", "find"] | None = None
+    # who chose the song: auto (the one before ended), next, prev, pick (from the list), station, ask, ear, compare,
+    # loop (the same song again, on repeat)
+    src: Literal["auto", "next", "prev", "pick", "station", "ask", "ear", "compare", "resume", "find", "loop"] | None = None
     idle: float | None = Field(None, ge=0)   # seconds since anyone touched the page
     vis: Literal["visible", "hidden"] | None = None
     test: bool = False   # a check run by the operator, kept out of every count

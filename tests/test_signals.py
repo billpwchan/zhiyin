@@ -189,6 +189,7 @@ def test_play_and_history_endpoints_take_only_what_they_describe():
     with store.as_user("owner"):
         ok = c.post("/api/play", json={"vid": "abcdefghijk", "ev": "start", "src": "pick", "fit": 0.8, "slot": 1, "fam": 2})
         assert ok.status_code == 200
+        assert c.post("/api/play", json={"vid": "abcdefghijk", "ev": "start", "src": "loop"}).status_code == 200   # on repeat
         assert c.post("/api/play", json={"vid": "abcdefghijk", "ev": "listened"}).status_code == 422
         assert c.post("/api/play", json={"vid": "abcdefghijk", "src": "somewhere"}).status_code == 422
         r = c.post("/api/history", json={"songs": [["abcdefghijk", 4, 3, "2025-01-01", "2026-01-01", 1.5, "T", "A"],

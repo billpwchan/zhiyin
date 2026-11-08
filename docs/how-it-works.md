@@ -47,7 +47,9 @@ reads how each listen went (`signals.py`), the way Spotify weighs a stream by wh
 - repeats on one day saturate; coming back on different days is what makes a song a favourite. Picked and heard
   through on three days, or saved to a playlist of yours this year, is about as strong as a like;
 - a song skipped with Next within ten seconds, on its own, is a sound you refused. A run of quick skips is you looking for
-  something else right now, and isn't held against the songs in it.
+  something else right now, and isn't held against the songs in it;
+- on repeat one, each time round counts as a listen that played on, so the day's cap holds it like any other repeat.
+  Leaving it with Next early in a later round is no skip: you heard it through the first time.
 
 These songs seed their station like likes do (the station they were played from, or the one Claude files them
 under), count as positive examples of your sound, and make their artists known rather than new. They are listed on

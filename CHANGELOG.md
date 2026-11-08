@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Play modes: in order, repeat one and shuffle, from the button left of the previous-song button, remembered in this
+  browser. Shuffle mixes the songs ahead of the one playing; in a station your own likes are laid in again between
+  the new songs, each new song still after the like it was found from, and turning shuffle off puts the songs ahead
+  back in the station's order. A song started from Your Ear plays first, with the rest shuffled after it.
+- The control row fits on 320px phones.
+- A second Anthropic API key can stand in for the first: when the first is out of credit, past its spending limit or
+  revoked, calls move to the second, and the first is tried again every ten minutes (`deploy/claude-token.sh --fallback-key`).
+  When neither can pay, listeners are told so at once instead of waiting on a call that fails.
 - The portrait on Your Ear reads you instead of counting you. It now starts with what you love in the music itself,
   such as the chords, the kind of voice and what makes you leave a song, each with the songs that show it (hover one
   to light them on the disc, click to play). Where enough of your likes have been heard, this comes from comparing
