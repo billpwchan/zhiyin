@@ -1,6 +1,6 @@
 # Privacy
 
-Updated October 28, 2026. The public-facing policy is served at `/privacy` in English, Simplified Chinese and
+Updated November 9, 2026. The public-facing policy is served at `/privacy` in English, Simplified Chinese and
 Traditional Chinese. Bill Chan operates `zhiyin.billpwchan.art`; a self-hosted copy has its own operator. Self-hosted
 copies do not automatically send data to the project author. For the official deployment, privacy requests can be
 sent to [billpwchan@gmail.com](mailto:billpwchan@gmail.com), the configured Google OAuth support address.
@@ -96,10 +96,13 @@ titles and artists of its newest 600 songs go to Anthropic for a name, billed to
 `card_names`, keyed by a hash of the playlist id and language, so the same list is named once a day (three times if
 they ask for another). How many records an address made in the last ten minutes is counted in memory only.
 
-Someone who goes on from such a record to weekly stations ("New songs every week, picked from these",
-`/api/card/follow`) signs in with Google for who they are only (openid, email, profile; no YouTube scope). The link
-waits for that in a signed cookie, `zy_n`, for at most 15 minutes. Their account then keeps the playlist's address in
-its settings (`netease`, for either app), and reads the public likes (and NetEase's 听歌排行) on the same clock as
+Someone who goes on from such a record to weekly stations ("Start from this playlist", `/api/card/follow`) gets an
+account made from that playlist alone, without Google. Drawing the record hands the browser a signed proof that names
+the list (`follow`, valid 7 days); one account is made per list, and the browser's session cookie is how they come
+back (Settings makes a 14-day sign-in link for another device). How many such accounts an address opened in the last
+day is counted in memory only (`LINK_JOINS_PER_DAY`). Google comes in only when every seat is taken, for who they are
+only (openid, email, profile; no YouTube scope), to keep a place on the waitlist; the link waits for that in a signed
+cookie, `zy_n`, for at most 15 minutes. Their account keeps the playlist's address and key in its settings (`netease`, for either app), and reads the public likes (and NetEase's 听歌排行) on the same clock as
 YouTube likes: every 6 hours while they listen, at least every 25 days while they are away (`library.sync_from_app`).
 Each like is looked up on YouTube Music by artist and title (`library.match_app`); a match is kept as a library
 record with the app's song id and like date (estimated from release dates for QQ Music, which shows nobody when), and a like with no match keeps only its title, artists and date (`unmatched`), so it is never

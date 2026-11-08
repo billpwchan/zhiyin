@@ -573,6 +573,12 @@ EN = {
     "在 YouTube Music 上找 {n} 首歌": ("Finding {n} song on YouTube Music", "Finding {n} songs on YouTube Music"),
     "这个账号已经在用别的喜欢了": "This account already gets its likes from somewhere else",
     "现在只能通过朋友的邀请加入": "Right now you can only join through a friend's invite",
+    "名额暂时满了，过几天再来": "Every place is taken for now. Come back in a few days",
+    "今天从这里加入的有点多，明天再来": "A lot of people have joined from here today. Come back tomorrow",
+    "这张唱片过期了，重新读一次歌单": "This record has expired. Read the playlist again",
+    "这份歌单已经开过知音了，用 Google 登录就能回去": "This playlist already has its Zhiyin. Sign in with Google to get back to it",
+    "这份歌单已经开过知音了：在当初开的浏览器里打开就能回去，那边的设置里能生成在这台设备上登录的链接":
+        "This playlist already has its Zhiyin. Open it in the browser where you started; Settings there makes a link to sign in on this device",
     "了解你的口味": "Learning your taste",
     "挑第一期电台": "Picking the first stations",
     "需要重新登录": "Please sign in again",
@@ -694,6 +700,12 @@ HANT = {
     "要的是主页链接：在 QQ 音乐点头像进主页，右上角「···」点分享，复制链接贴过来": "要的是主頁連結：在 QQ 音樂點頭像進主頁，右上角「···」點分享，複製連結貼過來",
     "这是你的喜欢来自的主页，上面的歌单已经读进来了": "這是你的喜歡來自的主頁，上面的歌單已經讀進來了",
     "现在只能通过朋友的邀请加入": "現在只能透過朋友的邀請加入",
+    "名额暂时满了，过几天再来": "名額暫時滿了，過幾天再來",
+    "今天从这里加入的有点多，明天再来": "今天從這裡加入的有點多，明天再來",
+    "这张唱片过期了，重新读一次歌单": "這張唱片過期了，重新讀一次歌單",
+    "这份歌单已经开过知音了，用 Google 登录就能回去": "這份歌單已經開過知音了，用 Google 登入就能回去",
+    "这份歌单已经开过知音了：在当初开的浏览器里打开就能回去，那边的设置里能生成在这台设备上登录的链接":
+        "這份歌單已經開過知音了：在當初開的瀏覽器裡打開就能回去，那邊的設定裡能產生在這台裝置上登入的連結",
 }
 
 

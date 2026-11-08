@@ -321,7 +321,8 @@ def _read_likes(log, glimpsed=None, got: dict | None = None) -> dict:
     if ne:
         r = library.sync_from_app(ne, log=log, glimpsed=glimpsed, got=got)
         # the list itself from now on, not the share text or short link it was found through
-        accounts.set_prefs(store.uid(), netease={"link": library.app_link(r["key"]), "n": r["videos"], "unmatched": r["unmatched"]})
+        accounts.set_prefs(store.uid(), netease={"link": library.app_link(r["key"]), "key": r["key"], "n": r["videos"],
+                                                 "unmatched": r["unmatched"]})
     else:
         r = library.sync_from_google(log=log, glimpsed=glimpsed) if glimpsed else library.sync_from_google(log=log)
     signals.read_lists(log=log, force=r.get("first", False))
@@ -661,11 +662,16 @@ def _seats_left() -> int:
     return max(0, SEATS - accounts.joined())
 
 
-def _join_state() -> str:
-    """open: anyone may join with Google; full: they go on the waitlist; invite: only invite links make accounts."""
-    if not (AUTH and SEATS and google.configured()) or (llm.HOSTED and not llm.API_KEY):
+def _seats_state() -> str:
+    """open: anyone may join; full: newcomers wait; invite: only invite links make accounts."""
+    if not (AUTH and SEATS) or (llm.HOSTED and not llm.API_KEY):
         return "invite"   # listeners who join run on the operator's API key, so there is nothing to join without one
     return "open" if _seats_left() else "full"
+
+
+def _join_state() -> str:
+    """Joining with Google (YouTube Music likes, or the waitlist)."""
+    return _seats_state() if google.configured() else "invite"
 
 
 def _me() -> dict:
@@ -673,7 +679,7 @@ def _me() -> dict:
         return {"uid": store.uid(), "sample": True, "name": "", "owner": False, "status": "ready",
                 "auth": AUTH, "lang": i18n.of(), "google": {"configured": google.configured(), "connected": False,
                                                            "verified": os.environ.get("ZHIYIN_GOOGLE_VERIFIED") == "1"},
-                "join": _join_state(), "sync": {}, "claude": None}
+                "join": _join_state(), "join_link": _seats_state(), "sync": {}, "claude": None}
     u = accounts.get() or {"id": store.uid(), "name": "", "status": "ready", "prefs": {}, "email": None}
     ok = google.configured() and google.connected(u["id"])
     ne = u["prefs"].get("netease")
@@ -723,7 +729,8 @@ def _page(name: str, lang: str, card: bool = False) -> str:
     # pages are written in Simplified Chinese; the language decided here is the one the page starts in
     return html.replace('<html lang="zh-Hans">', f'<html lang="{lang}" data-lang="{lang}">').replace(
         "<title>知音</title>", f"<title>{i18n.tr(CARD_TITLE, lang) + ' · ' if card else ''}{i18n.tr('知音', lang)}</title>").replace(
-        "</head>", _og(lang, card) + "</head>", 1)
+        # a reader of simplified Chinese lands on the box for a NetEase or QQ Music link, so a preview promises that
+        "</head>", _og(lang, card or (name == "index.html" and lang == "zh-Hans")) + "</head>", 1)
 
 
 # Where a visitor came from: ?ref= or utm_source on the link, else the site that sent them. Kept in a cookie for a
@@ -862,7 +869,7 @@ async def card_share(request: Request, token: str = ""):
         nonce = None
     else:
         d = cards.unsign(token)
-        if not d or cards.used(d["nonce"]):
+        if not d or not d.get("nonce") or cards.used(d["nonce"]):
             raise HTTPException(403, i18n.tr("这张唱片过期了，重新做一张再分享", i18n.from_request(request)))
         ip = request.client.host if request.client else ""
         now = time.time()
@@ -1808,6 +1815,7 @@ def account_delete(request: Request):
 
 class LinkReq(BaseModel):
     link: Annotated[str, Field(max_length=2000)]
+    token: Annotated[str, Field(max_length=2000)] = ""
 
 
 def _read_app(link: str, lang: str) -> dict:
@@ -1817,7 +1825,17 @@ def _read_app(link: str, lang: str) -> dict:
         raise HTTPException(422, _why(e, lang)) from None
 
 
-def _use_app(uid: str, link: str, got: dict | None = None) -> None:
+def _app_owner(key: str) -> dict | None:
+    """The account already made from this NetEase or QQ Music list, if any."""
+    link = library.app_link(key)
+    for u in accounts.users():
+        ne = (u.get("prefs") or {}).get("netease") or {}
+        if ne.get("key") == key or ne.get("link") == link:   # accounts read before keys were kept have the plain link
+            return u
+    return None
+
+
+def _use_app(uid: str, link: str, got: dict | None = None, key: str | None = None) -> None:
     """This listener's stations come from their NetEase or QQ Music likes from now on; the first run starts."""
     if (accounts.prefs(uid).get("netease") or {}).get("link") != link:   # another source: start over, never mix two
         for k in FROM_YOUTUBE:
@@ -1826,7 +1844,8 @@ def _use_app(uid: str, link: str, got: dict | None = None) -> None:
                 shutil.rmtree(f)
             else:
                 f.unlink(missing_ok=True)
-    accounts.set_prefs(uid, netease={"link": link}, setup_fails=0, setup_issue=None)
+    accounts.set_prefs(uid, netease={"link": link, **({"key": key or got["key"]} if key or got else {})}, setup_fails=0,
+                      setup_issue=None)
     with store.as_user(uid):
         try:
             _start("setup", lambda log: _setup(log, got))
@@ -1848,10 +1867,15 @@ def app_use(b: LinkReq):
     return {"me": _me(), "jobs": jobs()}
 
 
+_link_joins: dict[str, list[float]] = {}
+LINK_JOINS_PER_DAY = 2
+
+
 @app.post("/api/card/follow")
 def card_follow(b: LinkReq, request: Request):
-    """From a NetEase or QQ Music card to weekly stations: the link waits in a signed cookie while Google says who
-    they are (only that: nothing is read from YouTube)."""
+    """From a NetEase or QQ Music card to weekly stations. The link is the account: no Google, which most listeners
+    of these apps can't reach or don't have. This browser's session (and a link for another device, in Settings) is
+    how they come back. With every seat taken, Google puts them on the waitlist, the link waiting in a signed cookie."""
     lang = i18n.from_request(request)
     app_ = library.app_of(b.link)
     try:
@@ -1861,9 +1885,33 @@ def card_follow(b: LinkReq, request: Request):
     if AUTH and accounts.session_uid(request.cookies.get(accounts.COOKIE)):
         app_use(b)
         return {"go": "/"}
-    if _join_state() == "invite":
-        raise HTTPException(403, i18n.tr("现在只能通过朋友的邀请加入", lang))
-    store.count(f"join_{app_}", _ref_cookie(request))
+    seats = _seats_state()
+    if seats == "invite" or (seats == "full" and not google.configured()):
+        raise HTTPException(403, i18n.tr("现在只能通过朋友的邀请加入", lang) if seats == "invite" else i18n.tr("名额暂时满了，过几天再来", lang))
+    ref = _ref_cookie(request)
+    if seats == "open":
+        # only a list this browser had read (with enough songs) makes an account, and only one account per list: a
+        # seat can't be taken by a made-up link, and the same person can't open a second one from another browser
+        key = (cards.unsign(b.token) or {}).get("key")
+        if not key:
+            raise HTTPException(410, i18n.tr("这张唱片过期了，重新读一次歌单", lang))   # the page reads it again and retries
+        had = _app_owner(key)
+        if had:
+            raise HTTPException(409, i18n.tr("这份歌单已经开过知音了，用 Google 登录就能回去", lang) if had.get("google_sub")
+                                else i18n.tr("这份歌单已经开过知音了：在当初开的浏览器里打开就能回去，那边的设置里能生成在这台设备上登录的链接", lang))
+        store.count(f"join_{key.split(':')[0]}", ref)   # the list that was read, not the text sent with it
+        # each account's first setup is paid from the operator's key: a few per address a day, so a script can't
+        ip, now = request.client.host if request.client else "", time.time()
+        seen = _link_joins[ip] = [t for t in _link_joins.get(ip, []) if now - t < 86400]
+        if len(seen) >= LINK_JOINS_PER_DAY:
+            raise HTTPException(429, i18n.tr("今天从这里加入的有点多，明天再来", lang))
+        seen.append(now)
+        uid = accounts.create("")
+        accounts.set_prefs(uid, joined=True, lang=lang, sync_likes=False, ref=ref)
+        store.count("join_ok", ref)
+        _use_app(uid, library.app_link(key), key=key)
+        return _signed_in(JSONResponse({"go": "/"}), uid, request)
+    store.count(f"join_{app_}", ref)
     r = JSONResponse({"go": "/auth/google/start?mode=join&src=163"})
     r.set_cookie("zy_n", cards.sign({"link": b.link, "exp": time.time() + 900}), max_age=900, httponly=True,
                  samesite="lax", secure=google.public_url().startswith("https"))

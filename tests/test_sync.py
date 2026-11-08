@@ -1,7 +1,7 @@
 import time
 import pytest
 
-from zhiyin import server, store
+from zhiyin import cards, server, store
 
 
 def test_likes_made_before_connecting_go_across_once(monkeypatch):
@@ -702,7 +702,7 @@ def test_qq_music_likes_are_matched_with_qq_names_and_kept_without_a_ranking(mon
         assert seen["prompt"].startswith("2009 | ") and "QQ Music doesn't show when a song was liked" in seen["system"]
 
 
-def test_a_netease_card_becomes_an_account_with_google_saying_only_who_they_are(monkeypatch):
+def test_a_netease_card_becomes_an_account_from_the_link_alone_and_google_only_keeps_a_place_in_line(monkeypatch):
     from urllib.parse import parse_qs, urlparse
     from fastapi.testclient import TestClient
     from zhiyin import accounts, google, llm
@@ -710,34 +710,47 @@ def test_a_netease_card_becomes_an_account_with_google_saying_only_who_they_are(
     monkeypatch.setattr(llm, "HOSTED", True)
     monkeypatch.setattr(llm, "API_KEY", True)
     monkeypatch.setattr(google, "client", lambda: {"id": "x", "secret": "y"})
+    monkeypatch.setattr(server, "_link_joins", {})
     started = []
     monkeypatch.setattr(server, "_start", lambda kind, fn: started.append((store.uid(), kind)))
     monkeypatch.setattr(server, "SEATS", accounts.joined() + 1)
     link = "分享歌单: https://music.163.com/playlist?id=24381616&userid=1 (来自@网易云音乐)"
-
-    def come(who):
-        monkeypatch.setattr(google, "exchange", lambda code, v: {"id_token": who, "scope": "openid email"})
-        monkeypatch.setattr(google, "claims", lambda tok: {"sub": tok, "email": f"{tok}@example.com", "name": tok.title()})
-        c = TestClient(server.app)
-        assert c.post("/api/card/follow", json={"link": "not a link"}).status_code == 422
-        r = c.post("/api/card/follow", json={"link": link})
-        assert r.json()["go"] == "/auth/google/start?mode=join&src=163" and "zy_n" in r.cookies
-        r = c.get(r.json()["go"], follow_redirects=False)
-        assert "youtube" not in r.headers["location"]      # nothing is asked of their YouTube
-        state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
-        return c.get(f"/auth/google/callback?state={state}&code=x", follow_redirects=False)
-
-    r = come("mei")
-    uid = accounts.by_google("mei")
-    assert r.headers["location"] == "/" and accounts.COOKIE in r.cookies and uid
-    assert accounts.prefs(uid)["netease"] == {"link": link} and started == [(uid, "setup")]
-    assert accounts.get(uid)["email"] == "mei@example.com" and not google.connected(uid)
+    read = cards.sign({"key": "163:24381616", "exp": time.time() + 60})   # what drawing the record hands back
+    c = TestClient(server.app)
+    assert c.post("/api/card/follow", json={"link": "not a link"}).status_code == 422
+    assert c.post("/api/card/follow", json={"link": link}).status_code == 410        # a link nobody read takes no seat
+    stale = cards.sign({"key": "163:24381616", "exp": time.time() - 1})
+    assert c.post("/api/card/follow", json={"link": link, "token": stale}).status_code == 410
+    r = c.post("/api/card/follow", json={"link": link, "token": read})
+    assert r.json()["go"] == "/" and accounts.COOKIE in r.cookies    # no Google: this browser is the way back
+    uid = accounts.session_uid(r.cookies[accounts.COOKIE])
+    link = "https://music.163.com/playlist?id=24381616"                  # the list read, not the text around it
+    assert accounts.prefs(uid)["netease"] == {"link": link, "key": "163:24381616"} and accounts.prefs(uid)["joined"]
+    assert started == [(uid, "setup")]
+    assert not accounts.get(uid)["google_sub"] and not google.connected(uid)
     with store.as_user(uid):
         assert server._app_likes() == link and server._can_read(accounts.get(uid))
-
-    r = come("kai")                                        # no seat left: waits, and the link waits too
-    assert r.headers["location"] == "/login?e=full" and accounts.by_google("kai") is None
+        assert server.account_device()["url"].split("/i/")[1]      # and a link for their other devices
     con = store.db()
+    assert con.execute("select sum(n) from events where name='join_163'").fetchone()[0] == 1
+
+    # one account per list: another browser pasting it again is told the way back, and takes no seat
+    monkeypatch.setattr(server, "SEATS", accounts.joined() + 1)
+    r = TestClient(server.app).post("/api/card/follow", json={"link": link, "token": read}, headers={"accept-language": "zh-CN"})
+    assert r.status_code == 409 and "设置" in r.json()["detail"]
+    monkeypatch.setattr(server, "SEATS", accounts.joined())
+
+    # no seat left: Google is asked who they are, only to keep their place, and the link waits with them
+    monkeypatch.setattr(google, "exchange", lambda code, v: {"id_token": "kai", "scope": "openid email"})
+    monkeypatch.setattr(google, "claims", lambda tok: {"sub": tok, "email": f"{tok}@example.com", "name": tok.title()})
+    c = TestClient(server.app)
+    r = c.post("/api/card/follow", json={"link": link})
+    assert r.json()["go"] == "/auth/google/start?mode=join&src=163" and "zy_n" in r.cookies
+    r = c.get(r.json()["go"], follow_redirects=False)
+    assert "youtube" not in r.headers["location"]          # nothing is asked of their YouTube
+    state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
+    r = c.get(f"/auth/google/callback?state={state}&code=x", follow_redirects=False)
+    assert r.headers["location"] == "/login?e=full" and accounts.by_google("kai") is None
     assert con.execute("select src from waitlist where sub='kai'").fetchone()["src"] == link
     con.execute("update waitlist set admitted=1 where sub='kai'")
     con.commit()
@@ -745,33 +758,47 @@ def test_a_netease_card_becomes_an_account_with_google_saying_only_who_they_are(
     uid = accounts.by_google("kai")
     assert r.headers["location"] == "/" and accounts.prefs(uid)["netease"] == {"link": link} and started[-1] == (uid, "setup")
 
+    # with neither a seat nor Google to wait with, they hear so, and nothing is made
+    monkeypatch.setattr(google, "client", lambda: None)
+    r = TestClient(server.app).post("/api/card/follow", json={"link": link}, headers={"accept-language": "zh-CN"})
+    assert r.status_code == 403 and "满了" in r.json()["detail"]
+
+
+def test_a_few_accounts_a_day_from_one_address_since_each_first_setup_is_paid_for(monkeypatch):
+    from fastapi.testclient import TestClient
+    from zhiyin import accounts, llm
+    monkeypatch.setattr(server, "AUTH", True)
+    monkeypatch.setattr(llm, "HOSTED", True)
+    monkeypatch.setattr(llm, "API_KEY", True)
+    monkeypatch.setattr(server, "_link_joins", {})
+    monkeypatch.setattr(server, "_start", lambda kind, fn: None)
+    monkeypatch.setattr(server, "SEATS", accounts.joined() + 10)
+    link = "https://music.163.com/playlist?id=24381616"
+    made = [TestClient(server.app).post("/api/card/follow", json={"link": link, "token": cards.sign({"key": f"163:{n}", "exp": time.time() + 60})}).status_code
+            for n in range(server.LINK_JOINS_PER_DAY + 1)]
+    assert made == [200] * server.LINK_JOINS_PER_DAY + [429]
+    assert server._seats_state() == "open"                 # the seats are still there for anyone else
+
 
 def test_a_qq_music_card_follows_the_same_way_and_the_account_knows_its_app(monkeypatch):
-    from urllib.parse import parse_qs, urlparse
     from fastapi.testclient import TestClient
     from zhiyin import accounts, google, llm
     monkeypatch.setattr(server, "AUTH", True)
     monkeypatch.setattr(llm, "HOSTED", True)
     monkeypatch.setattr(llm, "API_KEY", True)
-    monkeypatch.setattr(google, "client", lambda: {"id": "x", "secret": "y"})
+    monkeypatch.setattr(google, "client", lambda: None)   # a server without Google takes app listeners all the same
+    monkeypatch.setattr(server, "_link_joins", {})
     monkeypatch.setattr(server, "_start", lambda kind, fn: None)
     monkeypatch.setattr(server, "SEATS", accounts.joined() + 1)
     link = "https://i.y.qq.com/n2/m/share/profile_v2/index.html?encrypt_uin=oKcPoKoP7i4soz**"
     c = TestClient(server.app)
     r = c.post("/api/card/follow", json={"link": "https://y.qq.com/n/ryqq/songDetail/002q83Sd2G7Y7D"}, headers={"accept-language": "zh-CN"})
     assert r.status_code == 422 and "一首歌" in r.json()["detail"] and "QQ 音乐" in r.json()["detail"]
-    r = c.post("/api/card/follow", json={"link": link})
-    assert r.json()["go"] == "/auth/google/start?mode=join&src=163"
-    day = store.db().execute("select sum(n) from events where name='join_qq'").fetchone()[0]
-    assert day == 1
-    monkeypatch.setattr(google, "exchange", lambda code, v: {"id_token": "qiao", "scope": "openid email"})
-    monkeypatch.setattr(google, "claims", lambda tok: {"sub": tok, "email": f"{tok}@example.com", "name": tok.title()})
-    r = c.get(r.json()["go"], follow_redirects=False)
-    state = parse_qs(urlparse(r.headers["location"]).query)["state"][0]
-    c.get(f"/auth/google/callback?state={state}&code=x", follow_redirects=False)
-    uid = accounts.by_google("qiao")
-    assert accounts.prefs(uid)["netease"] == {"link": link}
-    c.cookies.set(accounts.COOKIE, accounts.new_session(uid))
+    r = c.post("/api/card/follow", json={"link": link, "token": cards.sign({"key": "qq:u:oKcPoKoP7i4soz**", "exp": time.time() + 60})})
+    assert r.json()["go"] == "/"
+    assert store.db().execute("select sum(n) from events where name='join_qq'").fetchone()[0] == 1
+    uid = accounts.session_uid(r.cookies[accounts.COOKIE])
+    assert accounts.prefs(uid)["netease"]["key"] == "qq:u:oKcPoKoP7i4soz**"
     assert c.get("/api/state").json()["me"]["netease"]["app"] == "qq"
 
 
@@ -784,7 +811,7 @@ def test_an_account_without_likes_yet_can_start_from_netease_but_not_change_sour
     monkeypatch.setattr(netease, "likes", lambda link: {"key": "163:9", "owner": 1, "tracks": [], "total": 30})
     with store.as_user(uid):
         server.app_use(server.LinkReq(link="https://music.163.com/#/user/home?id=1"))
-        assert accounts.prefs(uid)["netease"] == {"link": "https://music.163.com/playlist?id=9"} and started == ["setup"]
+        assert accounts.prefs(uid)["netease"] == {"link": "https://music.163.com/playlist?id=9", "key": "163:9"} and started == ["setup"]
         monkeypatch.setattr(google, "connected", lambda u=None: True)
         with pytest.raises(HTTPException) as e:
             server.app_use(server.LinkReq(link="https://music.163.com/playlist?id=9"))
@@ -827,6 +854,7 @@ def test_inside_wechat_or_line_signing_in_moves_to_the_phones_browser_and_keeps_
         assert "accounts.google.com" in start(ua).headers["location"]
 
     link = "https://music.163.com/playlist?id=24381616"
+    monkeypatch.setattr(server, "SEATS", accounts.joined())   # full: waiting for a seat goes through Google
     assert c.post("/api/card/follow", json={"link": link}).status_code == 200
     gate = json.loads(re.search(r"const G = (\{.*?\});", start(WECHAT_IOS, "/auth/google/start?mode=join&src=163").text).group(1))
     assert unquote(parse_qs(urlparse(gate["url"]).query)["ne"][0]) == link   # the browser has no cookie: the link travels

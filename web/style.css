@@ -609,9 +609,27 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 .era-now b { font-weight: 500; color: var(--fg); margin-right: 10px; }
 
 /* a record from someone's NetEase likes, for visitors without an account: one band above the sample's record */
-.maker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 500px); gap: 16px 48px; align-items: center;
+.maker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 500px); gap: 16px 48px; align-items: start;
   margin: 0 0 48px; padding: 22px 24px; border-radius: 18px; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 1px var(--line); }
-.mk-k { margin: 0; font-size: 12px; color: var(--fg-3); }
+.mk-ex { margin: -32px 0 14px; font-size: 12px; color: var(--fg-3); }
+/* the app marks: each app's own colour behind a plain glyph, enough to find yours at a glance */
+.am { flex: none; width: 34px; height: 34px; padding: 8px; border-radius: 10px; fill: #fff; }
+.am.ne { background: #e5383b; }
+.am.qq { background: #24b46c; }
+.am.yt { background: #ff1f2d; padding: 7px; }
+.mk-apps { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(0, 0, 0, .28); box-shadow: inset 0 0 0 1px var(--line); }
+.mk-apps button { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 8px; border-radius: 9px; font-size: 14px;
+  color: var(--fg-2); transition: background var(--fast) var(--ease), color var(--fast) var(--ease); }
+.mk-apps button:hover { color: var(--fg); }
+.mk-apps [aria-checked="true"] { color: var(--fg); background: rgba(255, 255, 255, .12); }
+.mk-apps .am { width: 20px; height: 20px; padding: 4px; border-radius: 6px; opacity: .55; transition: opacity var(--fast) var(--ease); }
+.mk-apps [aria-checked="true"] .am { opacity: 1; }
+.mk-steps { margin: 14px 0 14px; padding: 0; list-style: none; counter-reset: st; font-size: 13.5px; line-height: 1.6; color: var(--fg-2); }
+.mk-steps li { position: relative; padding-left: 26px; counter-increment: st; text-wrap: pretty; }
+.mk-steps li + li { margin-top: 6px; }
+.mk-steps li::before { content: counter(st); position: absolute; left: 0; top: 2px; width: 18px; height: 18px; border-radius: 50%;
+  font-size: 11px; line-height: 18px; text-align: center; color: var(--fg); background: rgba(255, 255, 255, .1); font-variant-numeric: tabular-nums; }
+.mk-steps li:last-child { color: var(--fg-3); }
 .maker h2 { margin: 2px 0 0; font-size: 20px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
 .mk-sub { margin: 6px 0 0; font-size: 13px; line-height: 1.65; color: var(--fg-2); text-wrap: pretty; }
 .mk-how { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 10px 0 0; font-size: 13px; line-height: 1.55; }
@@ -780,6 +798,8 @@ a.m-acct:hover { background: var(--hover); }
 .m-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 8px; border-radius: 8px; font-size: 13px; color: var(--fg-2); text-align: left; }
 .m-item:hover { background: var(--hover); color: var(--fg); }
 .m-item svg { width: 16px; height: 16px; }
+.m-item[data-armed] { height: auto; min-height: 34px; padding-block: 8px; line-height: 1.45; color: var(--fg); }
+.m-item[data-armed] svg { flex: none; }
 .m-item kbd { margin-left: auto; }
 .m-seg { display: flex; margin: 6px 8px 0; }
 .m-seg button { flex: 1; height: 28px; font-size: 13px; }
@@ -818,7 +838,17 @@ a.m-acct:hover { background: var(--hover); }
 .j-note { margin: 0 0 12px; font-size: 13px; line-height: 1.6; color: var(--fg-2); text-wrap: pretty; }
 .join .fine { margin: 0 0 16px; font-size: 12px; line-height: 1.6; }
 .j-go { width: 100%; height: 46px; font-size: 15px; }
-.j-163 { margin: 16px 0 0; font-size: 13px; color: var(--fg-3); }
+.j-back { position: absolute; top: 12px; left: 12px; }
+.j-back svg { transform: scaleX(-1); }
+.j-back + h2 { margin-top: 30px; }
+.j-apps { display: grid; gap: 8px; }
+.j-app { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px 12px 12px; border-radius: 14px; text-align: left;
+  background: rgba(255, 255, 255, .055); transition: background var(--fast) var(--ease); }
+.j-app:hover { background: rgba(255, 255, 255, .1); }
+.j-app > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.j-app b { font-size: 15px; font-weight: 600; }
+.j-app small { font-size: 12.5px; line-height: 1.45; color: var(--fg-3); }
+.j-app > svg:last-child { flex: none; width: 16px; height: 16px; color: var(--fg-3); }
 .j-alt { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; margin-top: 18px; font-size: 13px; }
 .j-alt a { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
 .j-alt a:hover { color: var(--fg); }
@@ -906,8 +936,8 @@ a.m-acct:hover { background: var(--hover); }
   .rail-nav, .me { display: none; }
   .s-bar { display: flex; align-items: center; gap: 8px; width: calc(100% - 24px); margin: 12px 12px 0; padding: 10px 12px 10px 14px; border-radius: 12px;
     background: var(--sel); font-size: 13px; text-align: left; }
-  .s-bar span { color: var(--fg-3); white-space: nowrap; }
-  .s-bar b { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .s-bar span { flex: 1; min-width: 0; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s-bar b { flex: none; font-weight: 500; white-space: nowrap; }
   .s-bar svg { flex: none; width: 16px; height: 16px; }
   .me-mini.cta { width: auto; height: 32px; padding: 0 14px; border-radius: 16px; background: var(--fg); color: #0b0b0c; font-size: 13px; font-weight: 600; }
   .join { width: 100vw; max-width: none; margin: auto 0 0; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom); }
@@ -1019,6 +1049,7 @@ a.m-acct:hover { background: var(--hover); }
   .sheet[open] { animation: up 420ms var(--drawer); }
   .link input, .invite input, .mk-row input, .hist-add input, .prep-swap input { font-size: 16px; }
   .maker { margin: 0 0 28px; padding: 18px 16px 16px; border-radius: 16px; }
+  .mk-ex { margin: -16px 0 12px; }
   .maker h2 { font-size: 18px; }
   .welcome { padding: 32px 16px 120px; }
   .w-163 .mk-row { flex-direction: column; }

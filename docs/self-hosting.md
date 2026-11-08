@@ -116,7 +116,7 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 | `ZHIYIN_LISTENER_DAILY_USD` | what each listener may spend on the API key per day (default 0.5) |
 | `ZHIYIN_CARD_DAILY_USD` | what naming records made from NetEase or QQ Music links without signing in may spend on the API key per day, all visitors together (default 2; about a fifth of a cent each) |
 | `ZHIYIN_KEY_OPUS`, `ZHIYIN_KEY_SONNET` | the model listeners get where you get Opus or Sonnet (defaults `sonnet`, `sonnet`) |
-| `ZHIYIN_SEATS` | how many people may join with Google without an invite (default 0: invites only) |
+| `ZHIYIN_SEATS` | how many people may join without an invite, with Google or a NetEase or QQ Music link (default 0: invites only) |
 | `ZHIYIN_GOOGLE_VERIFIED` | `1` once Google has verified the app; drops the "unverified app" note from the join sheet |
 | `ZHIYIN_HEAVY`, `ZHIYIN_GATHER` | how many first setups, and how many candidate gatherings, run at once (default 2 each) |
 | `ZHIYIN_OWNER_DAILY_USD` | a ceiling on your own calls per day, priced as on an API key (default 30); a full edition measured $8.50 for eight stations when Claude read every station's whole pool three times; it now reads it once, about $2.80 less |
@@ -184,9 +184,14 @@ them in: on another device they sign in with the same Google account, so a forwa
 
 To let people in without inviting each one, set `ZHIYIN_SEATS` (say `20`) and restart. Anyone who opens the
 site without signing in hears a sample listener's stations (the files in `demo/`), read-only, in their browser's
-language. Liking, asking or opening Settings there offers "Continue with Google", which makes an account, connects
-YouTube Music read-only and starts their setup in one step. Joining needs an API key on the server. When the seats
-are taken, people who try go on a waitlist instead:
+language; a reader of simplified Chinese lands on the box for a NetEase or QQ Music link instead. Liking, asking or
+opening Settings there first asks which app they listen on. YouTube Music is "Continue with Google", which makes an
+account, connects YouTube Music read-only and starts their setup in one step. NetEase and QQ Music are a pasted link:
+it draws their record at once, and "Start from this playlist" under it makes an account from that link alone, with no
+Google, signed in in that browser (Settings makes a link for their other devices). A few such accounts a day are made
+from one address (`LINK_JOINS_PER_DAY` in `server.py`), since each first setup is paid from your key. Joining needs an
+API key on the server. When the seats are taken, people who try go on a waitlist with Google instead, a NetEase or QQ
+link waiting with them:
 
 ```sh
 docker exec zhiyin zhiyin waitlist                          # who is waiting

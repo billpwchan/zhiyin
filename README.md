@@ -79,9 +79,9 @@ Song titles, artists and lyrics stay in their own language and script.
 ### If your likes are on NetEase Cloud Music or QQ Music
 
 Paste the link to your NetEase "My Liked Music", or to your QQ Music profile, at
-[/card](https://zhiyin.billpwchan.art/card) and you get a record in ten seconds, without signing in. "New songs every
-week, picked from these" then makes it your library: Google only confirms it's you, each like is found on YouTube
-Music by artist, title and length (about four in five NetEase likes are, nine in ten of QQ Music's chart songs; the
+[/card](https://zhiyin.billpwchan.art/card) and you get a record in ten seconds, without signing in. "Start from this
+playlist" then makes it your library, without Google: this browser keeps you signed in, and Settings makes a link for
+your other devices. Each like is found on YouTube Music by artist, title and length (about four in five NetEase likes are, nine in ten of QQ Music's chart songs; the
 rest still count as songs you know), and the stations play there like everyone else's. NetEase's 听歌排行 tells it
 which old songs are your favourites; QQ Music shows nobody when a song was liked, so those dates are estimated from
 when the songs came out. Playing needs a network that reaches YouTube.

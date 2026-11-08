@@ -20,6 +20,7 @@ DIR.mkdir(parents=True, exist_ok=True)
 W, H = 1080, 1440
 MAX_BYTES = 1_500_000
 TOKEN_S = 86400
+FOLLOW_S = 7 * 86400   # as long as a record is kept in the browser that drew it
 NAMES_A_DAY = 3      # names for one playlist per day: the first and two more tries
 MAKES = (12, 600)    # imports from one address per ten minutes
 SHARES_A_DAY = 20    # links one account or address makes in a day
@@ -196,6 +197,8 @@ def make(link: str, lang: str, again: bool = False) -> dict:
     since = 0 if rec["dates"] == "released" else int(rec["span"][0])   # 0: no year their likes start from
     rec["token"] = sign({"label": label or "", "roast": roast or "", "pop": pop, "n": got["total"], "since": since,
                          "lang": lang, "exp": time.time() + TOKEN_S, "nonce": secrets.token_hex(8)})
+    # weekly stations start from a list that was read and had enough songs, never from a link nobody read
+    rec["follow"] = sign({"key": got["key"], "exp": time.time() + FOLLOW_S})
     return rec
 
 

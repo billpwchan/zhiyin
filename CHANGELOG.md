@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-11-09
 
+- Listeners of NetEase Cloud Music and QQ Music get a way in made for them. "Start" first asks which app you listen
+  on; NetEase and QQ Music lead to a paste box that shows that app's steps to copy the link, and pasting it is the last
+  step (the record is drawn without pressing anything). A reader of simplified Chinese lands on that box. "Start from
+  this playlist" under the record makes an account from the link alone, with no Google, signed in in that browser;
+  Settings makes a sign-in link for another device. Google is asked only to wait for a place when every seat is taken.
 - Play modes: in order, repeat one and shuffle, from the button left of the previous-song button, remembered in this
   browser. Shuffle mixes the songs ahead of the one playing; in a station your own likes are laid in again between
   the new songs, each new song still after the like it was found from, and turning shuffle off puts the songs ahead
