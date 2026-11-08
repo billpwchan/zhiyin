@@ -1,6 +1,6 @@
 [project]
 name = "zhiyin"
-version = "0.1.0"
+version = "0.2.0"
 description = "A personal music editor for your YouTube Music likes"
 readme = "README.md"
 license = "MIT"
