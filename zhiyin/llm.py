@@ -22,7 +22,12 @@ BASE = ["claude", "-p", "--tools", "", "--setting-sources", "", "--strict-mcp-co
 # the Mac worker), which Anthropic's terms keep to its owner's own use; everyone else runs on the operator's API key.
 HOSTED = os.environ.get("ZHIYIN_AUTH") == "1"
 OAUTH = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
-API_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
+# The operator's API keys, spent in this order: the fallback only while the first is refused (its credit ran out, it
+# hit its spending limit, it was revoked). A refused key rests KEY_REST_S, then is tried again in case it was topped up:
+# one failed request every ten minutes, so a top-up is in use within ten.
+KEYS = [(v, os.environ[v]) for v in ("ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY_FALLBACK") if os.environ.get(v)]
+API_KEY = bool(KEYS)
+KEY_REST_S = 600
 WORKER = bool(os.environ.get("ZHIYIN_WORKER_TOKEN"))
 # The operator's key is one pool for everyone (a plan's monthly API credit, say): POOL_USD over any 30 days, spent no
 # faster than twice the even pace on any one day, and at most DAILY_USD a day for one listener.
@@ -132,6 +137,8 @@ def unavailable(uid: str | None = None) -> str | None:
         return i18n.tr("服务器上还没有配置 Claude" if owner else "主人还没有为其他听众配置 Claude API key", i18n.of(uid))
     if src == "worker" and not worker_online():
         return i18n.tr("Mac 不在线（睡着或关机了）", i18n.of(uid))
+    if src == "key" and KEYS and _key() is None:
+        return _no_credit(uid)
     if src == "key" and not owner:   # the owner's calls are theirs, outside the pool shared with listeners
         if pool_spent(30) >= POOL_USD:
             return i18n.tr("这个月大家共用的 Claude 额度用完了，过几天会恢复", i18n.of(uid))
@@ -198,7 +205,9 @@ def call(prompt: str, system: str, schema: dict, model: str = "sonnet", timeout:
             out = run_api(prompt, system, schema, model, timeout, retries, effort)
         else:
             out = run_here(prompt, system, schema, model, timeout, retries, env=_env(src))
-    except NoClaude:
+    except NoClaude as e:
+        if e.usd:
+            _record(uid, _tally(uid, src), e.usd)
         raise
     except LLMError as e:
         _record(uid, _tally(uid, src), e.usd)
@@ -279,14 +288,60 @@ def strict(schema):
     return out
 
 
-_client = []
+_client: dict[int, object] = {}
+_refused: dict[int, float] = {}   # key -> when it was last refused
 
 
-def _api():
-    if not _client:
+def _key() -> int | None:
+    """The first key not refused within the last KEY_REST_S."""
+    now = time.time()
+    return next((i for i in range(len(KEYS)) if now - _refused.get(i, 0.0) > KEY_REST_S), None)
+
+
+def _api(i: int | None = None):
+    i = (_key() or 0) if i is None else i
+    if i not in _client:
         import anthropic
-        _client.append(anthropic.Anthropic(max_retries=0))
-    return _client[0]
+        _client[i] = anthropic.Anthropic(api_key=KEYS[i][1] if i < len(KEYS) else None, max_retries=0)
+    return _client[i]
+
+
+def _no_credit(uid: str):
+    if uid == store.OWNER:
+        return i18n.tr("Claude API key 用不了了（余额用完或被停用）：充值，或换一个 key", i18n.of(uid))
+    return i18n.tr("主人的 Claude API 暂时用不了，主人充值或换 key 后就能接着用", i18n.of(uid))
+
+
+def key_named(var: str) -> int:
+    """Where the key in `var` sits now (a batch can only be read with the key that made it)."""
+    for i, (v, _) in enumerate(KEYS):
+        if v == var:
+            return i
+    raise LLMError(f"{var} is no longer set on this server")
+
+
+def refused(e) -> bool:
+    """The key itself was turned away (no credit left, past its spending limit, revoked), not this one request."""
+    msg = str(e).lower()
+    kind = (e.body.get("error") or {}).get("type") if isinstance(getattr(e, "body", None), dict) else None
+    return (e.status_code in (401, 402, 403) or kind in ("authentication_error", "billing_error", "permission_error")
+            or (e.status_code == 400 and ("credit balance" in msg or "usage limits" in msg)))
+
+
+def keyed(fn, only: int | None = None):
+    """fn(client) on the first key that isn't refused, and that key's number. `only` asks one key, refused or not."""
+    import anthropic
+    if only is not None:
+        return fn(_api(only)), only
+    while (i := _key()) is not None:
+        try:
+            return fn(_api(i)), i
+        except anthropic.APIStatusError as e:
+            if not refused(e):
+                raise
+            _refused[i] = time.time()
+            print(f"zhiyin: {KEYS[i][0]} refused, resting it {KEY_REST_S // 60} min: {str(e)[:200]}", flush=True)
+    raise NoClaude(_no_credit(store.uid()))
 
 
 def _tokens(u) -> list[int]:
@@ -302,23 +357,30 @@ def cost(model: str, u) -> float:
             + (u.cache_read_input_tokens or 0) * r) / 1e6
 
 
-def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, retries: int, effort: str = "medium") -> dict:
+def run_api(prompt: str, system: str, schema: dict, model: str, timeout: int, retries: int, effort: str = "medium",
+            key: int | None = None) -> dict:
     import anthropic
+
+    def ask(api):
+        # the system prompt repeats across a listener's stations and songs, so it is the part worth caching
+        with api.messages.stream(
+                model=MODELS[model], max_tokens=64000, timeout=timeout,
+                system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+                messages=[{"role": "user", "content": prompt}],
+                output_config={"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}) as st:
+            return st.get_final_message()
     last, usd = None, 0.0
     for attempt in range(retries + 1):
         try:
-            # the system prompt repeats across a listener's stations and songs, so it is the part worth caching
-            with _api().messages.stream(
-                    model=MODELS[model], max_tokens=64000, timeout=timeout,
-                    system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
-                    messages=[{"role": "user", "content": prompt}],
-                    output_config={"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}) as st:
-                msg = st.get_final_message()
+            msg, _ = keyed(ask, only=key)
             usd += cost(model, msg.usage)
             if msg.stop_reason in ("refusal", "max_tokens"):
                 raise LLMError(f"stopped: {msg.stop_reason} after {msg.usage.output_tokens} output tokens")
             text = next(b.text for b in msg.content if b.type == "text")
             return {"data": json.loads(text), "usd": usd, "tok": _tokens(msg.usage)}
+        except NoClaude as e:
+            e.usd = usd   # what the attempts before it cost
+            raise
         except anthropic.APIStatusError as e:
             last = e
             if e.status_code in (400, 401, 403, 404):
@@ -337,12 +399,12 @@ BATCH_WAIT_S = 6 * 3600
 
 def run_batch(prompt: str, system: str, schema: dict, model: str, effort: str = "medium") -> dict:
     """Half price for work nobody is waiting on; most batches come back within the hour."""
-    api = _api()
-    b = api.messages.batches.create(requests=[{"custom_id": "1", "params": {
+    b, k = keyed(lambda api: api.messages.batches.create(requests=[{"custom_id": "1", "params": {
         "model": MODELS[model], "max_tokens": 64000,
         "system": [{"type": "text", "text": system}],
         "messages": [{"role": "user", "content": prompt}],
-        "output_config": {"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}}}])
+        "output_config": {"effort": effort, "format": {"type": "json_schema", "schema": strict(schema)}}}}]))
+    api = _api(k)   # a batch is only seen by the key that made it
     deadline = time.time() + BATCH_WAIT_S
     while api.messages.batches.retrieve(b.id).processing_status != "ended":
         if time.time() > deadline:

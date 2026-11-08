@@ -110,7 +110,8 @@ Secrets live in `/opt/zhiyin/secrets/zhiyin.env` on the server, never in the rep
 |---|---|
 | `ZHIYIN_PUBLIC_URL` | the site's address; set by the deploy scripts from `SITE` |
 | `CLAUDE_CODE_OAUTH_TOKEN` | optional: your subscription on the server, for your own calls (`deploy/claude-token.sh`) |
-| `ANTHROPIC_API_KEY` | optional: an API key for everyone but you (`deploy/claude-token.sh --api-key`) |
+| `ANTHROPIC_API_KEY` | optional: an API key for everyone, you included, while it is there (`deploy/claude-token.sh --api-key`) |
+| `ANTHROPIC_API_KEY_FALLBACK` | optional: a second key, spent only while the first is refused: out of credit, past its spending limit or revoked. The first is tried again every ten minutes (`deploy/claude-token.sh --fallback-key`) |
 | `ZHIYIN_KEY_MONTHLY_USD` | the API key's budget over 30 days (default 100) |
 | `ZHIYIN_LISTENER_DAILY_USD` | what each listener may spend on the API key per day (default 0.5) |
 | `ZHIYIN_CARD_DAILY_USD` | what naming records made from NetEase or QQ Music links without signing in may spend on the API key per day, all visitors together (default 2; about a fifth of a cent each) |
@@ -135,6 +136,9 @@ server, which then checks that Claude answers.
   wait for the Mac to be awake.
 - `deploy/claude-token.sh --api-key` adds an API key, which is what invited listeners run on. Without one you
   can't invite anyone. `--remove-api-key` takes it away again.
+- `deploy/claude-token.sh --fallback-key` adds a second key for when the first runs out of credit, so nobody's
+  stations stop while you top it up. The check afterwards asks each key once and says which of them answer;
+  `--remove-fallback-key` takes it away.
 
 ### 3. Google sign-in
 

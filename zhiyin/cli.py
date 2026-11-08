@@ -122,12 +122,17 @@ def main():
         from . import llm
         if not llm.API_KEY:
             sys.exit("no ANTHROPIC_API_KEY on this server")
-        try:
-            print(llm.run_api("Reply with the single word: ready", "Answer in JSON.",
-                              {"type": "object", "properties": {"word": {"type": "string"}}, "required": ["word"]},
-                              "haiku", 60, 0)["data"]["word"])
-        except llm.LLMError as e:
-            sys.exit(str(e))
+        ok = 0
+        for i, (var, _) in enumerate(llm.KEYS):
+            try:
+                print(f"{var}: " + llm.run_api("Reply with the single word: ready", "Answer in JSON.",
+                                               {"type": "object", "properties": {"word": {"type": "string"}}, "required": ["word"]},
+                                               "haiku", 60, 0, key=i)["data"]["word"])
+                ok += 1
+            except llm.LLMError as e:
+                print(f"{var}: {e}")
+        if not ok:
+            sys.exit(1)
     elif a.cmd == "stats":
         import time
         since = time.strftime("%Y-%m-%d", time.localtime(time.time() - (a.days - 1) * 86400))

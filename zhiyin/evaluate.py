@@ -218,12 +218,12 @@ def screen_submit(arms=("opus", "sonnet"), passes: int = 3, go: bool = False, lo
     if not todo:
         log("nothing to ask: every read has an answer")
         return
-    api = llm._api()
     system = rank.screen_system()
     per_char = {}
     for model in {ARMS[a][0] for a in arms}:
         sample = next(p for _, a, p in todo if ARMS[a][0] == model)
-        n = api.messages.count_tokens(model=llm.MODELS[model], system=system, messages=[{"role": "user", "content": sample}])
+        n, _ = llm.keyed(lambda api: api.messages.count_tokens(model=llm.MODELS[model], system=system,
+                                                               messages=[{"role": "user", "content": sample}]))
         per_char[model] = n.input_tokens / (len(system) + len(sample))
     usd = 0.0
     for _, arm, prompt in todo:
@@ -234,27 +234,28 @@ def screen_submit(arms=("opus", "sonnet"), passes: int = 3, go: bool = False, lo
     if not go:
         return
     ids = {f"r{n}": rid for n, (rid, _, _) in enumerate(todo)}
-    b = api.messages.batches.create(requests=[{"custom_id": f"r{n}", "params": {
+    b, key = llm.keyed(lambda api: api.messages.batches.create(requests=[{"custom_id": f"r{n}", "params": {
         "model": llm.MODELS[ARMS[arm][0]], "max_tokens": 32000,
         "system": [{"type": "text", "text": system}],
         "messages": [{"role": "user", "content": prompt}],
         "output_config": {"effort": ARMS[arm][1], "format": {"type": "json_schema", "schema": llm.strict(rank.IDS_SCHEMA)}}}}
-        for n, (rid, arm, prompt) in enumerate(todo)])
+        for n, (rid, arm, prompt) in enumerate(todo)]))
     batches = store.read_json(_dir() / "batches.json") or []
-    store.write_json(_dir() / "batches.json", batches + [{"id": b.id, "at": time.time(), "ids": ids, "estimate": usd}])
+    store.write_json(_dir() / "batches.json", batches + [{"id": b.id, "at": time.time(), "ids": ids, "estimate": usd,
+                                                          "key": llm.KEYS[key][0] if key < len(llm.KEYS) else None}])
     log(f"submitted {b.id}")
 
 
 def screen_collect(log=print) -> bool:
     """Fetch the answers of every finished batch; True once none is still running."""
     from . import llm, rank
-    api = llm._api()
     batches = store.read_json(_dir() / "batches.json") or []
     pools = {(w["uid"], w["window"], l["key"]): l["pool"] for w in _windows() for l in w["lanes"]}
     running = False
     for b in batches:
         if b.get("collected"):
             continue
+        api = llm._api(llm.key_named(b.get("key") or "ANTHROPIC_API_KEY"))   # a batch is only seen by the key that made it
         st = api.messages.batches.retrieve(b["id"])
         if st.processing_status != "ended":
             running = True

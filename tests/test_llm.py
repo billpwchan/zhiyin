@@ -1,5 +1,7 @@
+import contextlib
 import threading
 import time
+import types
 
 import pytest
 
@@ -195,3 +197,95 @@ def test_a_listener_on_the_key_gets_the_screen_only_when_their_allowance_covers_
     with store.as_user(store.OWNER):
         llm._record(store.OWNER, "key:owner", 20)
         assert edition.screens(8, "opus")
+
+
+class _Claude:
+    """One key's client: every call raises `fail` when it is set."""
+    def __init__(self, fail=None):
+        self.fail, self.asked, self.retrieved = fail, 0, 0
+        self.messages = types.SimpleNamespace(stream=self._stream, batches=types.SimpleNamespace(
+            create=self._create, retrieve=self._retrieve, results=lambda bid: iter([types.SimpleNamespace(
+                result=types.SimpleNamespace(type="succeeded", message=self._msg()))])))
+
+    def _msg(self):
+        return types.SimpleNamespace(stop_reason="end_turn", content=[types.SimpleNamespace(type="text", text='{"ok": 1}')],
+                                     usage=types.SimpleNamespace(input_tokens=10, output_tokens=5,
+                                                                 cache_creation_input_tokens=0, cache_read_input_tokens=0))
+
+    @contextlib.contextmanager
+    def _stream(self, **kw):
+        self.asked += 1
+        if self.fail:
+            raise self.fail
+        yield types.SimpleNamespace(get_final_message=self._msg)
+
+    def _create(self, requests):
+        self.asked += 1
+        if self.fail:
+            raise self.fail
+        return types.SimpleNamespace(id="b1")
+
+    def _retrieve(self, bid):
+        self.retrieved += 1
+        return types.SimpleNamespace(processing_status="ended")
+
+
+def _status(code, message):
+    import anthropic
+    import httpx
+    cls = {400: anthropic.BadRequestError, 401: anthropic.AuthenticationError, 402: anthropic.APIStatusError}[code]
+    return cls(f"Error code: {code} - {{'error': {{'message': '{message}'}}}}", body=None,
+               response=httpx.Response(code, request=httpx.Request("POST", "https://api.anthropic.com/v1/messages")))
+
+
+def test_a_key_out_of_credit_hands_over_to_the_fallback_and_is_tried_again_later(hosted, monkeypatch):
+    hosted(key=True)
+    no_credit = _status(400, "Your credit balance is too low to access the Anthropic API.")
+    first, second = _Claude(no_credit), _Claude()
+    monkeypatch.setattr(llm, "KEYS", [("ANTHROPIC_API_KEY", "a"), ("ANTHROPIC_API_KEY_FALLBACK", "b")])
+    monkeypatch.setattr(llm, "_client", {0: first, 1: second})
+    monkeypatch.setattr(llm, "_refused", {})
+    ask = lambda: llm.run_api("p", "s", {"type": "object"}, "haiku", 60, 0)["data"]   # noqa: E731
+    assert ask() == {"ok": 1} and ask() == {"ok": 1}
+    assert (first.asked, second.asked) == (1, 2)   # the refused key rests instead of being asked every time
+    assert llm.run_batch("p", "s", {"type": "object"}, "haiku")["data"] == {"ok": 1}
+    assert (first.retrieved, second.retrieved) == (0, 1)   # a batch is fetched with the key that made it
+
+    llm._refused[0] -= llm.KEY_REST_S   # an hour on, it may have been topped up
+    first.fail = None
+    assert ask() == {"ok": 1} and first.asked == 2
+
+    first.fail = second.fail = _status(401, "invalid x-api-key")   # revoked counts too
+    with pytest.raises(llm.NoClaude):
+        ask()
+    assert "主人" in llm.unavailable("u1") and "充值" in llm.unavailable(store.OWNER)
+    asked = first.asked + second.asked
+    with pytest.raises(llm.NoClaude):   # and nothing is sent while both rest
+        ask()
+    assert first.asked + second.asked == asked
+
+
+def test_a_bad_request_is_not_the_keys_fault(hosted, monkeypatch):
+    hosted(key=True)
+    first, second = _Claude(_status(400, "output_config.format.schema: invalid")), _Claude()
+    monkeypatch.setattr(llm, "KEYS", [("ANTHROPIC_API_KEY", "a"), ("ANTHROPIC_API_KEY_FALLBACK", "b")])
+    monkeypatch.setattr(llm, "_client", {0: first, 1: second})
+    monkeypatch.setattr(llm, "_refused", {})
+    with pytest.raises(llm.LLMError) as e:
+        llm.run_api("p", "s", {"type": "object"}, "haiku", 60, 2)
+    assert not isinstance(e.value, llm.NoClaude) and (first.asked, second.asked) == (1, 0) and not llm._refused
+
+
+def test_a_billing_error_moves_to_the_fallback_and_a_batch_remembers_its_key_by_name(hosted, monkeypatch):
+    hosted(key=True)
+    first, second = _Claude(_status(402, "billing_error")), _Claude()
+    monkeypatch.setattr(llm, "KEYS", [("ANTHROPIC_API_KEY", "a"), ("ANTHROPIC_API_KEY_FALLBACK", "b")])
+    monkeypatch.setattr(llm, "_client", {0: first, 1: second})
+    monkeypatch.setattr(llm, "_refused", {})
+    assert llm.run_api("p", "s", {"type": "object"}, "haiku", 60, 2)["data"] == {"ok": 1}
+    assert (first.asked, second.asked) == (1, 1)
+    assert llm.key_named("ANTHROPIC_API_KEY_FALLBACK") == 1
+    monkeypatch.setattr(llm, "KEYS", [("ANTHROPIC_API_KEY_FALLBACK", "b")])   # the first taken away: the index moves
+    assert llm.key_named("ANTHROPIC_API_KEY_FALLBACK") == 0
+    with pytest.raises(llm.LLMError):
+        llm.key_named("ANTHROPIC_API_KEY")

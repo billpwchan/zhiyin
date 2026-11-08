@@ -6,7 +6,9 @@
 #                                     signs you in in the browser and prints a long-lived token to paste.
 #   deploy/claude-token.sh --api-key  an Anthropic API key (platform.claude.com), billed per use. Needed before
 #                                     you invite anyone: a subscription is for its owner's own use.
-#   deploy/claude-token.sh --remove-api-key
+#   deploy/claude-token.sh --fallback-key a second API key, spent only while the first is refused (out of credit,
+#                                     past its spending limit, revoked); the first is tried again every 10 min.
+#   deploy/claude-token.sh --remove-api-key | --remove-fallback-key
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f deploy/local.conf ] && . deploy/local.conf
@@ -19,8 +21,11 @@ case "${1:-}" in
                      printf '\nPaste the token it printed (hidden): ' ;;
   --api-key)         VAR=ANTHROPIC_API_KEY; CHECK="zhiyin check-key"   # the Messages API, as the server uses it
                      printf 'Paste the API key (hidden): ' ;;
+  --fallback-key)    VAR=ANTHROPIC_API_KEY_FALLBACK; CHECK="zhiyin check-key"
+                     printf 'Paste the fallback API key (hidden): ' ;;
   --remove-api-key)  VAR=ANTHROPIC_API_KEY; CHECK="" ;;
-  *)                 echo "usage: $0 [--api-key | --remove-api-key]"; exit 2 ;;
+  --remove-fallback-key) VAR=ANTHROPIC_API_KEY_FALLBACK; CHECK="" ;;
+  *)                 echo "usage: $0 [--api-key | --fallback-key | --remove-api-key | --remove-fallback-key]"; exit 2 ;;
 esac
 VALUE=""
 if [ -n "$CHECK" ]; then
@@ -40,7 +45,7 @@ cd /opt/zhiyin && docker compose up -d --force-recreate 2>&1 | tail -1   # setti
 for i in \$(seq 1 40); do docker exec zhiyin curl -fsS http://127.0.0.1:8817/healthz >/dev/null 2>&1 && break; sleep 1; done
 if [ -z \"\$CHECK\" ]; then echo \"\$VAR is no longer set\"; exit 0; fi
 printf \"Claude on the server: \"
-if [ \"\$VAR\" = ANTHROPIC_API_KEY ]; then docker exec zhiyin \$CHECK; else docker exec zhiyin \$CHECK -p \"Reply with the single word: ready\" --model sonnet; fi ||
-  echo \"no answer: check what you pasted and run this again, or take it out with --remove-api-key\"
+if [ \"\$VAR\" != CLAUDE_CODE_OAUTH_TOKEN ]; then docker exec zhiyin \$CHECK; else docker exec zhiyin \$CHECK -p \"Reply with the single word: ready\" --model sonnet; fi ||
+  echo \"no answer: check what you pasted and run this again, or take it out with --remove-api-key or --remove-fallback-key\"
 '"
 unset VALUE

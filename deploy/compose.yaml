@@ -1,7 +1,7 @@
 # Installed at /opt/zhiyin/compose.yaml, with the settings that aren't secret in /opt/zhiyin/.env (written by
 # deploy.sh). ./current is the release being run, ./data holds every listener's data,
-# ./secrets/zhiyin.env holds ZHIYIN_WORKER_TOKEN and, optionally, CLAUDE_CODE_OAUTH_TOKEN and ANTHROPIC_API_KEY
-# (see docs/self-hosting.md, "Whose Claude").
+# ./secrets/zhiyin.env holds ZHIYIN_WORKER_TOKEN and, optionally, CLAUDE_CODE_OAUTH_TOKEN, ANTHROPIC_API_KEY and
+# ANTHROPIC_API_KEY_FALLBACK (see docs/self-hosting.md, "Whose Claude").
 services:
   zhiyin:
     build: ./current

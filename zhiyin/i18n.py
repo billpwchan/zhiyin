@@ -598,6 +598,8 @@ EN = {
     "服务器上还没有配置 Claude": "Claude isn't set up on the server yet",
     "主人还没有为其他听众配置 Claude API key": "The owner hasn't set up a Claude API key for other listeners yet",
     "Mac 不在线（睡着或关机了）": "The Mac is offline (asleep or shut down)",
+    "Claude API key 用不了了（余额用完或被停用）：充值，或换一个 key": "The Claude API key was refused (out of credit or disabled): top it up, or use another key",
+    "主人的 Claude API 暂时用不了，主人充值或换 key 后就能接着用": "The owner's Claude API can't be used right now. It works again once they top it up or change the key",
     "今天大家共用的 Claude 额度到了上限，明天再挑": "Today's shared Claude allowance is used up. New picks tomorrow",
     "你今天的 Claude 额度用完了，明天再来": "Your Claude allowance for today is used up. Come back tomorrow",
     "这个月大家共用的 Claude 额度用完了，过几天会恢复": "This month's shared Claude allowance is used up. It comes back in a few days",
