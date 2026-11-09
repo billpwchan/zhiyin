@@ -6,12 +6,12 @@
 </p>
 
 <p align="center">
-  從你在 YouTube Music 點過的喜歡出發的私人電台。<br>
-  每週給你幾個電台的新歌，每一首都告訴你為什麼選它。
+  從你點過的喜歡出發的私人電台，每週幾個電台的新歌，每一首都告訴你為什麼選它。<br>
+  喜歡都在網易雲或 QQ 音樂？貼一個歌單連結，不用登入，Claude 先給你的口味取個名字、銳評一句。
 </p>
 
 <p align="center">
-  <a href="https://zhiyin.billpwchan.art/?ref=github"><b>在瀏覽器裡試試</b></a> · 用 Google 登入，或先聽聽範例聽眾的電台
+  <a href="https://zhiyin.billpwchan.art/card?ref=github"><b>銳評我的歌單</b></a> · <a href="https://zhiyin.billpwchan.art/?ref=github">聽電台</a>（用 Google 登入 YouTube Music，或先聽聽範例聽眾的）
 </p>
 
 <p align="center">
@@ -21,6 +21,13 @@
 <p align="center">
   <a href="https://github.com/billpwchan/zhiyin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/billpwchan/zhiyin/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-lightgrey"></a>
+</p>
+
+<p align="center">
+  <img alt="大众情歌的老主顾" src="docs/images/card-1.webp" width="260">
+  <img alt="只听老录音的古典入门党" src="docs/images/card-2.webp" width="260">
+  <img alt="Weeknd 的回头客" src="docs/images/card-3.webp" width="260">
+  <br><sub>把網易雲自己的官方榜單當成紅心歌單餵進去，它逐張取的外號。</sub>
 </p>
 
 <p align="center">

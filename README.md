@@ -15,6 +15,10 @@
 </p>
 
 <p align="center">
+  Likes on NetEase Cloud Music or QQ Music? <a href="https://zhiyin.billpwchan.art/card?ref=github">Paste a playlist link</a>: no sign-in, Claude names your taste and roasts it in one line.
+</p>
+
+<p align="center">
   <b>English</b> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a>
 </p>
 
@@ -25,6 +29,13 @@
 
 <p align="center">
   <img alt="The player: stations on the left, the song with its cover and the reason it was picked, and synced lyrics with a translation on the right, a tab away from the rest of the station" src="docs/images/player.webp" width="900">
+</p>
+
+<p align="center">
+  <img alt="The regular of mainstream love songs" src="docs/images/card-1.webp" width="260">
+  <img alt="Classical beginner who only plays old recordings" src="docs/images/card-2.webp" width="260">
+  <img alt="Keeps coming back to The Weeknd" src="docs/images/card-3.webp" width="260">
+  <br><sub>NetEase's own charts, fed in as if each were someone's likes, and the names Claude gave them.</sub>
 </p>
 
 Most recommenders work from what millions of other people played next to your song. You get the same few hits,
