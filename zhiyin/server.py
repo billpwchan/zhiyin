@@ -1,5 +1,6 @@
 import contextvars
 import datetime as dt
+import functools
 import hmac
 import json
 import os
@@ -17,6 +18,7 @@ from urllib.parse import quote, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
+import segno
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.concurrency import run_in_threadpool
@@ -465,6 +467,10 @@ def _scheduler():
     while True:
         users = accounts.users()
         try:
+            cards.sweep_tmp()
+        except Exception:
+            traceback.print_exc()
+        try:
             gone = _forget_stale(users)
             google.sweep_videos()
             for u in users:
@@ -782,7 +788,7 @@ def _milestone(name: str) -> None:
 
 
 class Event(BaseModel):
-    name: Annotated[str, Field(pattern=r"^(sample_play|share_open|share_send|share_save|share_copy|yt_down)$")]
+    name: Annotated[str, Field(pattern=r"^(sample_play|share_open|share_send|share_save|share_copy|share_hold|yt_down)$")]
 
 
 @app.post("/api/event")
@@ -797,7 +803,7 @@ CARD_WHY = {
     "link": "这不像网易云或 QQ 音乐的主页、歌单链接。在 App 里点分享，选「复制链接」再贴过来",
     ("song", "163"): "这是一首歌的链接。要的是整份喜欢：在网易云打开「我喜欢的音乐」，点分享，复制链接贴过来",
     ("song", "qq"): "这是一首歌的链接。要的是整份喜欢：在 QQ 音乐点头像进主页，右上角「···」点分享，复制链接贴过来",
-    ("private", "163"): "这份「我喜欢的音乐」只有本人看得到。在网易云的隐私设置里改成所有人可见，或者贴一份公开歌单的链接",
+    ("private", "163"): "这份「我喜欢的音乐」只有你自己看得到。在网易云点左上角 ≡ →「设置」→「消息和隐私」→「个人主页隐私设置」，把「我喜欢的音乐」改成公开，再贴一次；或者贴一份公开歌单的链接",
     ("private", "qq"): "你的「喜欢」只有自己看得到。在 QQ 音乐点头像进主页，右上角「···」→「访问设置」，打开「喜欢」再贴一次；或者贴一份公开歌单的链接",
     "few": "这份歌单只有 {n} 首，至少要 20 首才画得出来",
     ("upstream", "163"): "网易云那边没有回应，过一会儿再试",
@@ -882,6 +888,51 @@ async def card_share(request: Request, token: str = ""):
                      c.get("line"))
     store.count("card_shared", _ref_of_user() if uid else _ref_cookie(request))
     return {"url": f"{google.public_url()}/c/{out['id']}", **out}
+
+
+@functools.cache
+def _qr(url: str) -> list[str]:
+    return ["".join("1" if v else "0" for v in row) for row in segno.make(url, error="m", micro=False).matrix]
+
+
+@app.get("/api/card/qr")
+def card_qr():
+    """The way back to the maker as a QR code's modules: every card carries it, for apps where a link in a picture
+    can't be tapped."""
+    url = f"{google.public_url()}/card?ref=qr"
+    return JSONResponse({"url": url, "rows": _qr(url)}, headers={"Cache-Control": "public, max-age=86400"})
+
+
+TMP_ID = r"^[A-Za-z0-9]{16}$"
+_tmp_recent: dict[str, list[float]] = {}
+
+
+@app.post("/api/card/tmp")
+async def card_tmp(request: Request):
+    """The picture behind a plain https address for two hours. In-app browsers (WeChat on Android) won't let a blob:
+    or data: image be long-pressed and saved; one with an address they will."""
+    img = await request.body()
+    if not cards.valid_image(img):
+        raise HTTPException(400, "image")
+    ip = request.client.host if request.client else ""
+    now = time.time()
+    seen = _tmp_recent[ip] = [t for t in _tmp_recent.get(ip, []) if now - t < 600]
+    if len(seen) >= 20:
+        raise HTTPException(429, i18n.tr("做得有点快，过几分钟再试", i18n.from_request(request)))
+    seen.append(now)
+    if len(_tmp_recent) > 5000:   # forget addresses gone quiet
+        for k in [k for k, v in _tmp_recent.items() if not v or now - v[-1] > 600]:
+            _tmp_recent.pop(k, None)
+    return {"url": f"/c/t/{await run_in_threadpool(cards.keep_tmp, img)}.jpg"}
+
+
+@app.get("/c/t/{tid}.jpg")
+def card_tmp_image(tid: str):
+    p = cards.TMP / f"{tid}.jpg"
+    if not re.fullmatch(TMP_ID, tid) or not p.exists() or time.time() - p.stat().st_mtime > cards.TMP_S:
+        raise HTTPException(404)
+    return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=7200",
+                                                             "X-Robots-Tag": "noindex"})
 
 
 class CardDel(BaseModel):

@@ -95,6 +95,14 @@ titles and artists of its newest 600 songs go to Anthropic for a name, billed to
 `cards` account and capped at `ZHIYIN_CARD_DAILY_USD` a day (default $2); the name is kept for 7 days in
 `card_names`, keyed by a hash of the playlist id and language, so the same list is named once a day (three times if
 they ask for another). How many records an address made in the last ten minutes is counted in memory only.
+If a NetEase 我喜欢的音乐 is visible only to its owner, or holds fewer than 20 songs, the record is drawn from that
+person's own largest public playlist instead (`netease.biggest_own`; the owner comes from the profile link or the
+`userid` in a shared playlist link), read the same way, and the page names the list it used. Inside apps that can't
+save a picture the page drew (WeChat, QQ, Weibo and the like), and in phone browsers that can't share files, opening the
+share picture (signed in or not) sends it to `/api/card/tmp`, which keeps it in `data/cards/tmp/` under a random name
+for 2 hours (the scheduler deletes it within 3, about every half hour, and the oldest go first past 200 MB in all), tied to no account or playlist,
+so it has an address to press and hold; how many an address saved in the last ten minutes is counted in memory only. The QR code
+drawn on every record points to `/card?ref=qr` and carries nothing about the person.
 
 Someone who goes on from such a record to weekly stations ("Start from this playlist", `/api/card/follow`) gets an
 account made from that playlist alone, without Google. Drawing the record hands the browser a signed proof that names

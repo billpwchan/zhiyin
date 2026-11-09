@@ -1,3 +1,4 @@
+import os
 import struct
 import time
 
@@ -58,6 +59,70 @@ def test_a_hidden_or_short_list_says_why(monkeypatch):
         netease.likes("https://music.163.com/playlist?id=1")
     assert (e.value.why, e.value.n) == ("few", 12)
 
+
+def _fake_owner(monkeypatch, liked: int, liked_code=200, own=((88, "通勤路上", 45), (89, "睡前", 30))):
+    """A listener whose liked songs (playlist 77) are hidden or short, with their own public playlists beside them."""
+    at0 = int(time.mktime((2019, 3, 1, 0, 0, 0, 0, 0, 0)) * 1000)
+    sizes = {77: liked, **{pid: n for pid, _, n in own}}
+
+    def get(c, path, **params):
+        if path == "/api/user/playlist":
+            liked_row = [{"id": 77, "specialType": 5, "creator": {"userId": 5}}] if liked_code == 200 else []
+            return {"code": 200, "playlist": liked_row + [{"id": pid, "name": name, "specialType": 0, "trackCount": n,
+                                                           "creator": {"userId": 5}} for pid, name, n in own]
+                    + [{"id": 99, "name": "别人的歌单", "specialType": 0, "trackCount": 500, "creator": {"userId": 6}}]}
+        pid = params["id"]
+        if pid == 77 and liked_code != 200:
+            return {"code": liked_code}
+        return {"code": 200, "playlist": {"specialType": 5 if pid == 77 else 0, "creator": {"userId": 5},
+                                          "trackIds": [{"id": pid * 1000 + i, "at": at0 + i * 86400000} for i in range(sizes[pid])]}}
+    monkeypatch.setattr(netease, "_get", get)
+    monkeypatch.setattr(netease, "_songs", lambda c, ids: {i: _song(i) for i in ids})
+
+
+def test_a_share_link_names_its_sharer():
+    assert netease.target("https://y.music.163.com/m/playlist?id=8009&userid=9003") == ("playlist", 8009, 9003)
+    assert netease.target("https://music.163.com/#/user/home?id=9003") == ("user", 9003, None)
+
+
+def test_a_card_from_hidden_likes_is_drawn_from_their_own_longest_public_playlist(monkeypatch):
+    _fake_owner(monkeypatch, 40, liked_code=401)
+    shared = "分享歌单: https://y.music.163.com/m/playlist?id=77&userid=5 (来自@网易云音乐)"
+    with pytest.raises(netease.Unreadable) as e:   # stations go by what was pasted, never a list they didn't pick
+        netease.likes(shared)
+    assert e.value.why == "private"
+    got = netease.likes(shared, fallback=True)
+    assert got["key"] == "163:88" and got["total"] == 45 and got["via"] == {"why": "private", "name": "通勤路上"}
+    assert got["user"] == 5
+    got = netease.likes("https://music.163.com/#/user/home?id=5", fallback=True)   # the profile link: no liked list in sight
+    assert got["key"] == "163:88" and got["via"]["why"] == "private"
+    with pytest.raises(netease.Unreadable) as e:   # a hidden list with no sharer named: nothing to fall back on
+        netease.likes("https://music.163.com/playlist?id=77", fallback=True)
+    assert e.value.why == "private"
+
+
+def test_short_likes_fall_back_but_a_short_list_they_chose_does_not(monkeypatch):
+    _fake_owner(monkeypatch, 12)
+    got = netease.likes("https://y.music.163.com/m/playlist?id=77&userid=5", fallback=True)
+    assert got["key"] == "163:88" and got["via"] == {"why": "few", "name": "通勤路上"}
+    _fake_owner(monkeypatch, 40, own=((88, "通勤路上", 12), (89, "睡前", 45)))
+    with pytest.raises(netease.Unreadable) as e:
+        netease.likes("https://y.music.163.com/m/playlist?id=88&userid=5", fallback=True)
+    assert (e.value.why, e.value.n) == ("few", 12)
+    _fake_owner(monkeypatch, 40, liked_code=401, own=())
+    with pytest.raises(netease.Unreadable) as e:   # nothing public of their own either
+        netease.likes("https://music.163.com/#/user/home?id=5", fallback=True)
+    assert e.value.why == "private"
+
+
+
+def test_a_fallback_that_fails_reports_the_list_they_pasted(monkeypatch):
+    _fake_owner(monkeypatch, 40, liked_code=401)
+    real = netease._get
+    monkeypatch.setattr(netease, "_get", lambda c, path, **p: {"code": 404} if p.get("id") == 88 else real(c, path, **p))
+    with pytest.raises(netease.Unreadable) as e:
+        netease.likes("https://music.163.com/#/user/home?id=5", fallback=True)
+    assert e.value.why == "private"
 
 def test_a_netease_record_is_laid_out_like_a_new_listeners(monkeypatch):
     _fake(monkeypatch, 60)
@@ -239,6 +304,52 @@ def test_a_card_made_without_an_account_shares_once_and_comes_down_by_its_key(mo
     assert c.post("/api/card/delete", json={"id": link["id"], "key": link["key"]}).status_code == 200
     assert c.get(f"/c/{link['id']}").status_code == 404
     assert c.get(f"/c/{link['id']}.jpg").status_code == 404
+
+
+def test_a_card_drawn_from_another_list_says_which(monkeypatch):
+    from fastapi.testclient import TestClient
+    _fake_owner(monkeypatch, 40, liked_code=401)
+    monkeypatch.setattr(cards, "verdict", lambda *a, **k: ("通勤耳机党", "地铁到站了，歌还没切。"))
+    c = TestClient(server.app, headers={"Accept-Language": "zh-CN"})
+    r = c.post("/api/card/make", json={"link": "https://y.music.163.com/m/playlist?id=77&userid=5"})
+    assert r.status_code == 200, r.text
+    assert r.json()["via"] == {"why": "private", "name": "通勤路上"} and r.json()["n"] == 45
+    assert cards.unsign(r.json()["follow"])["key"] == "163:88"   # stations would follow the list the card shows
+
+
+def test_a_picture_gets_an_address_for_a_while_and_only_a_card_sized_one(monkeypatch):
+    from fastapi.testclient import TestClient
+    c = TestClient(server.app)
+    assert c.post("/api/card/tmp", content=_jpeg(800, 600)).status_code == 400
+    r = c.post("/api/card/tmp", content=_jpeg())
+    assert r.status_code == 200
+    url = r.json()["url"]
+    assert url.startswith("/c/t/") and c.get(url).content == _jpeg()
+    assert c.get(url).headers["cache-control"].startswith("private")
+    assert c.get("/c/t/../../card.key.jpg").status_code == 404 and c.get("/c/t/zzzz.jpg").status_code == 404
+    monkeypatch.setattr(cards, "TMP_S", -1)   # two hours on
+    assert c.get(url).status_code == 404
+    cards.keep_tmp(_jpeg())   # the next one sweeps it away
+    assert not (cards.TMP / url.rsplit("/", 1)[1]).exists()
+
+
+
+def test_pictures_kept_for_saving_never_pile_up_past_a_cap(monkeypatch):
+    for p in cards.TMP.glob("*.jpg"):
+        p.unlink()
+    old = [cards.keep_tmp(_jpeg()) for _ in range(3)]
+    now = time.time()
+    for i, t in enumerate(old):
+        os.utime(cards.TMP / f"{t}.jpg", (now - 60 + i, now - 60 + i))
+    monkeypatch.setattr(cards, "TMP_BYTES", 2 * len(_jpeg()))
+    new = cards.keep_tmp(_jpeg())
+    assert sorted(p.stem for p in cards.TMP.glob("*.jpg")) == sorted([old[2], new])   # the oldest went first
+
+def test_every_card_carries_a_qr_code_back_to_the_maker():
+    from fastapi.testclient import TestClient
+    d = TestClient(server.app).get("/api/card/qr").json()
+    assert d["url"].endswith("/card?ref=qr")
+    assert len(d["rows"]) >= 21 and {len(r) for r in d["rows"]} == {len(d["rows"])} and set("".join(d["rows"])) == {"0", "1"}
 
 
 def test_a_name_for_a_playlist_is_kept_for_the_day_and_tries_are_counted(monkeypatch):

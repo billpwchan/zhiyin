@@ -17,6 +17,10 @@ from . import ear, i18n, library, llm, profile, store
 
 DIR = store.DATA / "cards"
 DIR.mkdir(parents=True, exist_ok=True)
+TMP = DIR / "tmp"   # pictures given an address for a while so in-app browsers let them be saved
+TMP.mkdir(exist_ok=True)
+TMP_S = 2 * 3600
+TMP_BYTES = 200_000_000   # all of them together; past it the oldest go first
 W, H = 1080, 1440
 MAX_BYTES = 1_500_000
 TOKEN_S = 86400
@@ -183,7 +187,7 @@ def _verdict(tracks: list[dict], total: int, key: str, lang: str, again: bool, a
 
 
 def make(link: str, lang: str, again: bool = False) -> dict:
-    got = library.app_likes(link)
+    got = library.app_likes(link, fallback=True)
     tracks = got["tracks"]
     app = got["key"].split(":", 1)[0]
     label, roast, why = _verdict(tracks, got["total"], got["key"], lang, again, app)
@@ -192,7 +196,7 @@ def make(link: str, lang: str, again: bool = False) -> dict:
     if pop is not None:
         rec["facts"].insert(0, {"key": "pop", "lead": f"{pop}%",
                                 "text": i18n.tr("大众度：你喜欢的歌在网易云的平均热度是 {p}，热歌榜是 100。", lang, p=pop), "vids": []})
-    rec.update(label=label, roast=roast, pop=pop, n=got["total"], source=app, why=why,
+    rec.update(label=label, roast=roast, pop=pop, n=got["total"], source=app, why=why, via=got.get("via"),
                pics={t["vid"]: t["pic"] for t in tracks if t["pic"]})
     since = 0 if rec["dates"] == "released" else int(rec["span"][0])   # 0: no year their likes start from
     rec["token"] = sign({"label": label or "", "roast": roast or "", "pop": pop, "n": got["total"], "since": since,
@@ -200,6 +204,33 @@ def make(link: str, lang: str, again: bool = False) -> dict:
     # weekly stations start from a list that was read and had enough songs, never from a link nobody read
     rec["follow"] = sign({"key": got["key"], "exp": time.time() + FOLLOW_S})
     return rec
+
+
+def sweep_tmp(room: int = 0) -> None:
+    now = time.time()
+    kept = []
+    for p in TMP.glob("*.jpg"):
+        try:
+            st = p.stat()
+        except FileNotFoundError:
+            continue
+        if now - st.st_mtime > TMP_S:
+            p.unlink(missing_ok=True)
+        else:
+            kept.append((st.st_mtime, st.st_size, p))
+    total = sum(size for _, size, _ in kept) + room
+    for _, size, p in sorted(kept):
+        if total <= TMP_BYTES:
+            break
+        p.unlink(missing_ok=True)
+        total -= size
+
+
+def keep_tmp(img: bytes) -> str:
+    sweep_tmp(len(img))
+    tid = secrets.token_hex(8)
+    (TMP / f"{tid}.jpg").write_bytes(img)
+    return tid
 
 
 def jpeg_size(b: bytes) -> tuple[int, int] | None:

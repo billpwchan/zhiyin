@@ -15,6 +15,7 @@ dependencies = [
     "numpy>=2.5.4",
     "opencc>=1.4.2",
     "pypinyin>=0.55.0",
+    "segno>=1.6",
     "tzdata>=2025.2",
     "uvicorn>=0.54.0",
     "ytmusicapi>=1.12.3,<2",

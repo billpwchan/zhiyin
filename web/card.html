@@ -22,6 +22,7 @@ body { background: radial-gradient(60% 70% at 38% 45%, rgba(233, 165, 91, .07) 0
 .cp .how { margin: 16px 0 0; font-size: 15px; line-height: 1.8; color: var(--fg-2); text-wrap: pretty; }
 .cp .go { margin-top: 30px; height: 48px; padding: 0 24px; border-radius: 12px; font-size: 15px; }
 .cp .alt { margin: 14px 0 0; font-size: 13px; line-height: 1.7; color: var(--fg-3); text-wrap: pretty; }
+.cp .alt a { color: var(--fg-2); }
 .cp-del { margin-top: 36px; margin-left: -10px; }
 .cp-gone { grid-column: 1 / -1; max-width: 420px; text-align: center; }
 .cp-gone h1 { margin-top: 28px; }
@@ -51,18 +52,21 @@ body { background: radial-gradient(60% 70% at 38% 45%, rgba(233, 165, 91, .07) 0
     <h1>让 Claude 锐评你的网易云、QQ 音乐歌单</h1>
     <p class="how">贴一个歌单链接，就能出一张这样的唱片：每一圈是一年，每个点是一首歌，颜色取自它的封面；名字和锐评是 Claude 读完这些歌写的。网易云的歌单还会按热度算出你有多大众。</p>
     <a class="btn go" href="/card?ref=card">锐评我的歌单</a>
+    <p class="alt">不用登录。知音是开源的，代码在 <a href="https://github.com/billpwchan/zhiyin" target="_blank" rel="noopener">GitHub</a>。</p>
     <button class="tb cp-del" id="del" hidden>收回这张唱片</button>
 <!--/lang-->
 <!--lang:zh-Hant-->
     <h1>讓 Claude 銳評你的網易雲、QQ 音樂歌單</h1>
     <p class="how">貼一個歌單連結，就能出一張這樣的唱片：每一圈是一年，每個點是一首歌，顏色取自它的封面；名字和銳評是 Claude 讀完這些歌寫的。網易雲的歌單還會按熱度算出你有多大眾。</p>
     <a class="btn go" href="/card?ref=card">銳評我的歌單</a>
+    <p class="alt">不用登入。知音是開源的，程式碼在 <a href="https://github.com/billpwchan/zhiyin" target="_blank" rel="noopener">GitHub</a>。</p>
     <button class="tb cp-del" id="del" hidden>收回這張唱片</button>
 <!--/lang-->
 <!--lang:en-->
     <h1>Let Claude roast your NetEase or QQ Music likes</h1>
     <p class="how">Paste a playlist link and get a record like this: a ring a year, a dot a song coloured by its cover. Claude read the songs and wrote the name and the roast; a NetEase list also gets how mainstream it is, from NetEase's own popularity.</p>
     <a class="btn go" href="/card?ref=card">Roast my likes</a>
+    <p class="alt">No sign-in. Zhiyin is open source: the code is on <a href="https://github.com/billpwchan/zhiyin" target="_blank" rel="noopener">GitHub</a>.</p>
     <button class="tb cp-del" id="del" hidden>Take this record down</button>
 <!--/lang-->
   </div>

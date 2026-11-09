@@ -18,6 +18,12 @@ let LANG = detectLang();
 
 const STRINGS = {
   en: {
+    "扫码，锐评你的歌单": "Scan to roast your likes",
+    "保存分享图": "Save the picture",
+    "图上带二维码，朋友扫一下就能锐评自己的": "It carries a QR code: friends scan it to roast their own",
+    "你的「我喜欢的音乐」歌太少，这张按你公开的歌单「{name}」画。": "Your “My Liked Music” has too few songs, so this record is drawn from your public playlist “{name}”.",
+    "你的「我喜欢的音乐」只有你自己看得到，这张按你公开的歌单「{name}」画。想换成喜欢的歌：网易云左上角 ≡ →「设置」→「消息和隐私」→「个人主页隐私设置」，把「我喜欢的音乐」改成公开，再贴一次。": "Only you can see your “My Liked Music”, so this record is drawn from your public playlist “{name}”. To use your likes: in NetEase tap ≡ at the top left → Settings → Messages and privacy → Profile privacy, make “My Liked Music” public and paste it again.",
+    "知音是开源的，代码在 {gh}。": "Zhiyin is open source: the code is on {gh}.",
 
     "YouTube Music 播放记录": "YouTube Music history",
     "用你的 Claude API key，按用量计费。": "Runs on your Claude API key, billed by use.",
@@ -578,6 +584,12 @@ const STRINGS = {
     "删掉你的账号、喜欢、电台和反馈。": "Deletes your account, likes, stations and feedback.",
   },
   'zh-Hant': {
+    "扫码，锐评你的歌单": "掃碼，銳評你的歌單",
+    "保存分享图": "儲存分享圖",
+    "图上带二维码，朋友扫一下就能锐评自己的": "圖上帶 QR 碼，朋友掃一下就能銳評自己的",
+    "你的「我喜欢的音乐」歌太少，这张按你公开的歌单「{name}」画。": "你的「我喜歡的音樂」歌太少，這張按你公開的歌單「{name}」畫。",
+    "你的「我喜欢的音乐」只有你自己看得到，这张按你公开的歌单「{name}」画。想换成喜欢的歌：网易云左上角 ≡ →「设置」→「消息和隐私」→「个人主页隐私设置」，把「我喜欢的音乐」改成公开，再贴一次。": "你的「我喜歡的音樂」只有你自己看得到，這張按你公開的歌單「{name}」畫。想換成喜歡的歌：網易雲左上角 ≡ →「設定」→「消息和隱私」→「個人主頁隱私設定」，把「我喜歡的音樂」改成公開，再貼一次。",
+    "知音是开源的，代码在 {gh}。": "知音是開源的，程式碼在 {gh}。",
 
     "用你的 Claude API key，按用量计费。": "用你的 Claude API key，按用量計費。",
     "今天 {calls} 次调用，读 {in}、写 {out} token，${usd}；近 7 天 ${week}。": "今天 {calls} 次呼叫，讀 {in}、寫 {out} token，${usd}；近 7 天 ${week}。",

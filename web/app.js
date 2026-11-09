@@ -2464,6 +2464,10 @@ function arcText(x, str, c, r, mid, low, spacing) {
   return total;
 }
 
+// The way back to the maker, drawn on every card: in Moments, Xiaohongshu or Weibo a link in a picture can't be tapped
+let QR = null;
+const qrRows = async () => (QR ??= await fetch('/api/card/qr').then((r) => (r.ok ? r.json() : null)).then((d) => d?.rows || null).catch(() => null));
+
 // a signed-in listener's card says what the top of their page says
 const cardLine = () => (!guest() && !EAR.roast && !S.stale_lang && S.portrait?.headline) || '';
 
@@ -2544,6 +2548,8 @@ async function cardCanvas() {
   const lead = pop !== null ? `${pop}%` : EAR.center || first;
   const said = pop !== null ? t('歌单大众度，热歌榜是 100%') : EAR.center ? t('你喜欢的歌，有一半是这一年或更早的') : t('这一年点了第一首喜欢');
   const footY = H - M;
+  const rows = await qrRows();
+  const MOD = 5, tile = rows ? (rows.length + 8) * MOD : 0, room = W - 2 * M - (tile ? tile + 36 : 0);
   font(600, 112);
   x.fillStyle = INK;
   x.fillText(String(lead), M - 4, footY);
@@ -2551,8 +2557,23 @@ async function cardCanvas() {
   font(400, 34);
   x.fillStyle = INK2;
   // two short lines beside the number read as its caption; one long one reads as a footnote
-  const sl = headLines(x, said, Math.min(W - 2 * M - nw - 44, x.measureText(said).width * 0.62)) || headLines(x, said, W - 2 * M - nw - 44) || [said];
-  sl.forEach((l, i) => x.fillText(l, M + nw + 44, footY - 4 - (sl.length - 1 - i) * 46));
+  const sl = headLines(x, said, Math.min(room - nw - 44, x.measureText(said).width * 0.62)) || headLines(x, said, room - nw - 44) || [said];
+  sl.forEach((l, i) => x.fillText(l, M + nw + 44, footY - 4 - (sl.length - 1 - i) * 46, room - nw - 44));
+  if (rows) {
+    // a pale tile, dark modules: scanners read a QR code that way round; whole modules keep its edges crisp
+    const tx = W - M - tile, ty = footY + 12 - tile;
+    x.fillStyle = '#e9e7e3';
+    x.beginPath();
+    if (x.roundRect) x.roundRect(tx, ty, tile, tile, 14); else x.rect(tx, ty, tile, tile);
+    x.fill();
+    x.fillStyle = '#0b0b0c';
+    rows.forEach((r, i) => { for (let j = 0; j < r.length; j++) if (r[j] === '1') x.fillRect(tx + (j + 4) * MOD, ty + (i + 4) * MOD, MOD, MOD); });
+    font(400, 22);
+    x.fillStyle = INK3;
+    x.textAlign = 'right';
+    x.fillText(t('扫码，锐评你的歌单'), W - M, ty - 18);
+    x.textAlign = 'left';
+  }
 
   // the record, centred in what is left
   const top = y + 40, bottom = footY - 112 - 44, D = Math.min(W - 2 * M + 40, bottom - top);
@@ -2637,6 +2658,9 @@ async function cardCanvas() {
 
 let card = null;
 const WECHAT = /MicroMessenger/i.test(navigator.userAgent);
+// apps' own browsers (as server.py _INAPP): saving happens by pressing and holding the picture, and Android WeChat
+// refuses that on a blob: picture, so these get one with an address (/api/card/tmp)
+const INAPP = /MicroMessenger|wxwork|ZhihuHybrid|osee2unifiedRelease|Weibo|\bQQ\/|XiaoHongShu|xhsdiscover|aweme|BytedanceWebview|DingTalk|Line\//i.test(navigator.userAgent);
 // links this browser made, so it can take them down again: [{ id, key, url, label }]
 const myLinks = () => store.get('cards') || [];
 // The link already made for the card on screen: per name for an account, per record for a NetEase one.
@@ -2656,23 +2680,35 @@ async function shareCard(btn) {
     const file = new File([blob], 'zhiyin.png', { type: 'image/png' });
     card = { blob, file, cv, url: URL.createObjectURL(blob) };
     const d = $('#shareD');
-    const phone = !WECHAT && navigator.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches;
+    const coarse = matchMedia('(pointer: coarse)').matches;
+    const phone = !INAPP && navigator.canShare?.({ files: [file] }) && coarse;
+    const hold = INAPP || (coarse && !phone);
     // the sample listener's card can be saved, not linked: a link is someone's own record
     const linkable = guest() || !SAMPLE();
     d.innerHTML = `<div class="sc-in">
       <img class="sc-img" src="${card.url}" alt="${esc(EAR.label || t('你的喜欢'))}" width="1080" height="1440">
-      ${WECHAT ? `<p class="sc-hint">${t('长按图片，保存或发给朋友')}</p>` : ''}
+      ${hold ? `<p class="sc-hint">${t('长按图片，保存或发给朋友')}</p>` : ''}
       <div class="sc-acts">
         ${phone ? `<button class="btn" data-k="sharenow">${I.share}<span>${t('分享')}</span></button>` : ''}
-        ${WECHAT ? '' : `<button class="${phone ? 'tb' : 'btn'}" data-k="savecard">${I.save}<span>${t('保存图片')}</span></button>`}
-        ${!phone && !WECHAT && window.ClipboardItem ? `<button class="tb" data-k="copycard">${I.copy}<span>${t('复制图片')}</span></button>` : ''}
+        ${hold ? '' : `<button class="${phone ? 'tb' : 'btn'}" data-k="savecard">${I.save}<span>${t('保存图片')}</span></button>`}
+        ${!phone && !hold && window.ClipboardItem ? `<button class="tb" data-k="copycard">${I.copy}<span>${t('复制图片')}</span></button>` : ''}
         ${linkable ? `<span class="sc-ln" id="scLn">${cardLinkHTML(linkFor())}</span>` : ''}
         <button class="ib sm sc-x" data-k="closeshare" aria-label="${t('关闭')}">${I.close}</button>
       </div></div>`;
     if (!d.open) { d.showModal(); ev('share_open'); }
     spare(d);
+    if (hold) holdable(cv);
   } catch { toast(t('图片没做出来，再试一次')); }
   btn.disabled = false;
+}
+async function holdable(cv) {
+  try {
+    const jpg = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.9));
+    const r = await fetch('/api/card/tmp', { method: 'POST', body: jpg, headers: { 'Content-Type': 'image/jpeg' } });
+    const u = r.ok && (await r.json()).url;
+    const img = $('#shareD .sc-img');
+    if (u && img && card?.cv === cv) { img.src = u; ev('share_hold'); }
+  } catch { /* the blob picture stays: most browsers save it anyway */ }
 }
 async function makeLink(b) {
   b.disabled = true;
@@ -2937,6 +2973,7 @@ function makerHTML() {
         placeholder="${mkHint(a)}" aria-label="${t('网易云或 QQ 音乐的链接')}" value="${esc(MK.link)}"><button class="btn" type="submit"${MK.busy ? ' disabled' : ''}>${esc(MK.busy || t('锐评一下'))}</button></div>
       <p class="mk-err" id="mkErr" role="alert">${esc(MK.err)}</p>
       <p class="mk-alt">${t('用 YouTube Music 的话，')}<button type="button" class="lnk" data-k="jyt">${t('用 Google 登录')}</button>${t('：唱片会按你的口味分区，每周还有几组新歌。')}</p>
+      <p class="mk-alt">${t('知音是开源的，代码在 {gh}。', { gh: '<a href="https://github.com/billpwchan/zhiyin" target="_blank" rel="noopener">GitHub</a>' })}</p>
     </div>
   </form>
   <p class="mk-ex">${t('下面是一位示例听众的唱片')}</p>`;
@@ -3389,7 +3426,9 @@ function renderEar() {
       <div class="hero-t">
         <h1 class="${naming ? 'sk' : ''}">${naming ? t('正在给你的口味起个名字') : name && g ? relabelable(name, 'grelabel') : name && !SAMPLE() ? relabelable(name) : esc(head || t('你的喜欢'))}</h1>
         ${lede ? `<p class="lede${g && EAR.roast ? ' roast' : ''}">${g && EAR.roast ? `<span class="rk">${t('Claude 锐评')}</span>` : ''}${esc(lede)}</p>` : ''}
-        <div class="meta-row"><p class="meta-line num">${meta}</p>${canShare ? `<button class="tb share" data-k="share">${I.share}<span>${t('分享')}</span></button>` : ''}</div>
+        <div class="meta-row"><p class="meta-line num">${meta}</p>${canShare && !g ? `<button class="tb share" data-k="share">${I.share}<span>${t('分享')}</span></button>` : ''}</div>
+        ${g && EAR.via ? `<p class="g-via">${EAR.via.why === 'few' ? t('你的「我喜欢的音乐」歌太少，这张按你公开的歌单「{name}」画。', { name: esc(EAR.via.name) }) : t('你的「我喜欢的音乐」只有你自己看得到，这张按你公开的歌单「{name}」画。想换成喜欢的歌：网易云左上角 ≡ →「设置」→「消息和隐私」→「个人主页隐私设置」，把「我喜欢的音乐」改成公开，再贴一次。', { name: esc(EAR.via.name) })}</p>` : ''}
+        ${canShare && g ? `<div class="g-save"><button class="btn" data-k="share">${I.save}<span>${t('保存分享图')}</span></button><span>${t('图上带二维码，朋友扫一下就能锐评自己的')}</span></div>` : ''}
       </div>
       ${ears ? soundHTML(po) : `<div class="facts" id="facts">${EAR?.list.length ? factsHTML() : earFailed ? '' : skeleton}</div>`}
       ${earFailed ? '' : `<div class="rec-l">

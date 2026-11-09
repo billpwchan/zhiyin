@@ -203,8 +203,10 @@ def app_of(link: str) -> str:
     return "qq" if qqmusic.ours(link) else "163"
 
 
-def app_likes(link: str) -> dict:
-    return APPS[app_of(link)].likes(link)
+def app_likes(link: str, fallback: bool = False) -> dict:
+    """`fallback`: a card may be drawn from another public list of theirs when their likes can't be (netease.likes)."""
+    app = app_of(link)
+    return netease.likes(link, fallback=True) if fallback and app == "163" else APPS[app].likes(link)
 
 
 def page_of(link: str) -> str:

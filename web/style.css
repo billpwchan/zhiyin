@@ -527,6 +527,12 @@ img.lb { transform: scale(1.34); }
 .ear .meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 14px; }
 .ear .meta-row .share { margin-left: -2px; height: 30px; padding: 0 10px 0 8px; color: var(--fg); background: rgba(255, 255, 255, .08); }
 .ear .meta-row .share:hover { background: rgba(255, 255, 255, .13); }
+/* a record made from a link: saving the picture is what comes next, so it is the one button in the hero */
+.ear .g-save { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 22px; }
+.ear .g-save .btn { height: 44px; padding: 0 20px 0 16px; border-radius: 12px; }
+.ear .g-save > span { font-size: 13px; line-height: 1.5; color: var(--fg-3); }
+.ear .g-via { margin: 14px 0 0; max-width: 36em; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.7;
+  color: var(--fg-2); background: rgba(255, 255, 255, .05); text-wrap: pretty; }
 .ear h1 .nw, .meta-line .nw { white-space: nowrap; }
 .ear h1 .relabel { display: inline-grid; width: 30px; height: 30px; margin: -4px 0 -4px 6px; vertical-align: -5px; opacity: 0; transition: opacity var(--fast) var(--ease), color var(--fast) var(--ease); }
 .ear h1:hover .relabel, .ear h1 .relabel:focus-visible { opacity: 1; }
@@ -647,6 +653,7 @@ body:not(.playing) .hub.spin img { animation-play-state: paused; }
 .mk-err { margin: 10px 0 0; font-size: 13px; line-height: 1.55; color: var(--danger); text-wrap: pretty; }
 .mk-err:empty { display: none; }
 .mk-alt { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-3); }
+.mk-alt a { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
 .lnk { color: var(--fg-2); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .25); text-underline-offset: 3px; }
 .lnk:hover { color: var(--fg); }
 @container (max-width: 860px) { .maker { grid-template-columns: minmax(0, 1fr); } }

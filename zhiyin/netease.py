@@ -46,6 +46,11 @@ def _ok(host: str | None) -> bool:
 def parse(text: str, c: httpx.Client | None = None) -> tuple[str, int]:
     """("playlist" | "user", id) from what a listener pastes: a profile or playlist link, the app's share text around
     one, or its 163cn.tv short link."""
+    return target(text, c)[:2]
+
+
+def target(text: str, c: httpx.Client | None = None) -> tuple[str, int, int | None]:
+    """`parse`, and whose share it was: the app's share links carry the sharer as `userid`."""
     m = re.search(r"https?://[^\s，。、“”\"'<>（）()]+", text or "")
     if not m:
         raise Unreadable("link")
@@ -70,14 +75,15 @@ def parse(text: str, c: httpx.Client | None = None) -> tuple[str, int]:
     for path, query in ((parts.path, parts.query), *([urlsplit(parts.fragment)[2:4]] if parts.fragment else [])):
         q = parse_qs(query)
         ids = q.get("id") or []
+        who = next((int(v[0]) for k in ("userid", "userId", "creatorId") if (v := q.get(k)) and v[0].isdigit()), None)
         tail = re.search(r"/(playlist|user(?:/home)?)/(\d+)", path)
         if tail:
-            return ("playlist" if tail.group(1) == "playlist" else "user", int(tail.group(2)))
+            return ("playlist" if tail.group(1) == "playlist" else "user", int(tail.group(2)), who)
         if ids and ids[0].isdigit():
             if "playlist" in path:
-                return "playlist", int(ids[0])
+                return "playlist", int(ids[0]), who
             if "user" in path:
-                return "user", int(ids[0])
+                return "user", int(ids[0]), who
         if "song" in path and ids:
             raise Unreadable("song")
     raise Unreadable("link")
@@ -101,6 +107,33 @@ def liked_playlist(c: httpx.Client, uid: int) -> int:
     raise Unreadable("private")   # hidden from others in their privacy settings
 
 
+def biggest_own(c: httpx.Client, uid: int) -> dict | None:
+    """The longest playlist someone made themselves and shows to everyone: what a card is drawn from when their liked
+    songs are hidden or too few."""
+    d = _get(c, "/api/user/playlist", uid=uid, limit=30, offset=0)
+    if d.get("code") != 200:
+        return None
+    own = [p for p in d.get("playlist") or [] if (p.get("creator") or {}).get("userId") == uid
+           and p.get("specialType") != 5 and (p.get("trackCount") or 0) >= MIN_SONGS]
+    return max(own, key=lambda p: p.get("trackCount") or 0, default=None)
+
+
+def _read(c: httpx.Client, pid: int) -> tuple[dict, list[dict]]:
+    """A playlist and its songs' ids with when each went in, newest first."""
+    d = _get(c, "/api/v6/playlist/detail", id=pid, n=0)
+    if d.get("code") in (401, 403) or (d.get("code") == 200 and not d.get("playlist")):
+        raise Unreadable("private")
+    if d.get("code") == 404:
+        raise Unreadable("link")
+    if d.get("code") != 200:
+        raise Unreadable("upstream")
+    refs = [x for x in d["playlist"].get("trackIds") or [] if x.get("id")]
+    refs.sort(key=lambda x: -(x.get("at") or 0))
+    if len(refs) < MIN_SONGS:
+        raise Unreadable("few", len(refs))
+    return d["playlist"], refs
+
+
 def _songs(c: httpx.Client, ids: list[int]) -> dict[int, dict]:
     out = {}
     for i in range(0, len(ids), BATCH):
@@ -122,29 +155,40 @@ def _date(ms) -> str | None:
     return datetime.fromtimestamp(ms / 1000, BEIJING).strftime("%Y-%m-%d") if ms and ms > 0 else None
 
 
-def likes(text: str) -> dict:
-    """{"key": a playlist id, "tracks": newest first, in the library's shape, "total": songs in the playlist}."""
+def likes(text: str, fallback: bool = False) -> dict:
+    """{"key": a playlist id, "tracks": newest first, in the library's shape, "total": songs in the playlist}.
+    With `fallback` (a card), liked songs that are hidden or too few give way to their own longest public playlist,
+    named in "via"."""
     if not _gate.acquire(timeout=30):
         raise Unreadable("upstream")
+    via = None
     try:
         with _client() as c:
-            kind, n = parse(text, c)
-            pid = liked_playlist(c, n) if kind == "user" else n
-            d = _get(c, "/api/v6/playlist/detail", id=pid, n=0)
-            if d.get("code") in (401, 403) or (d.get("code") == 200 and not d.get("playlist")):
-                raise Unreadable("private")
-            if d.get("code") == 404:
-                raise Unreadable("link")
-            if d.get("code") != 200:
-                raise Unreadable("upstream")
-            owner = (d["playlist"].get("creator") or {}).get("userId") or (n if kind == "user" else None)
+            kind, n, who = target(text, c)
+            pid = None
+            try:
+                pid = liked_playlist(c, n) if kind == "user" else n
+                pl, refs = _read(c, pid)
+            except Unreadable as e:
+                # their own liked songs give way, a list they picked doesn't. A hidden liked list is missing from their
+                # page, so it can't be told apart; NetEase won't share any other hidden list, so a hidden one is it
+                mine = n if kind == "user" else who
+                if (not fallback or not mine or e.why not in ("private", "few")
+                        or (e.why == "few" and kind != "user" and pid != _liked_or_none(c, mine))):
+                    raise
+                alt = biggest_own(c, mine)
+                if not alt or alt["id"] == pid:
+                    raise
+                try:
+                    pl, refs = _read(c, alt["id"])
+                except Unreadable:
+                    raise e from None   # say what went wrong with the list they pasted, not one they never saw
+                pid, via = alt["id"], {"why": e.why, "name": alt.get("name") or ""}
+                kind, n = "user", mine
+            owner = (pl.get("creator") or {}).get("userId") or (n if kind == "user" else None)
             # whose page the rest of their lists are on: theirs, or whoever's liked songs they chose to go by
-            user = n if kind == "user" else owner if d["playlist"].get("specialType") == 5 else None
-            refs = [x for x in d["playlist"].get("trackIds") or [] if x.get("id")]
-            refs.sort(key=lambda x: -(x.get("at") or 0))
+            user = n if kind == "user" else owner if pl.get("specialType") == 5 else None
             total = len(refs)
-            if total < MIN_SONGS:
-                raise Unreadable("few", total)
             refs = refs[:MAX_SONGS]
             info = _songs(c, [x["id"] for x in refs])
     finally:
@@ -164,7 +208,14 @@ def likes(text: str) -> dict:
                        "ne": s["id"], "ne_ar": [a["id"] for a in s.get("ar") or [] if a.get("id")]})
     if len(tracks) < MIN_SONGS:
         raise Unreadable("few", len(tracks))
-    return {"key": f"163:{pid}", "owner": owner, "user": user, "tracks": tracks, "total": total}
+    return {"key": f"163:{pid}", "owner": owner, "user": user, "tracks": tracks, "total": total, "via": via}
+
+
+def _liked_or_none(c: httpx.Client, uid: int) -> int | None:
+    try:
+        return liked_playlist(c, uid)
+    except Unreadable:
+        return None
 
 
 MAX_LISTS = 100   # playlists on a profile, in the order NetEase shows them: their own first
