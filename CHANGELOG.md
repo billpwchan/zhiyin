@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.1 — 2026-11-09
+
+- A record is easier to pass on. Every record carries a QR code back to the maker, under 「扫码，锐评你的歌单」, so a
+  friend who sees it in a chat can make their own. Without signing in, "Save the picture" now sits right under the
+  record instead of in the row of small buttons.
+- Saving works inside WeChat, QQ, Weibo, Zhihu and other in-app browsers. The picture there used to be one the page
+  drew, which Android WeChat can't save; it is now kept on the server for 2 hours under a random address, so pressing
+  and holding it saves it. The page says to press and hold instead of showing a button that does nothing there.
+- A NetEase list that can't be read no longer stops at an error. When 我喜欢的音乐 is visible only to its owner, or
+  holds fewer than 20 songs, the record is drawn from their own largest public playlist and says so; the steps to make
+  the likes public now follow NetEase's current menus (≡ → 设置 → 消息和隐私 → 个人主页隐私设置).
+- The maker and the card page say Zhiyin is open source, with a link to the code.
+
 ## 0.2.0 — 2026-11-09
 
 - Listeners of NetEase Cloud Music and QQ Music get a way in made for them. "Start" first asks which app you listen
