@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-11-09
+
+- A record can be sent to one friend to compare. "Send to a friend to compare" under a record made without signing in
+  gives a short link with a line to send, copied and also shown on the page for apps that refuse the clipboard. The
+  friend sees your name, roast and numbers above the box to paste theirs; once theirs is drawn, the two sit side by
+  side with what tells them apart first (who is less mainstream, by how many points), then who started liking songs
+  earlier and who has more. A line under their roast says it at once and leads down to it. Links work for 30 days.
+
 ## 0.2.1 — 2026-11-09
 
 - A record is easier to pass on. Every record carries a QR code back to the maker, under 「扫码，锐评你的歌单」, so a
