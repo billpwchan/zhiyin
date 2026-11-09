@@ -102,7 +102,11 @@ save a picture the page drew (WeChat, QQ, Weibo and the like), and in phone brow
 share picture (signed in or not) sends it to `/api/card/tmp`, which keeps it in `data/cards/tmp/` under a random name
 for 2 hours (the scheduler deletes it within 3, about every half hour, and the oldest go first past 200 MB in all), tied to no account or playlist,
 so it has an address to press and hold; how many an address saved in the last ten minutes is counted in memory only. The QR code
-drawn on every record points to `/card?ref=qr` and carries nothing about the person.
+drawn on every record points to `/card?ref=qr` and carries nothing about the person. "Send to a friend to compare"
+(`/api/card/vs`, which takes the record's signed proof) keeps the name, roast, 大众度, number of liked songs and first
+year in `kv` (`vs:<id>`, the id derived from the proof, so asking again for the same proof gives the same link) until
+30 days after it was last asked for, swept by the scheduler; anyone with `/card?vs=<id>` can read those five. The friend's browser keeps them (localStorage `vs`, 30 days) to set beside their
+own record, and the comparison is worked out there.
 
 Someone who goes on from such a record to weekly stations ("Start from this playlist", `/api/card/follow`) gets an
 account made from that playlist alone, without Google. Drawing the record hands the browser a signed proof that names

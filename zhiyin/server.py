@@ -468,6 +468,7 @@ def _scheduler():
         users = accounts.users()
         try:
             cards.sweep_tmp()
+            cards.sweep_vs()
         except Exception:
             traceback.print_exc()
         try:
@@ -788,7 +789,7 @@ def _milestone(name: str) -> None:
 
 
 class Event(BaseModel):
-    name: Annotated[str, Field(pattern=r"^(sample_play|share_open|share_send|share_save|share_copy|share_hold|yt_down)$")]
+    name: Annotated[str, Field(pattern=r"^(sample_play|share_open|share_send|share_save|share_copy|share_hold|vs_made|yt_down)$")]
 
 
 @app.post("/api/event")
@@ -901,6 +902,29 @@ def card_qr():
     can't be tapped."""
     url = f"{google.public_url()}/card?ref=qr"
     return JSONResponse({"url": url, "rows": _qr(url)}, headers={"Cache-Control": "public, max-age=86400"})
+
+
+class VsReq(BaseModel):
+    token: Annotated[str, Field(max_length=4000)]
+
+
+@app.post("/api/card/vs")
+def card_vs(b: VsReq, request: Request):
+    """A link for one friend: it shows this card's name, roast and numbers and asks for theirs, to set side by side."""
+    vid = cards.vs_keep(b.token)
+    if not vid:
+        raise HTTPException(403, i18n.tr("这张唱片过期了，重新做一张再分享", i18n.from_request(request)))
+    store.count("vs_make", _ref_cookie(request))
+    return {"url": f"{google.public_url()}/card?ref=vs&vs={vid}"}
+
+
+@app.get("/api/card/vs/{vid}")
+def card_vs_read(vid: str, request: Request):
+    d = cards.vs_get(vid)
+    if not d:
+        raise HTTPException(404)
+    store.count("vs_open", _ref_cookie(request))
+    return d
 
 
 TMP_ID = r"^[A-Za-z0-9]{16}$"

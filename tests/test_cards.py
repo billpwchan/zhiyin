@@ -1,4 +1,5 @@
 import os
+import re
 import struct
 import time
 
@@ -344,6 +345,25 @@ def test_pictures_kept_for_saving_never_pile_up_past_a_cap(monkeypatch):
     monkeypatch.setattr(cards, "TMP_BYTES", 2 * len(_jpeg()))
     new = cards.keep_tmp(_jpeg())
     assert sorted(p.stem for p in cards.TMP.glob("*.jpg")) == sorted([old[2], new])   # the oldest went first
+
+
+def test_a_card_becomes_a_short_link_for_one_friend_and_nothing_else(monkeypatch):
+    from fastapi.testclient import TestClient
+    c = TestClient(server.app)
+    tok = cards.sign({"label": "大众情歌的老主顾", "roast": "r", "pop": 100, "n": 200, "since": 2020, "lang": "zh-Hans",
+                      "exp": time.time() + 60, "nonce": "abc"})
+    url = c.post("/api/card/vs", json={"token": tok}).json()["url"]
+    vid = url.rsplit("vs=", 1)[1]
+    assert re.fullmatch(cards.VS_ID, vid) and "ref=vs" in url
+    assert c.post("/api/card/vs", json={"token": tok}).json()["url"] == url   # the same card, the same link
+    assert c.get(f"/api/card/vs/{vid}").json() == {"label": "大众情歌的老主顾", "roast": "r", "pop": 100, "n": 200,
+                                                   "since": 2020, "lang": "zh-Hans"}
+    assert c.post("/api/card/vs", json={"token": tok[:-1] + ("1" if tok.endswith("0") else "0")}).status_code == 403
+    follow = cards.sign({"key": "163:1", "exp": time.time() + 60})   # a stations proof is not a card
+    assert c.post("/api/card/vs", json={"token": follow}).status_code == 403
+    assert c.get("/api/card/vs/zzzzzzzzzz").status_code == 404 and c.get("/api/card/vs/x").status_code == 404
+    monkeypatch.setattr(cards, "VS_S", -1)   # a month on
+    assert c.get(f"/api/card/vs/{vid}").status_code == 404
 
 def test_every_card_carries_a_qr_code_back_to_the_maker():
     from fastapi.testclient import TestClient

@@ -2926,6 +2926,40 @@ let MAKE = false;   // came in on /card: the box to paste a link into is what th
 // the box outlives the page being redrawn under it (the sample's record arriving, colours, polls)
 const MK = { link: '', busy: '', err: '' };
 const guest = () => !!(SAMPLE() && GUEST?.songs);
+// a friend's card that came with the link they sent, to set beside the one made here; links live 30 days
+let VS = store.get('vs');
+if (VS && !(Date.now() - (VS.at || 0) < 30 * 86400e3)) { VS = null; store.del('vs'); }
+async function loadVs(id) {
+  if (id === GUEST?.vs) return;   // their own link, opened to check it
+  try {
+    const r = await fetch(`/api/card/vs/${encodeURIComponent(id)}`);
+    if (!r.ok) return;
+    VS = { ...(await r.json()), id, at: Date.now() };
+    store.set('vs', VS);
+    if (view === 'ear') renderEar();
+  } catch { /* the maker works without it */ }
+}
+const mine = () => ({ label: GUEST.label, pop: GUEST.pop, n: GUEST.n, since: GUEST.dates === 'released' ? 0 : Math.floor(+GUEST.span?.[0] || 0) });
+const vsMeta = (d) => [d.pop != null ? t('大众度 {p}%', { p: d.pop }) : '', d.since ? t('{y} 年开始点喜欢', { y: d.since }) : '',
+  d.n ? t('{n} 首', { n: d.n }) : ''].filter(Boolean).join(' · ');
+// what tells two lists apart, the sharpest first: how mainstream, then since when, then how many
+function vsLines(me, peer) {
+  const out = [];
+  if (me.pop != null && peer.pop != null) {
+    const n = peer.pop - me.pop;
+    out.push(n > 0 ? t('你比 TA 小众 {n} 个点', { n }) : n < 0 ? t('TA 比你小众 {n} 个点', { n: -n }) : t('你们一样大众'));
+  }
+  if (me.since && peer.since) {
+    const n = peer.since - me.since;
+    out.push(n > 0 ? t('你比 TA 早 {n} 年开始点喜欢', { n }) : n < 0 ? t('TA 比你早 {n} 年开始点喜欢', { n: -n }) : t('你们同一年开始点喜欢'));
+  }
+  if (me.n && peer.n) {
+    const n = me.n - peer.n;
+    out.push(n > 0 ? t('你的喜欢比 TA 多 {n} 首', { n }) : n < 0 ? t('TA 的喜欢比你多 {n} 首', { n: -n }) : t('你们喜欢的歌一样多'));
+  }
+  return out;
+}
+const vsCard = (who, d, roast) => `<div class="vs-c"><p class="k">${who}</p><p class="nm">${esc(d.label || t('还没有名字'))}</p>${roast && d.roast ? `<p class="rs">${esc(d.roast)}</p>` : ''}<p class="mt num">${esc(vsMeta(d))}</p></div>`;
 function useGuest(fresh) {
   EAR = earOf(GUEST);
   earFailed = false;
@@ -2964,8 +2998,10 @@ function howHTML() {
 function makerHTML() {
   const a = mkApp();
   return `<form class="maker" id="maker" autocomplete="off">
-    <div class="mk-t"><h2>${t('让 Claude 锐评你的歌单')}</h2>
-      <p class="mk-sub">${t('贴上你的喜欢：Claude 给你的口味起个名字，锐评一句，再把这些歌按年份画成一张唱片。')}</p></div>
+    <div class="mk-t">${VS ? `<div class="mk-vs">${vsCard(t('朋友的歌单，Claude 叫它'), VS, true)}</div>
+      <h2>${t('贴你的歌单，和 TA 比比')}</h2>
+      <p class="mk-sub">${t('Claude 也给你的口味起个名字、锐评一句，再和 TA 的并排放。')}</p>` : `<h2>${t('让 Claude 锐评你的歌单')}</h2>
+      <p class="mk-sub">${t('贴上你的喜欢：Claude 给你的口味起个名字，锐评一句，再把这些歌按年份画成一张唱片。')}</p>`}</div>
     <div class="mk-f">
       <div class="mk-apps" role="radiogroup" aria-label="${t('你用哪个 App 听歌')}">${['163', 'qq'].map((x) => `<button type="button" role="radio" aria-checked="${x === a}" data-k="mkapp" data-app="${x}">${APP_MARK[x]}${appShort(x)}</button>`).join('')}</div>
       <ol class="mk-steps">${stepsHTML(a)}</ol>
@@ -2988,12 +3024,62 @@ function pickMakerApp(a) {
   if (inp) inp.placeholder = mkHint(a);
 }
 
+function vsHTML() {
+  const me = mine(), lines = vsLines(me, VS);
+  return `<section class="sec g-vs"><h2>${t('你和 TA')}</h2>
+    ${lines.length ? `<p class="vs-lead">${esc(lines[0])}</p>${lines.length > 1 ? `<p class="vs-more">${esc(lines.slice(1).join(LANG === 'en' ? '. ' : '，'))}</p>` : ''}` : ''}
+    <div class="vs-grid">${vsCard(t('你'), me, false)}${vsCard(t('TA'), VS, true)}</div></section>`;
+}
+
 function guestNextHTML() {
   const follow = followHTML();
-  return `<section class="sec g-next"><h2>${GUEST.pop != null ? t('发给朋友，看谁更大众') : t('发给朋友，比比谁的歌更老')}<small>${t('朋友点开你的唱片，也能做一张自己的。')}</small></h2>
-    <div class="g-acts"><button class="btn" data-k="share">${I.share}<span>${t('分享唱片')}</span></button>
+  return `${VS ? vsHTML() : ''}<section class="sec g-next"><h2>${VS ? t('把结果发给 TA') : GUEST.pop != null ? t('发给朋友，看谁更大众') : t('发给朋友，比比谁的歌更老')}<small>${t('朋友点开链接、贴上自己的歌单，两张就并排比一比。')}</small></h2>
+    <div class="g-acts"><button class="btn" data-k="vslink">${I.share}<span>${VS ? t('发给 TA') : t('发给朋友比一比')}</span></button>
       <button class="tb" data-k="gnew">${I.swap}<span>${t('换一份歌单')}</span></button>
-      ${follow ? '' : `<button class="tb" data-k="jyt">${I.go}<span>${t('用 YouTube Music 每周听新歌')}</span></button>`}</div></section>${follow}`;
+      ${follow ? '' : `<button class="tb" data-k="jyt">${I.go}<span>${t('用 YouTube Music 每周听新歌')}</span></button>`}</div>
+    <div class="vs-out" hidden><textarea readonly rows="3" aria-label="${t('发给朋友的话')}"></textarea></div></section>${follow}`;
+}
+
+async function vsText() {
+  let r;
+  try { r = await api('/api/card/vs', { token: GUEST.token }); } catch {
+    await makeCard(GUEST.link, false, true);   // a card from yesterday: read the list again for a fresh proof
+    r = await api('/api/card/vs', { token: GUEST.token });
+  }
+  GUEST.vs = new URL(r.url).searchParams.get('vs');
+  store.set('guest', GUEST);
+  const head = !GUEST.label ? t('我画了一张歌单唱片，你也来一张，比比看：')
+    : GUEST.pop != null ? t('我的歌单被 Claude 叫做「{l}」，大众度 {p}%。你的呢？来比比谁更小众：', { l: GUEST.label, p: GUEST.pop })
+      : t('我的歌单被 Claude 叫做「{l}」。你的呢？来比比：', { l: GUEST.label });
+  return `${head}${r.url}`;
+}
+
+// The words to send go on the clipboard and into a box on the page, which can always be selected by hand. Safari
+// and the apps built on it let the clipboard be written only within the tap itself, so it is handed a promise of the
+// words at once and the link is made while it waits.
+async function vsLink(btn) {
+  btn.disabled = true;
+  const sheet = !INAPP && navigator.share && matchMedia('(pointer: coarse)').matches;
+  const got = vsText();
+  const clip = !sheet && window.ClipboardItem && navigator.clipboard?.write
+    ? navigator.clipboard.write([new ClipboardItem({ 'text/plain': got.then((x) => new Blob([x], { type: 'text/plain' })) })]).then(() => true, () => false)
+    : null;
+  try {
+    const text = await got;
+    const out = $('.vs-out'), ta = $('.vs-out textarea');
+    if (out && ta) { ta.value = text; out.hidden = false; }
+    if (sheet) {
+      try { await navigator.share({ text }); return; } catch (e) { if (e?.name === 'AbortError') return; }
+    }
+    let ok = clip ? await clip : false;
+    if (!ok) ok = await navigator.clipboard?.writeText(text).then(() => true, () => false);
+    if (ok) toast(t('已复制，发给朋友吧'));
+    else { ta?.select(); toast(t('选中下面这段，复制发给朋友')); }
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // The card's songs as the start of weekly stations. The link is the account, so nothing is asked of Google; with
@@ -3050,6 +3136,7 @@ async function makeCard(link, again, quiet) {
     MK.link = '';
     GUEST = { ...d, link };
     store.set('guest', GUEST);
+    if (VS && !again) ev('vs_made');
     useGuest(!again);
     if (again && !d.why) toast(t('换了个说法'));
     if (again && d.why) toast(d.why);
@@ -3428,6 +3515,7 @@ function renderEar() {
         ${lede ? `<p class="lede${g && EAR.roast ? ' roast' : ''}">${g && EAR.roast ? `<span class="rk">${t('Claude 锐评')}</span>` : ''}${esc(lede)}</p>` : ''}
         <div class="meta-row"><p class="meta-line num">${meta}</p>${canShare && !g ? `<button class="tb share" data-k="share">${I.share}<span>${t('分享')}</span></button>` : ''}</div>
         ${g && EAR.via ? `<p class="g-via">${EAR.via.why === 'few' ? t('你的「我喜欢的音乐」歌太少，这张按你公开的歌单「{name}」画。', { name: esc(EAR.via.name) }) : t('你的「我喜欢的音乐」只有你自己看得到，这张按你公开的歌单「{name}」画。想换成喜欢的歌：网易云左上角 ≡ →「设置」→「消息和隐私」→「个人主页隐私设置」，把「我喜欢的音乐」改成公开，再贴一次。', { name: esc(EAR.via.name) })}</p>` : ''}
+        ${g && VS && vsLines(mine(), VS).length ? `<button type="button" class="g-vsjump" data-k="vsjump">${esc(vsLines(mine(), VS)[0])}<span>${t('看对比')}</span></button>` : ''}
         ${canShare && g ? `<div class="g-save"><button class="btn" data-k="share">${I.save}<span>${t('保存分享图')}</span></button><span>${t('图上带二维码，朋友扫一下就能锐评自己的')}</span></div>` : ''}
       </div>
       ${ears ? soundHTML(po) : `<div class="facts" id="facts">${EAR?.list.length ? factsHTML() : earFailed ? '' : skeleton}</div>`}
@@ -3997,6 +4085,8 @@ async function act(k, btn) {
   else if (k === 'grelabel' && GUEST) { btn.disabled = true; await makeCard(GUEST.link, true); }
   else if (k === 'gnew') leaveGuest();
   else if (k === 'follow' && GUEST) follow(btn);
+  else if (k === 'vslink' && GUEST) vsLink(btn);
+  else if (k === 'vsjump') $('.g-vs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   else if (k === 'jpick') { if (btn.dataset.app === 'yt') openJoin($('#join').dataset.why, 'yt'); else { $('#join').close(); toMaker(btn.dataset.app); } }
   else if (k === 'jback') openJoin($('#join').dataset.why);
   else if (k === 'jyt') openJoin('', 'yt');
@@ -4381,12 +4471,14 @@ async function boot() {
   if (!location.hash && ['importing', 'building'].includes(S.me?.status)) history.replaceState(null, '', '#ear');
   // ?ne= is a NetEase card coming back from an app's own browser, where Google wouldn't sign in
   const ne = location.pathname === '/card' && SAMPLE() ? new URLSearchParams(location.search).get('ne') : null;
+  const vs = location.pathname === '/card' && SAMPLE() ? new URLSearchParams(location.search).get('vs') : null;
   if (location.pathname === '/card') { MAKE = SAMPLE() && !GUEST && !ne; history.replaceState(null, '', '/#ear'); }
   // whose likes most likely live in NetEase or QQ Music (or who already drew a record from them): the sample's
   // stations can't be theirs without that link
   else if (SAMPLE() && !location.hash && (guest() || LANG === 'zh-Hans')) { MAKE = !guest(); history.replaceState(null, '', '/#ear'); }
   route();
   if (ne) followOn(ne);
+  if (vs && vs !== VS?.id) loadVs(vs);
   if (cur()) { Player.load(cur(), false); trackChanged(); }
   if (Object.values(S.jobs || {}).some((j) => j?.running)) poll();
 }

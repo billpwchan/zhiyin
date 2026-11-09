@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import secrets
 import struct
 import time
@@ -21,6 +22,9 @@ TMP = DIR / "tmp"   # pictures given an address for a while so in-app browsers l
 TMP.mkdir(exist_ok=True)
 TMP_S = 2 * 3600
 TMP_BYTES = 200_000_000   # all of them together; past it the oldest go first
+VS_S = 30 * 86400   # how long a link to compare with a friend works
+VS_ID = r"^[A-Za-z0-9_-]{10}$"
+VS_KEEP = ("label", "roast", "pop", "n", "since", "lang")
 W, H = 1080, 1440
 MAX_BYTES = 1_500_000
 TOKEN_S = 86400
@@ -204,6 +208,34 @@ def make(link: str, lang: str, again: bool = False) -> dict:
     # weekly stations start from a list that was read and had enough songs, never from a link nobody read
     rec["follow"] = sign({"key": got["key"], "exp": time.time() + FOLLOW_S})
     return rec
+
+
+def vs_keep(token: str) -> str | None:
+    """A card's name and numbers, kept for a friend to put theirs beside. The id comes from the card itself, so asking
+    again gives the same link and one card is kept once."""
+    d = unsign(token)
+    if not d or not d.get("nonce"):
+        return None
+    vid = base64.urlsafe_b64encode(hmac.new(_key(), f"vs:{d['nonce']}".encode(), hashlib.sha256).digest()).decode()[:10]
+    con = store.db()
+    con.execute("insert or replace into kv(k, v) values (?, ?)",
+                (f"vs:{vid}", json.dumps({k: d.get(k) for k in VS_KEEP} | {"t": time.time()}, ensure_ascii=False)))
+    con.commit()
+    return vid
+
+
+def sweep_vs() -> None:
+    con = store.db()
+    con.execute("delete from kv where k like 'vs:%' and json_extract(v, '$.t') < ?", (time.time() - VS_S,))
+    con.commit()
+
+
+def vs_get(vid: str) -> dict | None:
+    if not re.fullmatch(VS_ID, vid or ""):
+        return None
+    r = store.db().execute("select v from kv where k=?", (f"vs:{vid}",)).fetchone()
+    d = json.loads(r["v"]) if r else None
+    return {k: d.get(k) for k in VS_KEEP} if d and d["t"] > time.time() - VS_S else None
 
 
 def sweep_tmp(room: int = 0) -> None:
