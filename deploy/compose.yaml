@@ -20,6 +20,9 @@ services:
     mem_limit: 900m
     cpus: 1.5
     pids_limit: 256
+    # a healthcheck curl orphaned by its 5 s timeout is reparented to PID 1; uvicorn never reaps it, so the zombies
+    # pile up against pids_limit. docker-init as PID 1 reaps them.
+    init: true
     security_opt: [no-new-privileges:true]
     networks: [gateway]
 networks:
